@@ -1,0 +1,33 @@
+{
+  "format": "navalha-project",
+  "version": 2,
+  "appVersion": "0.28.1",
+  "activeSource": "B",
+  "sources": {
+    "A": {
+      "sample": {"filename": "source-a.wav"},
+      "slicing": {"slices": [[0.0, 0.5], [0.5, 1.0]]}
+    },
+    "B": {
+      "sample": {"filename": "source-b.wav"},
+      "slicing": {"slices": [[0.0, 0.25], [0.25, 0.5], [0.5, 0.75], [0.75, 1.0]]}
+    }
+  },
+  "sequencer": {
+    "patterns": [[0, 128, 1, 129, 256, 2, 130, 3]],
+    "currentPattern": 1,
+    "bpm": 137,
+    "tmode": 2
+  },
+  "dsp": {
+    "pitch": -5,
+    "pitchMode": 0.65,
+    "gain": 0.78,
+    "sourceMixer": {
+      "A": {"level": 0.9, "pan": -0.2, "width": 1.1, "mute": false, "solo": false},
+      "B": {"level": 0.8, "pan": 0.2, "width": 0.9, "mute": false, "solo": false},
+      "balance": 0.1
+    }
+  },
+  "gesture": {}
+}
