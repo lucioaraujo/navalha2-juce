@@ -103,8 +103,9 @@ h3 { font-size: .9rem; letter-spacing: .04em; text-transform: uppercase; }
 .source small, .source b { position: relative; z-index: 2; display: block; }
 .source small { font-size: .56rem; letter-spacing: .14em; }
 .source b { margin-top: 12px; font-size: .72rem; }
-.source i { position: absolute; left: 0; right: 0; bottom: 15px; height: 1px; background: currentColor; box-shadow: 36px -12px 0 -0.25px, 76px 7px 0 -0.25px, 114px -19px 0 -0.25px, 158px -4px 0 -0.25px, 205px 8px 0 -0.25px, 255px -16px 0 -0.25px, 302px 2px 0 -0.25px, 355px -11px 0 -0.25px; }
-.source i::after { content: ""; position: absolute; top: -27px; left: 22%; width: 1px; height: 38px; background: currentColor; box-shadow: 78px 9px 0 currentColor, 163px -5px 0 currentColor, 250px 5px 0 currentColor; opacity: .92; }
+.source-wave { position: absolute; z-index: 1; left: 12px; bottom: 8px; width: calc(100% - 24px); height: 30px; overflow: visible; }
+.source-wave path { fill: none; stroke: currentColor; stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+.source-wave .wave-cut { stroke-width: 1; stroke-dasharray: 2 2; opacity: .9; }
 .source-a { color: var(--yellow); background: rgba(255,216,47,.035); }
 .source-b { color: #e84952; background: rgba(213,31,44,.045); }
 .fragments { display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px; margin-top: 14px; }
