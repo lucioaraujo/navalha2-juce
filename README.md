@@ -141,6 +141,8 @@ O runtime atual continua em:
   de reinicialização limpa do estágio após mudança de sample rate;
 - telemetria atômica PLAY/STOP, passo e geração para a interface;
 - destaque realtime do próximo passo sem leitura concorrente do SessionModel;
+- playhead A/B lock-free derivado dos players principais, com cursor e
+  readout atual/duração nas duas waveforms, inclusive em reverse;
 - gravação selecionável em PCM16, PCM24 ou float32 com diagnóstico de drops;
 - painel JUCE de dispositivo, saída estéreo, buffer e sample rate;
 - configuração do dispositivo persistida nas preferências locais do aplicativo;

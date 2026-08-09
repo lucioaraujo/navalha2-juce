@@ -1,6 +1,7 @@
 # Auditoria de paridade PD/Web v0.28.1 → JUCE/C++
 
 Data: 3 de agosto de 2026<br>
+Atualização da matriz: 9 de agosto de 2026<br>
 Referência: `navalha_app_project_v2_v0.28.1.zip`<br>
 Escopo: código PD, interface Web v0.28.1, documentação funcional e candidato
 JUCE/C++ atual.
@@ -34,10 +35,15 @@ etapa da TAKE Timeline em JUCE v0.1.0:
 1. descoberta/importação de takes anteriores e preset/escrita RIFF de metadados;
 2. construtor de ALBUM PROJECT a partir dos takes;
 3. importação/exportação histórica `.nvl`/`.ptn`;
-4. pré-escuta independente da Audio Library;
-5. completar FORM Advanced com nome, undo/redo e captura explícita dos bancos;
-6. preview/audição dentro de MASTER e matching relativo do fluxo v0.28;
-7. validações humanas de áudio real, dois monitores e sessão prolongada.
+4. completar FORM Advanced com nome, undo/redo e captura explícita dos bancos;
+5. preview/audição dentro de MASTER e matching relativo do fluxo v0.28;
+6. validações humanas de áudio real, dois monitores e sessão prolongada.
+
+Contagem não ponderada da matriz nesta atualização: 33 áreas completas,
+completas técnicas ou implementadas no fluxo equivalente; 12 parciais; 6
+ausentes; e uma conveniência Web substituída deliberadamente por comportamento
+nativo. Os estados “completo técnico” continuam exigindo aceitação humana onde
+indicado e não autorizam declarar substituição integral do produto.
 
 ## Matriz funcional
 
@@ -52,7 +58,7 @@ etapa da TAKE Timeline em JUCE v0.1.0:
 | BLADE por clique e UNDO | Completo | corte direto na onda, não destrutivo |
 | DIVIDE 4/8/16/32/64 | Completo | botões explícitos imediatamente sob a waveform |
 | Duas ondas simultâneas | Completo | A em cima, B embaixo; divisor vertical ajustável |
-| Playhead e readout temporal sobre a onda | Ausente | limites normalizados existem; falta cursor/tempo em reprodução |
+| Playhead e readout temporal sobre a onda | Completo | telemetria lock-free publica a posição A/B mais recente do player principal; cursores e tempo atual/duração aparecem nas duas ondas, avançam também em reverse e somem ao terminar/STOP |
 | Patterns 10 × 8 e códigos A/B/GAP | Completo | edição, macros e persistência |
 | GRID/FREE/JITTER + seed | Completo | scheduler por amostras e controles nativos |
 | STUTTER/BURST/MICRO/REVERSE | Completo | núcleo realtime e acesso main/PERFORM |
@@ -134,7 +140,8 @@ etapa da TAKE Timeline em JUCE v0.1.0:
   da waveform para não comprimir os botões de projeto e transporte.
 - Sob a waveform ficam apenas seleção, BLADE, WHOLE, UNDO e divisões.
 - SOURCE A/B são simultâneas e o operador pode ampliar uma delas.
-- Falta adicionar playhead/tempo e pré-escuta da biblioteca.
+- Playhead/tempo e pré-escuta independente da biblioteca estão transpostos; a
+  aceitação auditiva da pré-escuta permanece humana.
 
 ### PERFORM
 
@@ -216,7 +223,7 @@ Mantidos separados por segurança ou por não representarem um estado binário:
 2. ALBUM PROJECT builder integrado aos takes.
 3. Workspaces reais e mixer BASIC/ADVANCED.
 4. Compatibilidade `.nvl`/`.ptn`.
-5. Playhead temporal e preview MASTER; a pré-escuta da Library já foi transposta.
+5. Preview MASTER; playhead temporal e pré-escuta da Library já foram transpostos.
 6. FORM undo/redo/nome/capture bank.
 7. Completar tradução global e ampliar LEARN dos grupos nativos até a
    granularidade dos 106 tópicos Web quando houver controle equivalente.

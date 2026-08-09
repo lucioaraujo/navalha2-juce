@@ -463,6 +463,36 @@ public:
         repaint();
     }
 
+    void setSourceDuration(std::size_t sourceIndex, double seconds)
+    {
+        if (sourceIndex >= sourceDurations.size())
+            return;
+        const auto duration = std::isfinite(seconds) && seconds > 0.0
+            ? seconds : 0.0;
+        if (std::abs(sourceDurations[sourceIndex] - duration) < 1.0e-6)
+            return;
+        sourceDurations[sourceIndex] = duration;
+        repaint();
+    }
+
+    void setPlayheads(const std::array<double, 2>& positions)
+    {
+        auto changed = false;
+        for (std::size_t source = 0; source < playheads.size(); ++source)
+        {
+            const auto position = std::isfinite(positions[source])
+                    && positions[source] >= 0.0
+                ? std::clamp(positions[source], 0.0, 1.0) : -1.0;
+            if (std::abs(playheads[source] - position) > 1.0e-6)
+            {
+                playheads[source] = position;
+                changed = true;
+            }
+        }
+        if (changed)
+            repaint();
+    }
+
     void setSlices(std::size_t sourceIndex,
                    std::span<const navalha::Slice> newSlices)
     {
@@ -629,6 +659,59 @@ public:
                             static_cast<int>(x) + 3,
                             lane.getY() + 18, 38, 18,
                             juce::Justification::left);
+                }
+
+                const auto playhead = playheads[sourceIndex];
+                if (playhead >= 0.0)
+                {
+                    const auto x = static_cast<float>(lane.getX())
+                        + static_cast<float>(playhead)
+                            * static_cast<float>(lane.getWidth());
+                    graphics.setColour(sourceAccentHigh);
+                    graphics.fillRect(
+                        x - 1.0F, static_cast<float>(lane.getY()), 2.0F,
+                        static_cast<float>(lane.getHeight()));
+                    juce::Path marker;
+                    marker.addTriangle(
+                        x - 6.0F, static_cast<float>(lane.getY()),
+                        x + 6.0F, static_cast<float>(lane.getY()),
+                        x, static_cast<float>(lane.getY() + 8));
+                    graphics.fillPath(marker);
+                }
+
+                const auto duration = sourceDurations[sourceIndex];
+                if (duration > 0.0)
+                {
+                    const auto timeText = [] (double seconds)
+                    {
+                        const auto totalMilliseconds = static_cast<std::int64_t>(
+                            std::llround(std::max(0.0, seconds) * 1000.0));
+                        return juce::String::formatted(
+                            "%02lld:%02lld.%03lld",
+                            static_cast<long long>(totalMilliseconds / 60000),
+                            static_cast<long long>(
+                                (totalMilliseconds / 1000) % 60),
+                            static_cast<long long>(totalMilliseconds % 1000));
+                    };
+                    const auto current = playhead >= 0.0
+                        ? playhead * duration : 0.0;
+                    const auto readout = playhead >= 0.0
+                        ? timeText(current) + " / " + timeText(duration)
+                        : "DUR " + timeText(duration);
+                    auto readoutBounds = lane.removeFromTop(22)
+                        .removeFromRight(std::clamp(
+                            lane.getWidth() - 116, 0, 224))
+                        .reduced(2);
+                    graphics.setColour(
+                        juce::Colour(Arcade::background).withAlpha(0.90F));
+                    graphics.fillRoundedRectangle(
+                        readoutBounds.toFloat(), 2.0F);
+                    graphics.setColour(sourceAccentHigh);
+                    graphics.setFont(juce::Font(juce::FontOptions(
+                        "DejaVu Sans Mono", 9.0F, juce::Font::bold)));
+                    graphics.drawFittedText(
+                        readout, readoutBounds,
+                        juce::Justification::centredRight, 1);
                 }
             }
 
@@ -800,6 +883,8 @@ private:
 
     std::array<std::vector<navalha::WaveformPeak>, 2> peaks;
     std::array<std::vector<double>, 2> sliceBoundaries;
+    std::array<double, 2> sourceDurations {};
+    std::array<double, 2> playheads {-1.0, -1.0};
     std::array<navalha::Slice, 2> editRanges {
         navalha::Slice {0.0, 1.0}, navalha::Slice {0.0, 1.0}};
     EditMode editMode = EditMode::region;
@@ -4398,6 +4483,7 @@ private:
         outputRightMeter.repaint();
 
         const auto transport = engine.transportTelemetry();
+        waveform.setPlayheads(transport.sourcePlayhead);
         const auto nowMilliseconds = juce::Time::getMillisecondCounterHiRes();
         if (transport.running && !displayedTransportRunning)
             transportStartedAtMilliseconds =
@@ -6016,6 +6102,10 @@ private:
             sliceSource.setSelectedItemIndex(
                 static_cast<int>(sourceIndex), juce::dontSendNotification);
             waveform.setPeaks(sourceIndex, std::move(newPeaks));
+            waveform.setSourceDuration(
+                sourceIndex,
+                static_cast<double>(sourceBuffers[sourceIndex]->size())
+                    / sourceBuffers[sourceIndex]->sampleRate());
             refreshSliceEditor();
             setAudioChannels(0, 2);
             showStatus((sourceIndex == 0 ? "SOURCE A | " : "SOURCE B | ")
@@ -6244,12 +6334,20 @@ private:
                 engine.setSourceBuffer(source, sourceBuffers[source].get());
             for (std::size_t source = 0;
                  source < sourceBuffers.size(); ++source)
+            {
                 waveform.setPeaks(
                     source,
                     sourceBuffers[source] == nullptr
                         ? std::vector<navalha::WaveformPeak> {}
                         : navalha::buildWaveformPeaks(
                             *sourceBuffers[source], 2048));
+                waveform.setSourceDuration(
+                    source,
+                    sourceBuffers[source] == nullptr
+                        ? 0.0
+                        : static_cast<double>(sourceBuffers[source]->size())
+                            / sourceBuffers[source]->sampleRate());
+            }
             syncControlsFromSession();
             setAudioChannels(0, 2);
             showStatus(

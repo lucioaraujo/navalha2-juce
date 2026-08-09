@@ -675,21 +675,33 @@ int main()
     player.prepare(8.0);
     player.setBuffer(&audioBuffer);
     player.trigger({0.25, 0.75});
+    require(approximately(player.normalizedPosition(), 0.25),
+            "Forward playhead must begin at the slice start");
+    const auto forwardFirst = player.process().left;
+    require(approximately(player.normalizedPosition(), 0.375),
+            "Forward playhead must advance in source coordinates");
     std::vector<float> forward;
     while (player.isPlaying())
         forward.push_back(player.process().left);
-    require(forward.size() == 4, "Half of an eight-sample buffer must render four samples");
-    require(approximately(forward.front(), 0.0) && approximately(forward.back(), 0.0),
+    require(forward.size() == 3, "The remaining half-slice must render three samples");
+    require(approximately(forwardFirst, 0.0)
+                && approximately(forward.back(), 0.0),
             "Slice playback must de-click both boundaries");
-    require(approximately(forward[1], 3.0) && approximately(forward[2], 4.0),
+    require(approximately(forward[0], 3.0) && approximately(forward[1], 4.0),
             "Forward slice playback must preserve the interior sample order");
+    require(player.normalizedPosition() < 0.0,
+            "Finished playback must withdraw the waveform playhead");
 
     player.trigger({0.25, 0.75}, true);
+    const auto reverseStart = player.normalizedPosition();
+    static_cast<void>(player.process());
+    require(player.normalizedPosition() < reverseStart,
+            "Reverse playhead must move toward the slice start");
     std::vector<float> reversed;
     while (player.isPlaying())
         reversed.push_back(player.process().left);
-    require(reversed.size() == 4, "Reverse must preserve slice duration");
-    require(approximately(reversed[1], 4.0) && approximately(reversed[2], 3.0),
+    require(reversed.size() == 3, "Reverse must preserve the remaining slice duration");
+    require(approximately(reversed[0], 4.0) && approximately(reversed[1], 3.0),
             "Reverse must read the same slice in the opposite direction");
 
     player.trigger({0.0, 1.0}, false, 2.0);
@@ -745,7 +757,10 @@ int main()
     require(engineOutput.left > 0.0F && engineOutput.right < 0.0F,
             "The engine must route a SOURCE B pattern event through its slice player");
     const auto runningTelemetry = engine.transportTelemetry();
-    require(runningTelemetry.running && runningTelemetry.generation > 0,
+    require(runningTelemetry.running && runningTelemetry.generation > 0
+                && runningTelemetry.sourcePlayhead[0] < 0.0
+                && runningTelemetry.sourcePlayhead[1] > 0.0
+                && runningTelemetry.sourcePlayhead[1] <= 1.0,
             "Audio thread must publish transport state without exposing SessionModel");
 
     require(engine.submitCommand({EngineCommandType::stop}),
@@ -756,6 +771,8 @@ int main()
             "Engine STOP must fade active voices to silence");
     require(!engine.transportTelemetry().running,
             "STOP telemetry must become visible to the UI atomically");
+    require(engine.transportTelemetry().sourcePlayhead[1] < 0.0,
+            "STOP must withdraw an inactive source playhead from the UI");
     require(!engine.submitCommand(
                 {EngineCommandType::setPatternCell, patternCount, 0, 0.0}),
             "Invalid UI commands must be rejected before reaching the audio thread");

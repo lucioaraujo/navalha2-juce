@@ -11,17 +11,17 @@ Atualizado em 9 de agosto de 2026.
 - auto-stop de gravação após cinco minutos;
 - indicador renomeado para `TRANSPORT: STOP/PLAY`;
 - fila de comandos ampliada para absorver rajadas válidas de macros e PERFORM;
-- 9/9 testes automatizados passando.
+- saída live-safe, dither TPDF PCM16/24 e site público inicial;
+- playhead/readout temporal A/B ligado à telemetria real do motor;
+- 10/10 testes automatizados passando.
 
 ## Prioridade de hoje
 
-1. Reiniciar o binário atual e validar visualmente o indicador de transporte
-   e os botões Heritage/Audition em single monitor.
-2. Testar PERFORM em dual monitor com SOURCE A/B carregados: PLAY, STOP, RESET,
-   AUTO, REPEAT, macros, FORM e XY MOD.
-3. Separar e corrigir as mensagens `COMMAND QUEUE FULL` e `INVALID VALUE`.
-4. Repetir REC→STOP com sinal audível e confirmar o auto-stop de cinco minutos.
-5. Registrar no relatório de validação os resultados e eventuais falhas.
+1. Completar FORM Advanced com nome, undo/redo e capture bank.
+2. Descobrir/importar takes anteriores e fechar preset/escrita RIFF posterior.
+3. Criar ALBUM PROJECT builder integrado à TAKE Timeline.
+4. Adicionar preview A/B no MASTER e fluxo de matching relativo.
+5. Executar o roteiro humano com áudio real e dois monitores.
 
 ## Próximas etapas técnicas
 
@@ -34,7 +34,6 @@ Atualizado em 9 de agosto de 2026.
 
 ## Lacunas de paridade ainda conhecidas
 
-- playhead temporal na waveform;
 - mixer BASIC/ADVANCED recolhível;
 - FORM com nome, undo/redo e capture bank;
 - importação de takes antigos;

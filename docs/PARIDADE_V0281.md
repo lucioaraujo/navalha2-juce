@@ -68,6 +68,8 @@ O protótipo JUCE não substitui o runtime atual até cumprir estes contratos.
 - implementado: intensidade/seed do JITTER e balance global A/B no shell;
 - implementado: mixer A/B e editor de slices/BLADE ligados à fila realtime;
 - implementado: overlay dos limites de slices sobre a waveform nativa;
+- implementado: playhead A/B derivado da thread de áudio, com cursores sobre as
+  duas waveforms, tempo atual/duração, movimento reverse e retirada após STOP;
 - implementado: controles completos e patterns de 16 passos das virtual voices;
 - implementado: comparador WAV para RMS, erro máximo, correlação e SNR;
 - implementado: compensação explícita de latência no comparador WAV;
