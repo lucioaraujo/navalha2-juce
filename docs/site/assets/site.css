@@ -104,6 +104,7 @@ h3 { font-size: .9rem; letter-spacing: .04em; text-transform: uppercase; }
 .source small { font-size: .56rem; letter-spacing: .14em; }
 .source b { margin-top: 12px; font-size: .72rem; }
 .source i { position: absolute; left: 0; right: 0; bottom: 15px; height: 1px; background: currentColor; box-shadow: 36px -12px 0 -0.25px, 76px 7px 0 -0.25px, 114px -19px 0 -0.25px, 158px -4px 0 -0.25px, 205px 8px 0 -0.25px, 255px -16px 0 -0.25px, 302px 2px 0 -0.25px, 355px -11px 0 -0.25px; }
+.source i::after { content: ""; position: absolute; top: -27px; left: 22%; width: 1px; height: 38px; background: currentColor; box-shadow: 78px 9px 0 currentColor, 163px -5px 0 currentColor, 250px 5px 0 currentColor; opacity: .92; }
 .source-a { color: var(--yellow); background: rgba(255,216,47,.035); }
 .source-b { color: #e84952; background: rgba(213,31,44,.045); }
 .blade { position: relative; width: min(184px, 64%); height: 46px; margin: -4px auto 5px; background: linear-gradient(180deg, #f4f5ef 0 12%, #9ca6a6 13% 47%, #e5e8e4 48% 53%, #596365 54% 100%); clip-path: polygon(0 23%, 9% 0, 91% 0, 100% 23%, 100% 77%, 91% 100%, 9% 100%, 0 77%); box-shadow: 0 4px 11px rgba(0,0,0,.45); transform-origin: 50% 88%; animation: blade-cut 7s cubic-bezier(.45, .03, .2, 1) infinite; }
