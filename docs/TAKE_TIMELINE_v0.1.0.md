@@ -37,7 +37,8 @@ O editor permite:
 - exportar a recipe de um take como JSON;
 - usar o WAV como SOURCE A ou SOURCE B;
 - enviar o take diretamente ao TRACK MASTER, que o carrega e analisa sem
-  modificar o arquivo original.
+  modificar o arquivo original;
+- adicionar o take uma única vez ao ALBUM PROJECT, preservando receipt e review;
 - transformar os metadados do take selecionado no preset das próximas
   gravações ou limpar esse preset.
 
@@ -77,8 +78,10 @@ preservados. A ampliação dessa telemetria permanece uma tarefa futura.
 - editar os campos da janela altera o catálogo privado, não os chunks RIFF INFO
   do WAV;
 - a descoberta é explícita por `IMPORT WAV FOLDER`; não há varredura automática
-  de toda a pasta Music ao iniciar o aplicativo;
-- o ALBUM PROJECT builder ainda não foi ligado ao catálogo de takes.
+  de toda a pasta Music ao iniciar o aplicativo.
+
+O fluxo editorial e seus limites estão documentados em
+[`ALBUM_PROJECT_v0.1.0.md`](ALBUM_PROJECT_v0.1.0.md).
 
 ## Versionamento visual
 

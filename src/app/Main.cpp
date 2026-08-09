@@ -21,6 +21,7 @@
 #include <string>
 #include <vector>
 
+#include "core/AlbumProject.h"
 #include "core/AudioEngine.h"
 #include "core/Json.h"
 #include "core/MasteringAlbumManifest.h"
@@ -3877,6 +3878,95 @@ public:
         return recordingMetadataPreset;
     }
 
+    [[nodiscard]] const navalha::AlbumProject& albumProject() const noexcept
+    {
+        return albumProjectDraft;
+    }
+
+    bool addTakeToAlbum(std::string_view id)
+    {
+        const auto* entry = takeCatalog.find(id);
+        if (entry == nullptr)
+            return false;
+        try
+        {
+            auto candidate = albumProjectDraft;
+            if (!navalha::addTakeToAlbumProject(candidate, *entry))
+            {
+                showStatus("ALBUM PROJECT | TAKE ALREADY ADDED");
+                return false;
+            }
+            persistAlbumProject(std::move(candidate));
+            showStatus("ALBUM PROJECT | TAKE ADDED | "
+                       + utf8(entry->filename));
+            return true;
+        }
+        catch (const std::exception& exception)
+        {
+            showStatus("ALBUM PROJECT ADD FAILED | "
+                       + juce::String(exception.what()));
+            return false;
+        }
+    }
+
+    bool moveAlbumTrack(std::size_t index, int offset)
+    {
+        try
+        {
+            auto candidate = albumProjectDraft;
+            if (!navalha::moveAlbumProjectTrack(candidate, index, offset))
+                return false;
+            persistAlbumProject(std::move(candidate));
+            showStatus("ALBUM PROJECT | TRACK ORDER SAVED");
+            return true;
+        }
+        catch (const std::exception& exception)
+        {
+            showStatus("ALBUM PROJECT MOVE FAILED | "
+                       + juce::String(exception.what()));
+            return false;
+        }
+    }
+
+    bool removeAlbumTrack(std::size_t index)
+    {
+        try
+        {
+            auto candidate = albumProjectDraft;
+            if (!navalha::removeAlbumProjectTrack(candidate, index))
+                return false;
+            persistAlbumProject(std::move(candidate));
+            showStatus("ALBUM PROJECT | TRACK REMOVED");
+            return true;
+        }
+        catch (const std::exception& exception)
+        {
+            showStatus("ALBUM PROJECT REMOVE FAILED | "
+                       + juce::String(exception.what()));
+            return false;
+        }
+    }
+
+    bool updateAlbumProjectMetadata(
+        std::string newTitle, std::string newArtist, std::string newNotes)
+    {
+        try
+        {
+            auto candidate = albumProjectDraft;
+            candidate.title = std::move(newTitle);
+            candidate.artist = std::move(newArtist);
+            candidate.notes = std::move(newNotes);
+            persistAlbumProject(std::move(candidate));
+            return true;
+        }
+        catch (const std::exception& exception)
+        {
+            showStatus("ALBUM PROJECT SAVE FAILED | "
+                       + juce::String(exception.what()));
+            return false;
+        }
+    }
+
     void setRecordingPreset(navalha::WavMetadata metadata)
     {
         navalha::normalizeWavMetadata(metadata);
@@ -4388,6 +4478,20 @@ private:
                                + juce::String(exception.what()));
                 }
             }
+            const auto albumJson = settings->getValue("albumProjectV1");
+            if (albumJson.isNotEmpty())
+            {
+                try
+                {
+                    albumProjectDraft = navalha::decodeAlbumProject(
+                        albumJson.toStdString());
+                }
+                catch (const std::exception& exception)
+                {
+                    showStatus("ALBUM PROJECT IGNORED | "
+                               + juce::String(exception.what()));
+                }
+            }
             if (settings->getBoolValue(
                     "recordingMetadataPresetInitialized", false))
             {
@@ -4439,6 +4543,19 @@ private:
         settings->setValue(
             "recordingPresetComment", utf8(recordingMetadataPreset.comment));
         static_cast<void>(settings->saveIfNeeded());
+    }
+
+    void persistAlbumProject(navalha::AlbumProject candidate)
+    {
+        navalha::normalizeAlbumProject(candidate);
+        const auto encoded = navalha::encodeAlbumProject(candidate);
+        auto* settings = applicationProperties.getUserSettings();
+        if (settings == nullptr)
+            throw std::runtime_error("Application settings are unavailable");
+        settings->setValue("albumProjectV1", utf8(encoded));
+        if (!settings->saveIfNeeded())
+            throw std::runtime_error("Unable to persist application settings");
+        albumProjectDraft = std::move(candidate);
     }
 
     void saveAudioSettings()
@@ -6741,6 +6858,7 @@ private:
     navalha::AudioEngine engine;
     navalha::RecordingWriterService recorder {engine};
     navalha::TakeCatalog takeCatalog;
+    navalha::AlbumProject albumProjectDraft;
     juce::File activeRecordingFile;
     juce::Time activeRecordingCreatedAt;
     std::uint32_t activeRecordingRate = 0;
@@ -7042,8 +7160,10 @@ class TakeTimelineComponent final : public juce::Component,
 public:
     TakeTimelineComponent(
         MainComponent& owner,
-        std::function<void(const juce::File&)> sendAction = {})
-        : main(owner), sendToMasterAction(std::move(sendAction))
+        std::function<void(const juce::File&)> sendAction = {},
+        std::function<void(std::string_view)> addAlbumAction = {})
+        : main(owner), sendToMasterAction(std::move(sendAction)),
+          addToAlbumAction(std::move(addAlbumAction))
     {
         setLookAndFeel(&lookAndFeel);
         heading.setText("TAKE TIMELINE", juce::dontSendNotification);
@@ -7132,6 +7252,11 @@ public:
             if (file.existsAsFile())
                 sendToMasterAction(file);
         });
+        configureButton(addToAlbum, "ADD TO ALBUM", [this]
+        {
+            if (!selectedId.empty() && addToAlbumAction)
+                addToAlbumAction(selectedId);
+        });
         configureButton(setPreset, "SET AS REC PRESET", [this]
         {
             if (!selectedId.empty())
@@ -7153,6 +7278,7 @@ public:
         useB.getProperties().set("arcadeAccent", "play");
         save.getProperties().set("arcadeAccent", "record");
         sendToMaster.getProperties().set("arcadeAccent", "play");
+        addToAlbum.getProperties().set("arcadeAccent", "play");
         sendToMaster.getProperties().set("learnKey", "masterwindow");
 
         note.setText(
@@ -7229,12 +7355,14 @@ public:
             sourceActions.getWidth() / 2).reduced(2));
         useB.setBounds(sourceActions.reduced(2));
         auto saveActions = area.removeFromTop(42);
-        const auto saveActionWidth = saveActions.getWidth() / 3;
+        const auto saveActionWidth = saveActions.getWidth() / 4;
         save.setBounds(
             saveActions.removeFromLeft(saveActionWidth).reduced(2));
         exportRecipe.setBounds(
             saveActions.removeFromLeft(saveActionWidth).reduced(2));
-        sendToMaster.setBounds(saveActions.reduced(2));
+        sendToMaster.setBounds(
+            saveActions.removeFromLeft(saveActionWidth).reduced(2));
+        addToAlbum.setBounds(saveActions.reduced(2));
         auto presetActions = area.removeFromTop(42);
         setPreset.setBounds(presetActions.removeFromLeft(
             presetActions.getWidth() / 2).reduced(2));
@@ -7443,10 +7571,10 @@ private:
 
     void setEditorEnabled(bool enabled)
     {
-        const std::array<juce::Component*, 15> components {
+        const std::array<juce::Component*, 16> components {
             &title, &artist, &project, &year, &comment, &status, &rating,
             &tags, &notes, &useA, &useB, &save, &exportRecipe,
-            &sendToMaster, &setPreset};
+            &sendToMaster, &addToAlbum, &setPreset};
         for (auto* component : components)
             component->setEnabled(enabled);
     }
@@ -7512,6 +7640,7 @@ private:
     juce::TextButton save;
     juce::TextButton exportRecipe;
     juce::TextButton sendToMaster;
+    juce::TextButton addToAlbum;
     juce::TextButton importFolder;
     juce::TextButton setPreset;
     juce::TextButton clearPreset;
@@ -7519,6 +7648,7 @@ private:
     juce::Label note;
     std::unique_ptr<juce::FileChooser> chooser;
     std::function<void(const juce::File&)> sendToMasterAction;
+    std::function<void(std::string_view)> addToAlbumAction;
     std::string selectedId;
     std::size_t displayedCount = std::numeric_limits<std::size_t>::max();
 };
@@ -8089,10 +8219,11 @@ private:
     std::array<Row, 6> rows;
 };
 
-class MasteringComponent final : public juce::Component
+class MasteringComponent final : public juce::Component,
+                                 private juce::ListBoxModel
 {
 public:
-    MasteringComponent()
+    explicit MasteringComponent(MainComponent& owner) : main(owner)
     {
         setLookAndFeel(&lookAndFeel);
         title.setText(
@@ -8119,7 +8250,15 @@ public:
         configure(loadRecipe, "LOAD RECIPE", [this] { chooseRecipe(); });
         configure(saveRecipe, "SAVE RECIPE", [this] { chooseRecipeOutput(); });
         configure(loadAlbum, "LOAD MANIFEST", [this] { chooseAlbum(); });
-        configure(renderAlbum, "RENDER ALBUM", [this] { chooseAlbumOutput(); });
+        configure(renderAlbum, "RENDER MANIFEST", [this] { chooseAlbumOutput(); });
+        configure(exportProject, "EXPORT PROJECT", [this]
+        {
+            chooseAlbumProjectOutput();
+        });
+        configure(renderProject, "RENDER PROJECT", [this]
+        {
+            chooseAlbumProjectOutputDirectory();
+        });
 
         sourceInfo.setText(
             "No TRACK MASTER source loaded", juce::dontSendNotification);
@@ -8151,6 +8290,39 @@ public:
         albumInfo.setText("No ALBUM MASTER manifest loaded", false);
         addAndMakeVisible(albumInfo);
 
+        configureAlbumLabel(albumTitleLabel, "ALBUM TITLE");
+        configureAlbumLabel(albumArtistLabel, "ARTIST");
+        configureAlbumLabel(albumNotesLabel, "NOTES");
+        for (auto* editor : {
+                 &albumTitleEditor, &albumArtistEditor, &albumNotesEditor})
+        {
+            styleEditableTextField(*editor);
+            addAndMakeVisible(*editor);
+            editor->onFocusLost = [this]
+            {
+                if (!syncingAlbumProject)
+                    saveAlbumProjectMetadata();
+            };
+        }
+        albumTitleEditor.setInputRestrictions(120);
+        albumArtistEditor.setInputRestrictions(120);
+        albumNotesEditor.setInputRestrictions(500);
+        albumSummary.setColour(
+            juce::Label::textColourId, juce::Colour(Arcade::muted));
+        albumSummary.setJustificationType(juce::Justification::centredLeft);
+        addAndMakeVisible(albumSummary);
+        albumTracks.setModel(this);
+        albumTracks.setRowHeight(54);
+        albumTracks.setColour(
+            juce::ListBox::backgroundColourId, juce::Colour(Arcade::background));
+        albumTracks.setColour(
+            juce::ListBox::outlineColourId, juce::Colour(Arcade::line));
+        albumTracks.setOutlineThickness(1);
+        addAndMakeVisible(albumTracks);
+        configure(moveAlbumUp, "MOVE UP", [this] { moveSelectedAlbumTrack(-1); });
+        configure(moveAlbumDown, "MOVE DOWN", [this] { moveSelectedAlbumTrack(1); });
+        configure(removeAlbumTrack, "REMOVE", [this] { removeSelectedAlbumTrack(); });
+
         status.setText(
             "MASTER is supplementary and never owns the realtime engine.",
             juce::dontSendNotification);
@@ -8159,12 +8331,25 @@ public:
         status.setJustificationType(juce::Justification::centredLeft);
         addAndMakeVisible(status);
         getProperties().set("learnKey", "masterwindow");
+        refreshAlbumProjectEditor();
         updateMode();
     }
 
     ~MasteringComponent() override
     {
+        albumTracks.setModel(nullptr);
         setLookAndFeel(nullptr);
+    }
+
+    void addTakeToProject(std::string_view id)
+    {
+        mode.setSelectedItemIndex(1, juce::dontSendNotification);
+        updateMode();
+        if (main.addTakeToAlbum(id))
+        {
+            refreshAlbumProjectEditor();
+            albumTracks.selectRow(getNumRows() - 1);
+        }
     }
 
     bool loadTrackFile(const juce::File& file)
@@ -8212,16 +8397,28 @@ public:
         mode.setBounds(area.removeFromTop(42).removeFromLeft(230).reduced(3));
 
         auto actions = area.removeFromTop(50);
-        loadTrack.setBounds(actions.removeFromLeft(130).reduced(3));
-        analyzeTrack.setBounds(actions.removeFromLeft(120).reduced(3));
-        renderTrack.setBounds(actions.removeFromLeft(150).reduced(3));
-        loadRecipe.setBounds(actions.removeFromLeft(135).reduced(3));
-        saveRecipe.setBounds(actions.removeFromLeft(135).reduced(3));
-        loadAlbum.setBounds(actions.removeFromLeft(155).reduced(3));
-        renderAlbum.setBounds(actions.removeFromLeft(155).reduced(3));
+        auto trackActions = actions;
+        loadTrack.setBounds(trackActions.removeFromLeft(130).reduced(3));
+        analyzeTrack.setBounds(trackActions.removeFromLeft(120).reduced(3));
+        renderTrack.setBounds(trackActions.removeFromLeft(150).reduced(3));
+        loadRecipe.setBounds(trackActions.removeFromLeft(135).reduced(3));
+        saveRecipe.setBounds(trackActions.removeFromLeft(135).reduced(3));
+        auto albumTopActions = actions;
+        const auto albumTopActionWidth = albumTopActions.getWidth() / 4;
+        loadAlbum.setBounds(
+            albumTopActions.removeFromLeft(albumTopActionWidth).reduced(3));
+        renderAlbum.setBounds(
+            albumTopActions.removeFromLeft(albumTopActionWidth).reduced(3));
+        exportProject.setBounds(
+            albumTopActions.removeFromLeft(albumTopActionWidth).reduced(3));
+        renderProject.setBounds(albumTopActions.reduced(3));
+
+        status.setBounds(area.removeFromBottom(38).reduced(3));
+        auto albumArea = area;
         sourceInfo.setBounds(area.removeFromTop(44).reduced(3));
 
-        auto trackArea = area.removeFromTop(430);
+        auto trackArea = area.removeFromTop(
+            std::min(430, std::max(0, area.getHeight())));
         metrics.setBounds(trackArea.removeFromLeft(310).reduced(3));
         auto parameters = trackArea.reduced(6);
         const auto leftWidth = parameters.getWidth() / 2;
@@ -8243,12 +8440,241 @@ public:
         place(saturation, right);
         place(ceiling, right);
 
-        albumInfo.setBounds(area.removeFromTop(
-            std::max(120, area.getHeight() - 42)).reduced(3));
-        status.setBounds(area.reduced(3));
+        albumInfo.setBounds(area.reduced(3));
+
+        auto albumTitleRow = albumArea.removeFromTop(42);
+        albumTitleLabel.setBounds(
+            albumTitleRow.removeFromLeft(110).reduced(2));
+        albumTitleEditor.setBounds(albumTitleRow.reduced(2));
+        auto albumArtistRow = albumArea.removeFromTop(42);
+        albumArtistLabel.setBounds(
+            albumArtistRow.removeFromLeft(110).reduced(2));
+        albumArtistEditor.setBounds(albumArtistRow.reduced(2));
+        auto albumNotesRow = albumArea.removeFromTop(42);
+        albumNotesLabel.setBounds(
+            albumNotesRow.removeFromLeft(110).reduced(2));
+        albumNotesEditor.setBounds(albumNotesRow.reduced(2));
+        albumSummary.setBounds(albumArea.removeFromTop(30).reduced(3));
+        auto albumActions = albumArea.removeFromBottom(46);
+        const auto albumActionWidth = albumActions.getWidth() / 3;
+        moveAlbumUp.setBounds(
+            albumActions.removeFromLeft(albumActionWidth).reduced(3));
+        moveAlbumDown.setBounds(
+            albumActions.removeFromLeft(albumActionWidth).reduced(3));
+        removeAlbumTrack.setBounds(albumActions.reduced(3));
+        albumTracks.setBounds(albumArea.reduced(3));
     }
 
 private:
+    int getNumRows() override
+    {
+        return static_cast<int>(main.albumProject().tracks.size());
+    }
+
+    void paintListBoxItem(int row,
+                          juce::Graphics& graphics,
+                          int rowWidth,
+                          int height,
+                          bool selected) override
+    {
+        const auto& tracks = main.albumProject().tracks;
+        if (!juce::isPositiveAndBelow(row, static_cast<int>(tracks.size())))
+            return;
+        const auto& track = tracks[static_cast<std::size_t>(row)];
+        const auto* take = main.take(track.takeId);
+        const auto available = take != nullptr
+            && juce::File(utf8(take->audioPath)).existsAsFile();
+        graphics.fillAll(selected
+            ? juce::Colour(0xff20251f) : juce::Colour(Arcade::surface));
+        graphics.setColour(juce::Colour(Arcade::line));
+        graphics.drawHorizontalLine(
+            height - 1, 5.0F, static_cast<float>(rowWidth - 5));
+        auto bounds = juce::Rectangle<int>(
+            0, 0, rowWidth, height).reduced(8, 4);
+        auto order = bounds.removeFromLeft(42);
+        graphics.setColour(juce::Colour(Arcade::yellowHigh));
+        graphics.setFont(juce::Font(
+            juce::FontOptions("DejaVu Sans Mono", 13.0F, juce::Font::bold)));
+        graphics.drawFittedText(
+            juce::String(row + 1).paddedLeft('0', 2), order,
+            juce::Justification::centred, 1);
+        graphics.setColour(selected
+            ? juce::Colour(Arcade::yellowHigh) : juce::Colour(Arcade::ink));
+        graphics.setFont(juce::Font(
+            juce::FontOptions("DejaVu Sans Mono", 11.0F, juce::Font::bold)));
+        graphics.drawFittedText(
+            utf8(track.title), bounds.removeFromTop(23),
+            juce::Justification::centredLeft, 1);
+        graphics.setColour(juce::Colour(Arcade::muted));
+        graphics.setFont(juce::Font(
+            juce::FontOptions("DejaVu Sans Mono", 9.0F, juce::Font::plain)));
+        graphics.drawFittedText(
+            utf8(track.filename) + " | "
+                + juce::String(track.durationSeconds, 2) + " s | "
+                + utf8(track.status)
+                + (available ? juce::String() : " | AUDIO MISSING"),
+            bounds, juce::Justification::centredLeft, 1);
+    }
+
+    void selectedRowsChanged(int row) override
+    {
+        const auto valid = juce::isPositiveAndBelow(row, getNumRows());
+        moveAlbumUp.setEnabled(valid && row > 0);
+        moveAlbumDown.setEnabled(valid && row + 1 < getNumRows());
+        removeAlbumTrack.setEnabled(valid);
+    }
+
+    void refreshAlbumProjectEditor()
+    {
+        const auto& project = main.albumProject();
+        syncingAlbumProject = true;
+        albumTitleEditor.setText(utf8(project.title), false);
+        albumArtistEditor.setText(utf8(project.artist), false);
+        albumNotesEditor.setText(utf8(project.notes), false);
+        syncingAlbumProject = false;
+        double seconds = 0.0;
+        for (const auto& track : project.tracks)
+            seconds += track.durationSeconds;
+        albumSummary.setText(
+            juce::String(project.tracks.size())
+                + (project.tracks.size() == 1 ? " TRACK | " : " TRACKS | ")
+                + juce::String(seconds, 2) + " s | ORIGINAL WAVs UNCHANGED",
+            juce::dontSendNotification);
+        albumTracks.updateContent();
+        albumTracks.repaint();
+        selectedRowsChanged(albumTracks.getSelectedRow());
+    }
+
+    void saveAlbumProjectMetadata()
+    {
+        static_cast<void>(main.updateAlbumProjectMetadata(
+            albumTitleEditor.getText().toStdString(),
+            albumArtistEditor.getText().toStdString(),
+            albumNotesEditor.getText().toStdString()));
+        refreshAlbumProjectEditor();
+    }
+
+    void moveSelectedAlbumTrack(int offset)
+    {
+        const auto row = albumTracks.getSelectedRow();
+        if (!juce::isPositiveAndBelow(row, getNumRows())
+            || !main.moveAlbumTrack(static_cast<std::size_t>(row), offset))
+            return;
+        const auto target = std::clamp(row + offset, 0, getNumRows() - 1);
+        refreshAlbumProjectEditor();
+        albumTracks.selectRow(target);
+    }
+
+    void removeSelectedAlbumTrack()
+    {
+        const auto row = albumTracks.getSelectedRow();
+        if (!juce::isPositiveAndBelow(row, getNumRows())
+            || !main.removeAlbumTrack(static_cast<std::size_t>(row)))
+            return;
+        refreshAlbumProjectEditor();
+        if (getNumRows() > 0)
+            albumTracks.selectRow(std::min(row, getNumRows() - 1));
+    }
+
+    void chooseAlbumProjectOutput()
+    {
+        if (main.albumProject().tracks.empty())
+        {
+            setStatus("ADD A TAKE BEFORE EXPORTING ALBUM PROJECT");
+            return;
+        }
+        const auto suggestedName = safeMasterStem(
+            utf8(main.albumProject().title)) + ".navalha-album.json";
+        chooser = std::make_unique<juce::FileChooser>(
+            "Export ALBUM PROJECT", juce::File {}.getChildFile(suggestedName),
+            "*.json");
+        chooser->launchAsync(
+            juce::FileBrowserComponent::saveMode
+                | juce::FileBrowserComponent::canSelectFiles
+                | juce::FileBrowserComponent::warnAboutOverwriting,
+            [this] (const juce::FileChooser& selected)
+            {
+                auto file = selected.getResult();
+                if (file != juce::File {})
+                {
+                    if (!file.hasFileExtension("json"))
+                        file = file.withFileExtension("json");
+                    try
+                    {
+                        const auto json = navalha::encodeAlbumProject(
+                            main.albumProject(),
+                            juce::Time::getCurrentTime().toISO8601(true)
+                                .toStdString());
+                        const auto ok = file.replaceWithText(utf8(json));
+                        setStatus(ok
+                            ? "ALBUM PROJECT EXPORTED | " + file.getFileName()
+                            : "ALBUM PROJECT EXPORT FAILED");
+                    }
+                    catch (const std::exception& exception)
+                    {
+                        setStatus("ALBUM PROJECT EXPORT FAILED | "
+                                  + juce::String(exception.what()));
+                    }
+                }
+                chooser.reset();
+            });
+    }
+
+    void prepareAlbumFromProject()
+    {
+        const auto& project = main.albumProject();
+        if (project.tracks.empty())
+            throw std::invalid_argument("ALBUM PROJECT contains no tracks");
+        navalha::AlbumMasterManifest prepared;
+        prepared.createdAt = juce::Time::getCurrentTime()
+            .toISO8601(true).toStdString();
+        prepared.title = project.title;
+        prepared.artist = project.artist;
+        prepared.notes = project.notes;
+        prepared.chain = parameters();
+        std::vector<juce::File> sources;
+        prepared.tracks.reserve(project.tracks.size());
+        sources.reserve(project.tracks.size());
+        for (const auto& projectTrack : project.tracks)
+        {
+            const auto* take = main.take(projectTrack.takeId);
+            if (take == nullptr)
+                throw std::runtime_error(
+                    "TAKE no longer exists: " + projectTrack.filename);
+            const juce::File sourcePath(utf8(take->audioPath));
+            if (!sourcePath.existsAsFile())
+                throw std::runtime_error(
+                    "Missing album track: " + projectTrack.filename);
+            navalha::AlbumManifestTrack track;
+            track.id = projectTrack.id;
+            track.title = projectTrack.title;
+            track.filename = sourcePath.getFileName().toStdString();
+            track.status = projectTrack.status;
+            track.settings = projectTrack.settings;
+            prepared.tracks.push_back(std::move(track));
+            sources.push_back(sourcePath);
+        }
+        album = std::move(prepared);
+        albumSourceFiles = std::move(sources);
+        albumFile = juce::File {};
+    }
+
+    void chooseAlbumProjectOutputDirectory()
+    {
+        if (busy.load())
+            return;
+        try
+        {
+            prepareAlbumFromProject();
+            chooseAlbumOutput();
+        }
+        catch (const std::exception& exception)
+        {
+            setStatus("ALBUM PROJECT RENDER BLOCKED | "
+                      + juce::String(exception.what()));
+        }
+    }
+
     void configure(juce::TextButton& button,
                    const juce::String& text,
                    std::function<void()> action)
@@ -8256,6 +8682,16 @@ private:
         button.setButtonText(text);
         button.onClick = std::move(action);
         addAndMakeVisible(button);
+    }
+
+    void configureAlbumLabel(juce::Label& label, const juce::String& text)
+    {
+        label.setText(text, juce::dontSendNotification);
+        label.setColour(
+            juce::Label::textColourId, juce::Colour(Arcade::muted));
+        label.setFont(juce::Font(
+            juce::FontOptions("DejaVu Sans Mono", 10.0F, juce::Font::bold)));
+        addAndMakeVisible(label);
     }
 
     void configureParameter(juce::Slider& slider,
@@ -8326,7 +8762,24 @@ private:
             component->setVisible(trackMode);
         loadAlbum.setVisible(!trackMode);
         renderAlbum.setVisible(!trackMode);
-        albumInfo.setVisible(!trackMode);
+        exportProject.setVisible(!trackMode);
+        renderProject.setVisible(!trackMode);
+        albumInfo.setVisible(false);
+        for (auto* component : {
+                 static_cast<juce::Component*>(&albumTitleLabel),
+                 static_cast<juce::Component*>(&albumArtistLabel),
+                 static_cast<juce::Component*>(&albumNotesLabel),
+                 static_cast<juce::Component*>(&albumTitleEditor),
+                 static_cast<juce::Component*>(&albumArtistEditor),
+                 static_cast<juce::Component*>(&albumNotesEditor),
+                 static_cast<juce::Component*>(&albumSummary),
+                 static_cast<juce::Component*>(&albumTracks),
+                 static_cast<juce::Component*>(&moveAlbumUp),
+                 static_cast<juce::Component*>(&moveAlbumDown),
+                 static_cast<juce::Component*>(&removeAlbumTrack)})
+            component->setVisible(!trackMode);
+        if (!trackMode)
+            refreshAlbumProjectEditor();
     }
 
     void chooseTrack()
@@ -8522,6 +8975,12 @@ private:
                         album = navalha::decodeAlbumMasterManifest(
                             file.loadFileAsString().toStdString());
                         albumFile = file;
+                        albumSourceFiles.clear();
+                        albumSourceFiles.reserve(album.tracks.size());
+                        for (const auto& track : album.tracks)
+                            albumSourceFiles.push_back(
+                                file.getParentDirectory().getChildFile(
+                                    utf8(track.filename)));
                         juce::String description;
                         description << album.title << "\n"
                                     << album.artist << "\n"
@@ -8558,7 +9017,11 @@ private:
         }
         chooser = std::make_unique<juce::FileChooser>(
             "Choose ALBUM MASTER output directory",
-            albumFile.getParentDirectory(), "*");
+            albumFile == juce::File {}
+                ? juce::File::getSpecialLocation(
+                    juce::File::userMusicDirectory)
+                : albumFile.getParentDirectory(),
+            "*");
         chooser->launchAsync(
             juce::FileBrowserComponent::openMode
                 | juce::FileBrowserComponent::canSelectDirectories,
@@ -8575,11 +9038,13 @@ private:
     {
         const auto manifest = album;
         const auto manifestDirectory = albumFile.getParentDirectory();
+        const auto sourceFiles = albumSourceFiles;
         busy.store(true);
         setStatus("ALBUM MASTER RENDERING...");
         juce::Component::SafePointer<MasteringComponent> safe(this);
         if (!juce::Thread::launch(
-                [safe, manifest, manifestDirectory, outputDirectory]
+                [safe, manifest, manifestDirectory, sourceFiles,
+                 outputDirectory]
                 {
                     juce::String result;
                     try
@@ -8590,8 +9055,11 @@ private:
                              index < manifest.tracks.size(); ++index)
                         {
                             const auto& track = manifest.tracks[index];
-                            const auto sourcePath = manifestDirectory.getChildFile(
-                                juce::String(track.filename));
+                            const auto sourcePath = sourceFiles.size()
+                                    == manifest.tracks.size()
+                                ? sourceFiles[index]
+                                : manifestDirectory.getChildFile(
+                                    juce::String(track.filename));
                             if (!sourcePath.existsAsFile())
                                 throw std::runtime_error(
                                     "Missing album track: " + track.filename);
@@ -8656,6 +9124,7 @@ private:
         status.setText(message, juce::dontSendNotification);
     }
 
+    MainComponent& main;
     ArcadeLookAndFeel lookAndFeel;
     juce::Label title;
     juce::Label sourceInfo;
@@ -8668,8 +9137,21 @@ private:
     juce::TextButton saveRecipe;
     juce::TextButton loadAlbum;
     juce::TextButton renderAlbum;
+    juce::TextButton exportProject;
+    juce::TextButton renderProject;
     MasterMetricsList metrics;
     juce::TextEditor albumInfo;
+    juce::Label albumTitleLabel;
+    juce::Label albumArtistLabel;
+    juce::Label albumNotesLabel;
+    juce::TextEditor albumTitleEditor;
+    juce::TextEditor albumArtistEditor;
+    juce::TextEditor albumNotesEditor;
+    juce::Label albumSummary;
+    juce::ListBox albumTracks;
+    juce::TextButton moveAlbumUp;
+    juce::TextButton moveAlbumDown;
+    juce::TextButton removeAlbumTrack;
     juce::Slider trim;
     juce::Slider highPass;
     juce::Slider lowShelf;
@@ -8685,6 +9167,8 @@ private:
     juce::File sourceFile;
     navalha::AlbumMasterManifest album;
     juce::File albumFile;
+    std::vector<juce::File> albumSourceFiles;
+    bool syncingAlbumProject = false;
     std::atomic<bool> busy {false};
 };
 
@@ -8692,13 +9176,18 @@ class ProductionWorkspaceComponent final : public juce::Component
 {
 public:
     explicit ProductionWorkspaceComponent(MainComponent& main)
-        : takes(main, [this] (const juce::File& file)
+        : mastering(main), takes(main, [this] (const juce::File& file)
           {
               if (mastering.loadTrackFile(file))
               {
                   selectedPage = 1;
                   updatePageVisibility();
               }
+          }, [this] (std::string_view id)
+          {
+              mastering.addTakeToProject(id);
+              selectedPage = 1;
+              updatePageVisibility();
           })
     {
         setLookAndFeel(&lookAndFeel);

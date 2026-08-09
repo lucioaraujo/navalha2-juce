@@ -152,6 +152,8 @@ O runtime atual continua em:
   leitura dos metadados RIFF disponíveis;
 - preset privado de metadados derivado de qualquer take e aplicado somente às
   gravações futuras;
+- ALBUM PROJECT persistente com seleção de takes, deduplicação, ordem editorial,
+  exportação v1 e render direto pelo ALBUM MASTER;
 - painel JUCE de dispositivo, saída estéreo, buffer e sample rate;
 - configuração do dispositivo persistida nas preferências locais do aplicativo;
 - invariantes compatíveis com Project v2;

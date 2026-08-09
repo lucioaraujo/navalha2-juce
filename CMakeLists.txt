@@ -12,6 +12,7 @@ set(NAVALHA_PD_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../NAVALHA2_PD" CACHE PATH
     "Path to the sibling Navalha 2 Pure Data/web repository")
 
 add_library(navalha_core STATIC
+    src/core/AlbumProject.cpp
     src/core/AssistedRng.cpp
     src/core/AssistedPerformer.cpp
     src/core/AudioComparison.cpp

@@ -12,6 +12,7 @@ fi
 c++ -std=c++20 -Wall -Wextra -Wpedantic -Werror -pthread \
   $SANITIZER_FLAGS \
   -I"$SCRIPT_DIR/src" \
+  "$SCRIPT_DIR/src/core/AlbumProject.cpp" \
   "$SCRIPT_DIR/src/core/AssistedRng.cpp" \
   "$SCRIPT_DIR/src/core/AssistedPerformer.cpp" \
   "$SCRIPT_DIR/src/core/AudioComparison.cpp" \

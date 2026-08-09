@@ -144,6 +144,8 @@ O protótipo JUCE não substitui o runtime atual até cumprir estes contratos.
   deduplicação por caminho, dados técnicos e leitura de tags RIFF disponíveis;
 - implementado: preset persistente de metadados derivado do take selecionado e
   aplicado exclusivamente a gravações futuras;
+- implementado: ALBUM PROJECT v1 persistente com deduplicação de takes, ordem,
+  receipt/review, duração total, exportação e render direto pelo ALBUM MASTER;
 - implementado: decisões Assisted de source e seleção de pattern;
 - implementado: recombinação Assisted de pattern com reverse, interleave,
   substituição limitada, MEMORY e mínimo de células sonoras;

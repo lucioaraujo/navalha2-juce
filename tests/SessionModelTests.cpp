@@ -1,3 +1,4 @@
+#include "core/AlbumProject.h"
 #include "core/AssistedRng.h"
 #include "core/AssistedPerformer.h"
 #include "core/AudioComparison.h"
@@ -2257,6 +2258,63 @@ int main()
     }
     require(rejected,
             "ALBUM MASTER manifest must reject unsafe audio references");
+
+    AlbumProject albumProject;
+    auto projectTakeA = takeEntry;
+    projectTakeA.id = "take-album-a";
+    projectTakeA.filename = "album-a.wav";
+    projectTakeA.metadata.title = "Opening";
+    projectTakeA.metadata.artist = "Navalha 2";
+    projectTakeA.metadata.project = "Validation Album";
+    projectTakeA.durationSeconds = 4.0;
+    auto projectTakeB = projectTakeA;
+    projectTakeB.id = "take-album-b";
+    projectTakeB.filename = "album-b.wav";
+    projectTakeB.metadata.title = "Closing";
+    projectTakeB.durationSeconds = 7.5;
+    require(addTakeToAlbumProject(albumProject, projectTakeA)
+                && addTakeToAlbumProject(albumProject, projectTakeB)
+                && !addTakeToAlbumProject(albumProject, projectTakeA)
+                && albumProject.title == "Validation Album"
+                && albumProject.artist == "Navalha 2"
+                && albumProject.tracks.size() == 2,
+            "ALBUM PROJECT must add each TAKE once and infer album metadata");
+    require(moveAlbumProjectTrack(albumProject, 1, -1)
+                && albumProject.tracks.front().takeId == projectTakeB.id
+                && !moveAlbumProjectTrack(albumProject, 0, -1),
+            "ALBUM PROJECT must preserve explicit bounded track order");
+    const auto albumProjectJson = encodeAlbumProject(
+        albumProject, "2026-08-09T20:00:00Z");
+    const auto decodedAlbumProject = decodeAlbumProject(albumProjectJson);
+    require(decodedAlbumProject.title == albumProject.title
+                && decodedAlbumProject.tracks.size() == 2,
+            "ALBUM PROJECT v1 must preserve album metadata and track count");
+    require(decodedAlbumProject.tracks.front().takeId == projectTakeB.id,
+            "ALBUM PROJECT v1 must preserve explicit track order");
+    require(decodedAlbumProject.tracks.front().recipeJson.find(
+                "navalha-take-recipe") != std::string::npos
+                && decodedAlbumProject.tracks.front().recipeJson.find(
+                    "0x12345678") != std::string::npos,
+            "ALBUM PROJECT v1 must preserve the TAKE receipt");
+    require(decodedAlbumProject.tracks.front().review.rating == 5
+                && decodedAlbumProject.tracks.front().review.status
+                    == "EXPERIMENT",
+            "ALBUM PROJECT v1 must preserve the normalized TAKE review");
+    require(removeAlbumProjectTrack(albumProject, 0)
+                && albumProject.tracks.size() == 1
+                && !removeAlbumProjectTrack(albumProject, 5),
+            "ALBUM PROJECT must remove only an existing ordered track");
+    rejected = false;
+    try
+    {
+        static_cast<void>(decodeAlbumProject(
+            R"({"format":"navalha-album-project","version":2,"tracks":[]})"));
+    }
+    catch (const std::invalid_argument&)
+    {
+        rejected = true;
+    }
+    require(rejected, "ALBUM PROJECT must reject unsupported versions");
 
     std::cout << "Navalha JUCE migration core contracts: OK\n";
     return 0;

@@ -33,13 +33,12 @@ Bloqueadores reais para declarar paridade funcional completa, após a primeira
 etapa da TAKE Timeline em JUCE v0.1.0:
 
 1. escrita RIFF posterior e opcional dos metadados editados no catálogo;
-2. construtor de ALBUM PROJECT a partir dos takes;
-3. importação/exportação histórica `.nvl`/`.ptn`;
-4. preview/audição dentro de MASTER e matching relativo do fluxo v0.28;
-5. validações humanas de áudio real, dois monitores e sessão prolongada.
+2. importação/exportação histórica `.nvl`/`.ptn`;
+3. preview/audição dentro de MASTER e matching relativo do fluxo v0.28;
+4. validações humanas de áudio real, dois monitores e sessão prolongada.
 
-Contagem não ponderada da matriz nesta atualização: 36 áreas completas,
-completas técnicas ou implementadas no fluxo equivalente; 10 parciais; 5
+Contagem não ponderada da matriz nesta atualização: 37 áreas completas,
+completas técnicas ou implementadas no fluxo equivalente; 10 parciais; 4
 ausentes; e uma conveniência Web substituída deliberadamente por comportamento
 nativo. Os estados “completo técnico” continuam exigindo aceitação humana onde
 indicado e não autorizam declarar substituição integral do produto.
@@ -82,7 +81,7 @@ indicado e não autorizam declarar substituição integral do produto.
 | Review/status/rating/tags | Completo | estados EXPERIMENT…MASTER, rating 0–5, tags e notas persistem no catálogo privado |
 | Recipe JSON por TAKE | Parcial | snapshot pré-REC exportável; cursor interno Assisted é declarado indisponível |
 | TAKE → SOURCE A/B | Completo | recarrega o WAV pelo decoder seguro sem alterar o take original |
-| ALBUM PROJECT builder | Ausente | não há ordenação de takes e export de manifesto a partir da main |
+| ALBUM PROJECT builder | Completo técnico | TAKE Timeline adiciona sem duplicar; título/artista/notas, ordem, remoção, duração, persistência privada, receipt/review, export `navalha-album-project` v1 e render direto pelo catálogo; falta ensaio auditivo e edição JUCE de trim/gap/fades por faixa |
 | ALBUM MASTER por manifesto | Completo | load, preflight, gaps, fades, trims e batch PCM24 |
 | TRACK MASTER | Completo técnico | análise, receita e render; aprovação auditiva ainda pendente |
 | MASTER preview/audition | Ausente | processamento é analyze/render, sem reprodução A/B no painel |
@@ -220,16 +219,15 @@ Mantidos separados por segurança ou por não representarem um estado binário:
 
 ## Ordem recomendada para concluir
 
-1. ALBUM PROJECT builder integrado aos takes.
-2. Escrita RIFF posterior, explícita e recuperável, para metadados de catálogo.
-3. Workspaces reais e mixer BASIC/ADVANCED.
-4. Compatibilidade `.nvl`/`.ptn`.
-5. Preview MASTER; playhead temporal e pré-escuta da Library já foram transpostos.
-6. Completar tradução global e ampliar LEARN dos grupos nativos até a
+1. Escrita RIFF posterior, explícita e recuperável, para metadados de catálogo.
+2. Workspaces reais e mixer BASIC/ADVANCED.
+3. Compatibilidade `.nvl`/`.ptn`.
+4. Preview MASTER; playhead temporal e pré-escuta da Library já foram transpostos.
+5. Completar tradução global e ampliar LEARN dos grupos nativos até a
    granularidade dos 106 tópicos Web quando houver controle equivalente.
-7. Aceitação auditiva com sinal real, incluindo o auto-stop de 5 minutos,
+6. Aceitação auditiva com sinal real, incluindo o auto-stop de 5 minutos,
    dois monitores e soak prolongado.
-8. Gerar `.deb` para validação interna; somente depois preparar publicação
+7. Gerar `.deb` para validação interna; somente depois preparar publicação
    multiplataforma.
 
 Nenhum item marcado como ausente deve ser descrito como implementado em
