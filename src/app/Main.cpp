@@ -11556,6 +11556,9 @@ public:
 
     void initialise(const juce::String&) override
     {
+        // Modal alerts are top-level JUCE components. Give them the same
+        // Arcade skin as the instrument instead of the generic grey fallback.
+        juce::LookAndFeel::setDefaultLookAndFeel(&arcadeLookAndFeel);
         mainWindow = std::make_unique<MainWindow>(
             [this] (MainComponent& main, bool makeVisible)
             {
@@ -11570,9 +11573,11 @@ public:
         preparedPerformance.reset();
         productionWindow.reset();
         mainWindow.reset();
+        juce::LookAndFeel::setDefaultLookAndFeel(nullptr);
     }
 
 private:
+    ArcadeLookAndFeel arcadeLookAndFeel;
     void showPerform(MainComponent& main, bool makeVisible)
     {
         if (!makeVisible)
