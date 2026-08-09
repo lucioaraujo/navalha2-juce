@@ -2,6 +2,10 @@
 
 Pacote validado: `navalha2_0.1.0_x86_64.deb`.
 
+Outros idiomas: [English](INSTALLATION_DEB_INTERNAL_EN.md),
+[Français](INSTALLATION_DEB_INTERNE_FR.md) e
+[Español](INSTALACION_DEB_INTERNA_ES.md).
+
 Os requisitos de computador, tela e sistema estão em
 [`REQUISITOS_MINIMOS_LINUX.md`](REQUISITOS_MINIMOS_LINUX.md).
 
