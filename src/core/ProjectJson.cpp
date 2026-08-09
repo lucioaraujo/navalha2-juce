@@ -18,8 +18,17 @@ Json encodeSlices(const SliceBank& bank)
     return Json(std::move(values));
 }
 
-Json encodeSource(const SourceState& source, const SourceReference& reference)
+Json encodeSource(const SourceState& source, const SourceReference& reference,
+                  const NamedSliceBankStore& formBanks)
 {
+    Json::Object namedBanks;
+    for (std::size_t index = 1; index < sliceBankProfileCount; ++index)
+    {
+        const auto profile = static_cast<SliceBankProfile>(index);
+        if (formBanks.has(profile))
+            namedBanks.emplace(
+                toString(profile), encodeSlices(formBanks.bank(profile)));
+    }
     return Json::Object {
         {"sample", Json::Object {
             {"filename", reference.filename},
@@ -31,6 +40,8 @@ Json encodeSource(const SourceState& source, const SourceReference& reference)
         }},
         {"slicing", Json::Object {
             {"slices", encodeSlices(source.sliceBank)},
+            {"sliceBanks", std::move(namedBanks)},
+            {"activeSliceBank", toString(formBanks.active())},
             {"storedCount", static_cast<double>(source.sliceBank.size())},
             {"operationalCount", static_cast<double>(source.sliceBank.size())}
         }}
@@ -75,10 +86,10 @@ double finiteNumber(const Json* value, double fallback)
     return std::isfinite(number) ? number : fallback;
 }
 
-void decodeSliceArray(const Json* slices, SliceBank& bank)
+bool decodeSliceArray(const Json* slices, SliceBank& bank)
 {
     if (slices == nullptr || !slices->isArray() || slices->array().empty())
-        return;
+        return false;
 
     std::array<Slice, maxSlices> decoded {};
     std::size_t count = 0;
@@ -94,15 +105,34 @@ void decodeSliceArray(const Json* slices, SliceBank& bank)
             decoded[count++] = slice;
     }
     if (count == 0)
-        return;
+        return false;
     bank.divideRegion(decoded[0].start, decoded[count - 1].end, count);
     for (std::size_t index = 0; index < count; ++index)
         bank.setSlice(index, decoded[index]);
+    return true;
 }
 
 void decodeSlices(const Json* slicing, SliceBank& bank)
 {
-    decodeSliceArray(child(slicing, "slices"), bank);
+    static_cast<void>(decodeSliceArray(child(slicing, "slices"), bank));
+}
+
+void decodeNamedSliceBanks(
+    const Json* slicing, NamedSliceBankStore& formBanks)
+{
+    const auto* namedBanks = child(slicing, "sliceBanks");
+    for (std::size_t index = 1; index < sliceBankProfileCount; ++index)
+    {
+        const auto profile = static_cast<SliceBankProfile>(index);
+        SliceBank decoded;
+        if (decodeSliceArray(child(namedBanks, toString(profile)), decoded))
+            formBanks.set(profile, decoded);
+    }
+    const auto active = child(slicing, "activeSliceBank");
+    formBanks.setActive(active == nullptr
+        ? SliceBankProfile::working
+        : sliceBankProfileFromString(
+            std::string(active->string()), SliceBankProfile::working));
 }
 
 MixerChannel decodeMixerChannel(const Json* value)
@@ -452,8 +482,10 @@ std::string encodeProjectJson(const ProjectStateV2& project)
         {"format", "navalha-project"}, {"version", 2}, {"appVersion", "0.28.1"},
         {"activeSource", project.activeSource == 1 ? "B" : "A"},
         {"sources", Json::Object {
-            {"A", encodeSource(project.sources[0], project.sourceReferences[0])},
-            {"B", encodeSource(project.sources[1], project.sourceReferences[1])}
+            {"A", encodeSource(project.sources[0], project.sourceReferences[0],
+                                project.formSliceBanks[0])},
+            {"B", encodeSource(project.sources[1], project.sourceReferences[1],
+                                project.formSliceBanks[1])}
         }},
         {"sequencer", Json::Object {
             {"patterns", std::move(patterns)},
@@ -539,9 +571,15 @@ ProjectStateV2 decodeProjectJson(std::string_view text)
     const auto* sourceA = version == 2 ? child(sources, "A") : &root;
     const auto* sourceB = version == 2 ? child(sources, "B")
         : child(child(&root, "dualMaterial"), "sourceB");
-    decodeSlices(child(sourceA, "slicing"), project.sources[0].sliceBank);
+    const auto* slicingA = child(sourceA, "slicing");
+    decodeSlices(slicingA, project.sources[0].sliceBank);
+    decodeNamedSliceBanks(slicingA, project.formSliceBanks[0]);
     if (sourceB != nullptr)
-        decodeSlices(child(sourceB, "slicing"), project.sources[1].sliceBank);
+    {
+        const auto* slicingB = child(sourceB, "slicing");
+        decodeSlices(slicingB, project.sources[1].sliceBank);
+        decodeNamedSliceBanks(slicingB, project.formSliceBanks[1]);
+    }
     const std::array<const Json*, 2> decodedSources {sourceA, sourceB};
     for (std::size_t index = 0; index < decodedSources.size(); ++index)
     {

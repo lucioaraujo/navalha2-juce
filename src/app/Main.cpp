@@ -2133,9 +2133,21 @@ public:
             {"WORKING", "LONG", "MEDIUM", "SHORT", "MICRO", "MANUAL", "REGION"}, 1);
         for (auto* combo : {&formTransition, &formBankA, &formBankB})
         {
-            combo->onChange = [this] { editFormProfiles(); };
+            combo->onChange = [this] { editFormProfiles(true); };
             addAndMakeVisible(*combo);
         }
+        formName.setTextToShowWhenEmpty(
+            "SCENE NAME", juce::Colour(Arcade::muted));
+        formName.setSelectAllWhenFocused(true);
+        formName.setInputRestrictions(36);
+        styleEditableTextField(formName);
+        formName.onReturnKey = [this]
+        {
+            renameFormScene();
+            formName.giveAwayKeyboardFocus();
+        };
+        formName.onFocusLost = [this] { renameFormScene(); };
+        addAndMakeVisible(formName);
         for (auto* slider : {
                  &formDensity, &formTension, &formStability,
                  &formContinuity, &formContrast, &formStereoMotion})
@@ -2146,9 +2158,9 @@ public:
                 juce::Slider::TextBoxRight, false, 44, 22);
             addAndMakeVisible(*slider);
         }
-        formDensity.onValueChange = [this] { editFormProfiles(); };
-        formTension.onValueChange = [this] { editFormProfiles(); };
-        formStability.onValueChange = [this] { editFormProfiles(); };
+        formDensity.onValueChange = [this] { editFormProfiles(false); };
+        formTension.onValueChange = [this] { editFormProfiles(false); };
+        formStability.onValueChange = [this] { editFormProfiles(false); };
         formContinuity.onValueChange = [this] { editFormCharacter(); };
         formContrast.onValueChange = [this] { editFormCharacter(); };
         formStereoMotion.onValueChange = [this] { editFormCharacter(); };
@@ -2178,6 +2190,16 @@ public:
         });
         configureButton(formMoveUp, "<", [this] { moveFormScene(-1); });
         configureButton(formMoveDown, ">", [this] { moveFormScene(1); });
+        configureButton(formUndo, "UNDO", [this] { undoFormEdit(); });
+        configureButton(formRedo, "REDO", [this] { redoFormEdit(); });
+        configureButton(formCaptureA, "CAPTURE A", [this]
+        {
+            captureFormSliceBank(0);
+        });
+        configureButton(formCaptureB, "CAPTURE B", [this]
+        {
+            captureFormSliceBank(1);
+        });
         syncFormControls();
 
         configureParameterLabel(mixerHeaderLabel, "SOURCE MIXER");
@@ -3335,10 +3357,12 @@ public:
                 &formTransition, &formBankA, &formBankB,
                 &formDensity, &formTension});
             placeEqual(area.removeFromTop(dualCreateRowHeight), {
-                &formStability, &formLock, &formAdd, &formDuplicate});
+                &formName, &formStability, &formLock, &formAdd,
+                &formDuplicate, &formUndo, &formRedo});
             placeEqual(area.removeFromTop(dualCreateRowHeight), {
                 &formContinuity, &formContrast, &formStereoMotion,
-                &formDelete, &formMoveUp, &formMoveDown});
+                &formDelete, &formMoveUp, &formMoveDown,
+                &formCaptureA, &formCaptureB});
             area = dualAssistedArea;
         }
         else
@@ -3355,18 +3379,28 @@ public:
             formAdd.setBounds(formAdvancedRow.removeFromLeft(60).reduced(3));
             formDuplicate.setBounds(formAdvancedRow.removeFromLeft(92).reduced(3));
             auto formCharacterRow = area.removeFromTop(44);
+            formName.setBounds(
+                formCharacterRow.removeFromLeft(150).reduced(3));
             formContinuity.setBounds(
-                formCharacterRow.removeFromLeft(190).reduced(3));
+                formCharacterRow.removeFromLeft(135).reduced(3));
             formContrast.setBounds(
-                formCharacterRow.removeFromLeft(190).reduced(3));
+                formCharacterRow.removeFromLeft(135).reduced(3));
             formStereoMotion.setBounds(
-                formCharacterRow.removeFromLeft(190).reduced(3));
+                formCharacterRow.removeFromLeft(135).reduced(3));
             formDelete.setBounds(
-                formCharacterRow.removeFromLeft(85).reduced(3));
+                formCharacterRow.removeFromLeft(75).reduced(3));
             formMoveUp.setBounds(
-                formCharacterRow.removeFromLeft(55).reduced(3));
+                formCharacterRow.removeFromLeft(45).reduced(3));
             formMoveDown.setBounds(
-                formCharacterRow.removeFromLeft(55).reduced(3));
+                formCharacterRow.removeFromLeft(45).reduced(3));
+            formUndo.setBounds(
+                formCharacterRow.removeFromLeft(60).reduced(3));
+            formRedo.setBounds(
+                formCharacterRow.removeFromLeft(60).reduced(3));
+            formCaptureA.setBounds(
+                formCharacterRow.removeFromLeft(90).reduced(3));
+            formCaptureB.setBounds(
+                formCharacterRow.removeFromLeft(90).reduced(3));
         }
         if (dualMonitorLayout)
         {
@@ -4135,6 +4169,7 @@ private:
                  static_cast<juce::Component*>(&formBars),
                  static_cast<juce::Component*>(&formEnergy),
                  static_cast<juce::Component*>(&formVariation),
+                 static_cast<juce::Component*>(&formName),
                  static_cast<juce::Component*>(&formTransition),
                  static_cast<juce::Component*>(&formBankA),
                  static_cast<juce::Component*>(&formBankB),
@@ -4149,7 +4184,11 @@ private:
                  static_cast<juce::Component*>(&formDuplicate),
                  static_cast<juce::Component*>(&formDelete),
                  static_cast<juce::Component*>(&formMoveUp),
-                 static_cast<juce::Component*>(&formMoveDown)})
+                 static_cast<juce::Component*>(&formMoveDown),
+                 static_cast<juce::Component*>(&formUndo),
+                 static_cast<juce::Component*>(&formRedo),
+                 static_cast<juce::Component*>(&formCaptureA),
+                 static_cast<juce::Component*>(&formCaptureB)})
             registerLearn(*control, "form");
         registerLearn(tracePad, "trace");
         registerLearn(traceLabel, "trace");
@@ -5199,6 +5238,9 @@ private:
         uiMixer = session.mixer;
         syncMixerControls();
         uiSliceBanks = {session.sources[0].sliceBank, session.sources[1].sliceBank};
+        uiNamedSliceBanks = {
+            session.formSliceBanks[0],
+            session.formSliceBanks[1]};
         for (std::size_t source = 0; source < uiSliceBanks.size(); ++source)
         {
             waveform.setSlices(source, uiSliceBanks[source].slices());
@@ -5454,6 +5496,11 @@ private:
         formScene.setSelectedItemIndex(
             static_cast<int>(form.currentScene), juce::dontSendNotification);
         const auto& scene = form.scenes[form.currentScene];
+        formName.setText(
+            juce::String::fromUTF8(
+                navalha::formText(scene.name).data(),
+                static_cast<int>(navalha::formText(scene.name).size())),
+            false);
         formBars.setValue(scene.bars, juce::dontSendNotification);
         formEnergy.setValue(scene.energy, juce::dontSendNotification);
         formVariation.setValue(scene.variation, juce::dontSendNotification);
@@ -5474,6 +5521,8 @@ private:
         formEnable.setButtonText(form.enabled ? "FORM ON" : "ARM FORM");
         formHold.setButtonText(form.hold ? "RELEASE" : "HOLD");
         formHold.setEnabled(form.enabled);
+        formUndo.setEnabled(uiFormDirector.canUndo());
+        formRedo.setEnabled(uiFormDirector.canRedo());
         syncingFormControls = false;
     }
 
@@ -5484,14 +5533,8 @@ private:
         const std::array profiles {scene.bankA, scene.bankB};
         for (std::size_t source = 0; source < uiSliceBanks.size(); ++source)
         {
-            const auto count = navalha::generatedSliceCount(profiles[source]);
-            if (count == 0)
-                continue;
-            const auto slices = uiSliceBanks[source].slices();
-            uiSliceBanks[source].divideRegion(
-                slices.empty() ? 0.0 : slices.front().start,
-                slices.empty() ? 1.0 : slices.back().end,
-                count);
+            static_cast<void>(uiNamedSliceBanks[source].apply(
+                uiSliceBanks[source], profiles[source]));
         }
         refreshSliceEditor();
     }
@@ -5518,7 +5561,7 @@ private:
         syncFormControls();
     }
 
-    void editFormProfiles()
+    void editFormProfiles(bool recordHistory)
     {
         if (syncingFormControls)
             return;
@@ -5533,7 +5576,7 @@ private:
         scene.density = static_cast<int>(std::lround(formDensity.getValue()));
         scene.tension = static_cast<int>(std::lround(formTension.getValue()));
         scene.stability = static_cast<int>(std::lround(formStability.getValue()));
-        if (!uiFormDirector.replaceCurrentScene(scene))
+        if (!uiFormDirector.replaceCurrentScene(scene, recordHistory))
         {
             showStatus("FORM SCENE LOCKED");
             syncFormControls();
@@ -5542,7 +5585,8 @@ private:
         const auto packed =
             static_cast<std::size_t>(scene.transition)
             | (static_cast<std::size_t>(scene.bankA) << 8U)
-            | (static_cast<std::size_t>(scene.bankB) << 16U);
+            | (static_cast<std::size_t>(scene.bankB) << 16U)
+            | (recordHistory ? (1U << 24U) : 0U);
         submitOrWarn({
             navalha::EngineCommandType::setFormSceneProfiles,
             uiFormDirector.state().currentScene, packed,
@@ -5586,6 +5630,68 @@ private:
             navalha::EngineCommandType::moveFormScene,
             0, 0, static_cast<double>(delta)});
         syncFormControls();
+    }
+
+    void renameFormScene()
+    {
+        if (syncingFormControls)
+            return;
+        const auto name = formName.getText().trim().substring(0, 36);
+        const auto& state = uiFormDirector.state();
+        const auto currentName = juce::String::fromUTF8(
+            navalha::formText(state.scenes[state.currentScene].name).data(),
+            static_cast<int>(
+                navalha::formText(state.scenes[state.currentScene].name).size()));
+        if (name.isEmpty() || name == currentName)
+        {
+            syncFormControls();
+            return;
+        }
+        auto scene = state.scenes[state.currentScene];
+        scene.name = navalha::makeFormText(name.toStdString());
+        if (!uiFormDirector.replaceCurrentScene(scene, true))
+        {
+            showStatus("FORM SCENE LOCKED");
+            syncFormControls();
+            return;
+        }
+        submitOrWarn({navalha::EngineCommandType::checkpointFormEdit});
+        syncFormControls();
+    }
+
+    void undoFormEdit()
+    {
+        if (!uiFormDirector.undoEdit())
+            return;
+        submitOrWarn({navalha::EngineCommandType::undoFormEdit});
+        applyUiFormSceneMaterial();
+        syncFormControls();
+        showStatus("FORM UNDO");
+    }
+
+    void redoFormEdit()
+    {
+        if (!uiFormDirector.redoEdit())
+            return;
+        submitOrWarn({navalha::EngineCommandType::redoFormEdit});
+        applyUiFormSceneMaterial();
+        syncFormControls();
+        showStatus("FORM REDO");
+    }
+
+    void captureFormSliceBank(std::size_t source)
+    {
+        const auto& state = uiFormDirector.state();
+        const auto& scene = state.scenes[state.currentScene];
+        const auto selected = source == 0 ? scene.bankA : scene.bankB;
+        const auto captured = uiNamedSliceBanks[source].capture(
+            uiSliceBanks[source], selected);
+        submitOrWarn({
+            navalha::EngineCommandType::captureFormSliceBank,
+            source, static_cast<std::size_t>(selected)});
+        showStatus(
+            "SOURCE " + juce::String(source == 0 ? "A" : "B")
+            + " CAPTURED AS " + navalha::toString(captured));
     }
 
     void syncAssistedControls()
@@ -6121,6 +6227,12 @@ private:
         const juce::File& projectFile) const
     {
         auto project = navalha::captureProjectState(session);
+        project.formDirector = uiFormDirector.state();
+        for (std::size_t source = 0; source < uiSliceBanks.size(); ++source)
+        {
+            project.sources[source].sliceBank = uiSliceBanks[source];
+            project.formSliceBanks[source] = uiNamedSliceBanks[source];
+        }
         project.motifSlots = uiMotifSlots;
         project.selectedMotifSlot = selectedMotifSlot;
         const auto projectDirectory = projectFile.getParentDirectory();
@@ -6369,6 +6481,7 @@ private:
         for (std::size_t source = 0; source < snapshot.sources.size(); ++source)
         {
             snapshot.sources[source].sliceBank = uiSliceBanks[source];
+            snapshot.formSliceBanks[source] = uiNamedSliceBanks[source];
             snapshot.sources[source].hasAudio = sourceBuffers[source] != nullptr;
             const auto& file = sourceFiles[source];
             if (file.existsAsFile())
@@ -6722,6 +6835,7 @@ private:
     juce::ComboBox formTransition;
     juce::ComboBox formBankA;
     juce::ComboBox formBankB;
+    juce::TextEditor formName;
     juce::Slider formDensity {
         juce::Slider::LinearHorizontal, juce::Slider::TextBoxRight};
     juce::Slider formTension {
@@ -6740,6 +6854,10 @@ private:
     juce::TextButton formDelete;
     juce::TextButton formMoveUp;
     juce::TextButton formMoveDown;
+    juce::TextButton formUndo;
+    juce::TextButton formRedo;
+    juce::TextButton formCaptureA;
+    juce::TextButton formCaptureB;
     bool syncingFormControls = false;
     navalha::FormDirector uiFormDirector;
     juce::TextButton traceRecord;
@@ -6818,6 +6936,7 @@ private:
     juce::TextButton wholeRegion;
     juce::TextButton playSlice;
     std::array<navalha::SliceBank, 2> uiSliceBanks;
+    std::array<navalha::NamedSliceBankStore, 2> uiNamedSliceBanks;
     std::array<navalha::Slice, 2> uiSourceRegions {
         navalha::Slice {0.0, 1.0}, navalha::Slice {0.0, 1.0}};
     WaveformComponent::EditMode waveformEditMode =

@@ -50,6 +50,7 @@ struct ProjectStateV2
     std::array<PatternMemory, patternCount> patternMemory {};
     PatternTransformState patternTransform;
     FormDirectorState formDirector = defaultFormDirector();
+    std::array<NamedSliceBankStore, 2> formSliceBanks;
     ControlTrace controlTrace;
     std::size_t activeSource = 0;
     std::size_t currentPattern = 0;

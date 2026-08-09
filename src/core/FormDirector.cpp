@@ -127,12 +127,17 @@ std::size_t generatedSliceCount(SliceBankProfile profile) noexcept
     }
 }
 
-FormDirector::FormDirector() : value(defaultFormDirector()) {}
+FormDirector::FormDirector()
+    : value(defaultFormDirector()), history(std::make_unique<EditHistory>())
+{
+}
 const FormDirectorState& FormDirector::state() const noexcept { return value; }
 void FormDirector::restore(FormDirectorState restored)
 {
     normalizeFormDirector(restored);
     value = std::move(restored);
+    history->undoCount = 0;
+    history->redoCount = 0;
 }
 void FormDirector::setEnabled(bool enabled) noexcept
 {
@@ -185,6 +190,7 @@ bool FormDirector::addScene()
 {
     if (value.sceneCount >= maxFormScenes)
         return false;
+    pushUndo();
     auto copy = value.scenes[value.currentScene];
     char text[37] {};
     static_cast<void>(std::snprintf(
@@ -206,6 +212,7 @@ bool FormDirector::duplicateScene()
 {
     if (value.sceneCount >= maxFormScenes)
         return false;
+    pushUndo();
     auto copy = value.scenes[value.currentScene];
     auto name = formText(copy.name);
     FormText copiedName {};
@@ -229,6 +236,7 @@ bool FormDirector::deleteScene() noexcept
 {
     if (value.sceneCount <= 1)
         return false;
+    pushUndo();
     std::move(value.scenes.begin() + static_cast<std::ptrdiff_t>(value.currentScene + 1),
         value.scenes.begin() + static_cast<std::ptrdiff_t>(value.sceneCount),
         value.scenes.begin() + static_cast<std::ptrdiff_t>(value.currentScene));
@@ -245,15 +253,18 @@ bool FormDirector::moveScene(int delta) noexcept
         static_cast<int>(value.sceneCount - 1));
     if (target == static_cast<int>(value.currentScene))
         return false;
+    pushUndo();
     std::swap(value.scenes[value.currentScene],
               value.scenes[static_cast<std::size_t>(target)]);
     value.currentScene = static_cast<std::size_t>(target);
     return true;
 }
-bool FormDirector::replaceCurrentScene(FormScene scene)
+bool FormDirector::replaceCurrentScene(FormScene scene, bool recordHistory)
 {
     if (value.scenes[value.currentScene].locked)
         return false;
+    if (recordHistory)
+        pushUndo();
     normalizeScene(scene, value.currentScene);
     value.scenes[value.currentScene] = std::move(scene);
     value.bar = std::min(value.bar, value.scenes[value.currentScene].bars);
@@ -262,10 +273,72 @@ bool FormDirector::replaceCurrentScene(FormScene scene)
 }
 bool FormDirector::toggleCurrentLock() noexcept
 {
+    pushUndo();
     auto& locked = value.scenes[value.currentScene].locked;
     locked = !locked;
     return locked;
 }
+
+void FormDirector::checkpointEdit() noexcept
+{
+    pushUndo();
+}
+
+void FormDirector::pushSnapshot(
+    std::array<EditSnapshot, maxFormHistory>& history,
+    std::size_t& count, EditSnapshot snapshot) noexcept
+{
+    if (count == maxFormHistory)
+    {
+        for (std::size_t index = 1; index < count; ++index)
+            history[index - 1] = std::move(history[index]);
+        --count;
+    }
+    history[count++] = std::move(snapshot);
+}
+
+FormDirector::EditSnapshot FormDirector::editSnapshot() const noexcept
+{
+    return {value.scenes, value.sceneCount};
+}
+
+void FormDirector::restoreEditSnapshot(EditSnapshot snapshot) noexcept
+{
+    value.scenes = std::move(snapshot.scenes);
+    value.sceneCount = std::clamp<std::size_t>(
+        snapshot.sceneCount, 1, maxFormScenes);
+    value.currentScene = std::min(value.currentScene, value.sceneCount - 1);
+    value.bar = std::clamp(
+        value.bar, 0, value.scenes[value.currentScene].bars);
+    value.completed = false;
+}
+
+void FormDirector::pushUndo() noexcept
+{
+    pushSnapshot(history->undo, history->undoCount, editSnapshot());
+    history->redoCount = 0;
+}
+
+bool FormDirector::undoEdit() noexcept
+{
+    if (history->undoCount == 0)
+        return false;
+    pushSnapshot(history->redo, history->redoCount, editSnapshot());
+    restoreEditSnapshot(std::move(history->undo[--history->undoCount]));
+    return true;
+}
+
+bool FormDirector::redoEdit() noexcept
+{
+    if (history->redoCount == 0)
+        return false;
+    pushSnapshot(history->undo, history->undoCount, editSnapshot());
+    restoreEditSnapshot(std::move(history->redo[--history->redoCount]));
+    return true;
+}
+
+bool FormDirector::canUndo() const noexcept { return history->undoCount != 0; }
+bool FormDirector::canRedo() const noexcept { return history->redoCount != 0; }
 
 const char* toString(FormTransition value) noexcept
 {

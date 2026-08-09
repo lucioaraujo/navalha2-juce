@@ -386,6 +386,10 @@ bool AudioEngine::submitCommand(const EngineCommand& command) noexcept
             if (command.valueA != -1.0 && command.valueA != 1.0)
                 return false;
             break;
+        case EngineCommandType::captureFormSliceBank:
+            if (command.indexA > 1 || command.indexB >= sliceBankProfileCount)
+                return false;
+            break;
         case EngineCommandType::setAssistedSettings:
             if (command.indexA > 1023
                 || !std::isfinite(command.valueA)
@@ -1249,7 +1253,8 @@ void AudioEngine::applyCommand(const EngineCommand& command) noexcept
             scene.density = static_cast<int>(command.valueA);
             scene.tension = static_cast<int>(command.valueB);
             scene.stability = static_cast<int>(command.valueC);
-            if (session.formDirector.replaceCurrentScene(std::move(scene)))
+            if (session.formDirector.replaceCurrentScene(
+                    std::move(scene), (command.indexB & (1U << 24U)) != 0))
                 session.applyCurrentFormSceneMaterial();
             break;
         }
@@ -1266,6 +1271,9 @@ void AudioEngine::applyCommand(const EngineCommand& command) noexcept
                 session.formDirector.replaceCurrentScene(std::move(scene)));
             break;
         }
+        case EngineCommandType::checkpointFormEdit:
+            session.formDirector.checkpointEdit();
+            break;
         case EngineCommandType::toggleFormSceneLock:
             static_cast<void>(session.formDirector.toggleCurrentLock());
             break;
@@ -1281,6 +1289,19 @@ void AudioEngine::applyCommand(const EngineCommand& command) noexcept
         case EngineCommandType::moveFormScene:
             static_cast<void>(
                 session.formDirector.moveScene(static_cast<int>(command.valueA)));
+            break;
+        case EngineCommandType::undoFormEdit:
+            if (session.formDirector.undoEdit())
+                session.applyCurrentFormSceneMaterial();
+            break;
+        case EngineCommandType::redoFormEdit:
+            if (session.formDirector.redoEdit())
+                session.applyCurrentFormSceneMaterial();
+            break;
+        case EngineCommandType::captureFormSliceBank:
+            static_cast<void>(session.captureFormSliceBank(
+                command.indexA,
+                static_cast<SliceBankProfile>(command.indexB)));
             break;
         case EngineCommandType::setAssistedSettings:
             session.assisted.enabled = (command.indexA & 1U) != 0;

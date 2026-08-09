@@ -7,13 +7,109 @@ namespace navalha
 {
 namespace
 {
+[[nodiscard]] std::size_t profileIndex(SliceBankProfile profile) noexcept
+{
+    return std::min<std::size_t>(
+        static_cast<std::size_t>(profile), sliceBankProfileCount - 1);
+}
+}
+
+NamedSliceBankStore::NamedSliceBankStore()
+    : storage(std::make_unique<Storage>())
+{
+}
+
+NamedSliceBankStore::NamedSliceBankStore(const NamedSliceBankStore& other)
+    : storage(std::make_unique<Storage>(*other.storage))
+{
+}
+
+NamedSliceBankStore& NamedSliceBankStore::operator=(
+    const NamedSliceBankStore& other) noexcept
+{
+    if (this != &other)
+        *storage = *other.storage;
+    return *this;
+}
+
+SliceBankProfile NamedSliceBankStore::capture(
+    const SliceBank& workingBank, SliceBankProfile profile) noexcept
+{
+    if (profile == SliceBankProfile::working)
+        profile = SliceBankProfile::manual;
+    set(profile, workingBank);
+    storage->activeProfile = profile;
+    return profile;
+}
+
+bool NamedSliceBankStore::apply(
+    SliceBank& workingBank, SliceBankProfile profile) noexcept
+{
+    if (profile == SliceBankProfile::working)
+    {
+        storage->activeProfile = profile;
+        return true;
+    }
+    const auto index = profileIndex(profile);
+    if (!storage->valid[index])
+    {
+        auto generated = workingBank;
+        const auto count = generatedSliceCount(profile);
+        if (count != 0)
+        {
+            const auto slices = workingBank.slices();
+            generated.divideRegion(
+                slices.empty() ? 0.0 : slices.front().start,
+                slices.empty() ? 1.0 : slices.back().end,
+                count);
+        }
+        storage->banks[index] = std::move(generated);
+        storage->valid[index] = true;
+    }
+    workingBank = storage->banks[index];
+    storage->activeProfile = profile;
+    return true;
+}
+
+void NamedSliceBankStore::set(
+    SliceBankProfile profile, const SliceBank& bank) noexcept
+{
+    const auto index = profileIndex(profile);
+    storage->banks[index] = bank;
+    storage->valid[index] = profile != SliceBankProfile::working;
+}
+
+bool NamedSliceBankStore::has(SliceBankProfile profile) const noexcept
+{
+    return profile != SliceBankProfile::working
+        && storage->valid[profileIndex(profile)];
+}
+
+const SliceBank& NamedSliceBankStore::bank(SliceBankProfile profile) const noexcept
+{
+    return storage->banks[profileIndex(profile)];
+}
+
+SliceBankProfile NamedSliceBankStore::active() const noexcept
+{
+    return storage->activeProfile;
+}
+
+void NamedSliceBankStore::setActive(SliceBankProfile profile) noexcept
+{
+    storage->activeProfile = static_cast<std::size_t>(profile) < sliceBankProfileCount
+        ? profile : SliceBankProfile::working;
+}
+
+namespace
+{
 double clampUnit(double value) noexcept
 {
     return std::clamp(value, 0.0, 1.0);
 }
 }
 
-SessionModel::SessionModel() noexcept
+SessionModel::SessionModel()
     : sequencer(patterns)
 {
 }
@@ -288,14 +384,18 @@ void SessionModel::applyCurrentFormSceneMaterial()
     const std::array profiles {scene.bankA, scene.bankB};
     for (std::size_t source = 0; source < sources.size(); ++source)
     {
-        const auto count = generatedSliceCount(profiles[source]);
-        if (count == 0)
-            continue;
-        const auto slices = sources[source].sliceBank.slices();
-        const auto start = slices.empty() ? 0.0 : slices.front().start;
-        const auto end = slices.empty() ? 1.0 : slices.back().end;
-        sources[source].sliceBank.divideRegion(start, end, count);
+        static_cast<void>(formSliceBanks[source].apply(
+            sources[source].sliceBank, profiles[source]));
     }
+}
+
+SliceBankProfile SessionModel::captureFormSliceBank(
+    std::size_t sourceIndex, SliceBankProfile profile) noexcept
+{
+    if (sourceIndex >= sources.size())
+        return SliceBankProfile::working;
+    return formSliceBanks[sourceIndex].capture(
+        sources[sourceIndex].sliceBank, profile);
 }
 
 AssistedPerformanceContext SessionModel::performanceContext(

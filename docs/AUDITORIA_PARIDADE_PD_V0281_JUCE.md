@@ -35,12 +35,11 @@ etapa da TAKE Timeline em JUCE v0.1.0:
 1. descoberta/importação de takes anteriores e preset/escrita RIFF de metadados;
 2. construtor de ALBUM PROJECT a partir dos takes;
 3. importação/exportação histórica `.nvl`/`.ptn`;
-4. completar FORM Advanced com nome, undo/redo e captura explícita dos bancos;
-5. preview/audição dentro de MASTER e matching relativo do fluxo v0.28;
-6. validações humanas de áudio real, dois monitores e sessão prolongada.
+4. preview/audição dentro de MASTER e matching relativo do fluxo v0.28;
+5. validações humanas de áudio real, dois monitores e sessão prolongada.
 
-Contagem não ponderada da matriz nesta atualização: 33 áreas completas,
-completas técnicas ou implementadas no fluxo equivalente; 12 parciais; 6
+Contagem não ponderada da matriz nesta atualização: 35 áreas completas,
+completas técnicas ou implementadas no fluxo equivalente; 11 parciais; 5
 ausentes; e uma conveniência Web substituída deliberadamente por comportamento
 nativo. Os estados “completo técnico” continuam exigindo aceitação humana onde
 indicado e não autorizam declarar substituição integral do produto.
@@ -71,8 +70,8 @@ indicado e não autorizam declarar substituição integral do produto.
 | AUTO MIX conservador | Completo no Assisted | não há botão BASIC separado como no Web |
 | Duas Virtual Voices | Completo | source, divisão, foco, pattern, pitch, envelope, level e pan |
 | FORM básico | Completo | arm, hold, next, reset, barras, energia e variação |
-| FORM Advanced: cenas/macros | Parcial | transição, bancos, dimensões, lock/add/copy/delete/move existem |
-| FORM nome/undo/redo/capture bank | Ausente | funções presentes no diálogo Web não aparecem no JUCE |
+| FORM Advanced: cenas/macros | Completo | nome, transição, bancos, seis dimensões, lock/add/copy/delete/move e limite de 16 cenas |
+| FORM nome/undo/redo/capture bank | Completo | editor nomeia cenas; histórico estrutural fixo de 64 passos é espelhado pela fila realtime; CAPTURE A/B grava e Project v2 preserva bancos nomeados por fonte |
 | Assisted Performer | Completo | vocabulário, BPM, variation, seed, rewind, next/keep/restore |
 | Motif locks | Completo | oito categorias persistidas e respeitadas pelo Assisted |
 | Oito slots de Motif Memory | Completo | snapshot nomeado, CAPTURE/RECALL/VARY/DELETE e Project/Portable v2 |
@@ -181,6 +180,8 @@ Mantidos separados por segurança ou por não representarem um estado binário:
 ### COMPOSE / FORM / MIX / MASTER
 
 - A main ainda mostra módulos demais num único documento rolável.
+- FORM Advanced agora inclui nome de cena, undo/redo e captura A/B na própria
+  área COMPOSE, sem abrir um segundo motor ou duplicar estado.
 - TRACE XY voltou a ter superfície direta na main e grava do pressionar ao soltar.
 - As métricas TRACK MASTER usam lista de seis linhas com valores destacados,
   em vez de texto monoespaçado solto.
@@ -224,12 +225,11 @@ Mantidos separados por segurança ou por não representarem um estado binário:
 3. Workspaces reais e mixer BASIC/ADVANCED.
 4. Compatibilidade `.nvl`/`.ptn`.
 5. Preview MASTER; playhead temporal e pré-escuta da Library já foram transpostos.
-6. FORM undo/redo/nome/capture bank.
-7. Completar tradução global e ampliar LEARN dos grupos nativos até a
+6. Completar tradução global e ampliar LEARN dos grupos nativos até a
    granularidade dos 106 tópicos Web quando houver controle equivalente.
-8. Aceitação auditiva com sinal real, incluindo o auto-stop de 5 minutos,
+7. Aceitação auditiva com sinal real, incluindo o auto-stop de 5 minutos,
    dois monitores e soak prolongado.
-9. Gerar `.deb` para validação interna; somente depois preparar publicação
+8. Gerar `.deb` para validação interna; somente depois preparar publicação
    multiplataforma.
 
 Nenhum item marcado como ausente deve ser descrito como implementado em

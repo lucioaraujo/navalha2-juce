@@ -127,7 +127,12 @@ O protótipo JUCE não substitui o runtime atual até cumprir estes contratos.
   automática dos bancos LONG/MEDIUM/SHORT/MICRO;
 - implementado: edição FORM nativa de transição, bancos, seis dimensões,
   lock, add, duplicate, delete e move;
-- implementado: armazenamento textual fixo das cenas, sem alocação no callback;
+- implementado: nome de cena, undo/redo estrutural de 64 passos e captura
+  explícita de bancos A/B com a mesma semântica da v0.25 Web;
+- implementado: bancos nomeados LONG/MEDIUM/SHORT/MICRO/MANUAL/REGION por
+  fonte, recall por cena e extensão opcional interoperável no Project v2;
+- implementado: armazenamento textual fixo e histórico pré-alocado das cenas,
+  sem alocação durante comandos no callback;
 - implementado: planejador determinístico do Assisted Performer por frase;
 - implementado: escolha de tempo dirigida por FORM, mutation/erosion/deconstruct,
   Heritage Pitch e STUTTER/BURST/REVERSE com probabilidades v0.28.1;

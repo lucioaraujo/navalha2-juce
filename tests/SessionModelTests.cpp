@@ -38,6 +38,7 @@
 #include <filesystem>
 #include <iostream>
 #include <limits>
+#include <memory>
 #include <sstream>
 #include <stdexcept>
 #include <thread>
@@ -330,6 +331,32 @@ int main()
             "FORM duplication must preserve scene data and clear its lock");
     require(form.deleteScene() && form.state().sceneCount == 5,
             "FORM scene deletion must retain at least one scene");
+    FormDirector formHistory;
+    auto namedScene = formHistory.state().scenes[0];
+    namedScene.name = makeFormText("OPENING KNIFE");
+    require(formHistory.replaceCurrentScene(namedScene, true)
+                && formHistory.canUndo() && !formHistory.canRedo()
+                && formHistory.addScene()
+                && formHistory.state().sceneCount == 6,
+            "FORM structural edits must enter a bounded undo history");
+    require(formHistory.undoEdit()
+                && formHistory.state().sceneCount == 5
+                && formText(formHistory.state().scenes[0].name)
+                    == "OPENING KNIFE"
+                && formHistory.canRedo(),
+            "FORM undo must restore the previous scene structure and names");
+    require(formHistory.redoEdit()
+                && formHistory.state().sceneCount == 6
+                && !formHistory.canRedo(),
+            "FORM redo must restore the reverted structural edit");
+    FormDirector boundedFormHistory;
+    for (std::size_t edit = 0; edit < maxFormHistory + 6; ++edit)
+        static_cast<void>(boundedFormHistory.toggleCurrentLock());
+    for (std::size_t edit = 0; edit < maxFormHistory; ++edit)
+        require(boundedFormHistory.undoEdit(),
+                "FORM must retain its advertised fixed history depth");
+    require(!boundedFormHistory.undoEdit(),
+            "FORM history must discard edits older than its fixed capacity");
     const auto context = assistedPerformanceContext(form.state(), 60.0);
     require(context.formActive
                 && approximately(context.intensity, 0.785)
@@ -357,6 +384,39 @@ int main()
     require(formSession.sources[0].sliceBank.size() == 32
                 && formSession.sources[1].sliceBank.size() == 16,
             "FORM CLIMAX must apply MICRO A and SHORT B banks");
+    formSession.sources[0].sliceBank.divideRegion(0.3, 0.7, 3);
+    require(formSession.captureFormSliceBank(
+                0, SliceBankProfile::longSlices)
+                == SliceBankProfile::longSlices,
+            "FORM capture must overwrite the selected named bank");
+    static_cast<void>(formSession.formDirector.selectScene(0));
+    formSession.applyCurrentFormSceneMaterial();
+    require(formSession.sources[0].sliceBank.size() == 3
+                && approximately(
+                    formSession.sources[0].sliceBank.slices().front().start, 0.3)
+                && approximately(
+                    formSession.sources[0].sliceBank.slices().back().end, 0.7),
+            "FORM scenes must recall captured banks instead of regenerating them");
+    auto formQueueSession = std::make_unique<SessionModel>();
+    formQueueSession->sources[0].sliceBank.divideRegion(0.25, 0.75, 5);
+    auto formQueueEngine = std::make_unique<AudioEngine>(*formQueueSession);
+    formQueueEngine->prepare(48000.0);
+    require(formQueueEngine->submitCommand({
+                    EngineCommandType::captureFormSliceBank, 0,
+                    static_cast<std::size_t>(SliceBankProfile::working)}),
+            "FORM bank capture must enter the realtime command queue");
+    formQueueEngine->synchronizePendingCommands();
+    require(formQueueSession->formSliceBanks[0].has(
+                    SliceBankProfile::manual)
+                && formQueueSession->formSliceBanks[0].bank(
+                    SliceBankProfile::manual).size() == 5,
+            "Audio-thread FORM commands must preserve captured banks");
+    require(formQueueEngine->submitCommand({EngineCommandType::addFormScene})
+                && formQueueEngine->submitCommand({EngineCommandType::undoFormEdit}),
+            "FORM undo must enter the realtime command queue");
+    formQueueEngine->synchronizePendingCommands();
+    require(formQueueSession->formDirector.state().sceneCount == 5,
+            "Queued FORM undo must restore the structural scene state");
 
     AssistedPerformerSettings assistedSettings;
     assistedSettings.enabled = true;
@@ -1408,6 +1468,10 @@ int main()
     projectSession.selectSource(1);
     projectSession.patterns.setCell(3, 4, 205);
     projectSession.sources[0].sliceBank.divideRegion(0.1, 0.9, 16);
+    require(projectSession.captureFormSliceBank(
+                0, SliceBankProfile::manual)
+                == SliceBankProfile::manual,
+            "Project fixture must capture a named FORM bank");
     projectSession.mixer.sourceA.pan = -0.4;
     projectSession.masterLevel = 0.63;
     projectSession.heritagePitchSemitones = 5;
@@ -1421,6 +1485,10 @@ int main()
     };
     projectSession.formDirector.setEnabled(true);
     static_cast<void>(projectSession.formDirector.selectScene(3));
+    auto projectFormScene = projectSession.formDirector.state().scenes[3];
+    projectFormScene.name = makeFormText("PEAK METAL");
+    static_cast<void>(projectSession.formDirector.replaceCurrentScene(
+        projectFormScene, true));
     static_cast<void>(projectSession.formDirector.notePhraseCompleted());
     require(projectSession.controlTrace.append(0, 120, 0)
                 && projectSession.controlTrace.append(120, 144, 5),
@@ -1498,6 +1566,10 @@ int main()
     const auto decodedProject = decodeProjectJson(projectJson);
     require(decodedProject.activeSource == savedProject.activeSource
                 && decodedProject.sources[0].sliceBank.size() == 16
+                && decodedProject.formSliceBanks[0].has(
+                    SliceBankProfile::manual)
+                && decodedProject.formSliceBanks[0].bank(
+                    SliceBankProfile::manual).size() == 16
                 && decodedProject.patterns.cell(3, 4) == 205
                 && approximately(decodedProject.bpm, 137.0)
                 && decodedProject.assistedSeed == 0x10203040U
@@ -1514,6 +1586,8 @@ int main()
                 && decodedProject.patternTransform.base == transformBase
                 && decodedProject.patternTransform.amounts.deconstruct == 66
                 && decodedProject.formDirector.currentScene == 3
+                && formText(decodedProject.formDirector.scenes[3].name)
+                    == "PEAK METAL"
                 && decodedProject.formDirector.bar == 1
                 && !decodedProject.formDirector.enabled
                 && decodedProject.controlTrace.size() == 2

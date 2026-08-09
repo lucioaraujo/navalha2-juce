@@ -47,8 +47,12 @@ O runtime atual continua em:
 - TRACE LOOP sample-accurate aplicando BPM e Heritage Pitch no callback;
 - FORM avançando por frases, trocando bancos LONG/MEDIUM/SHORT/MICRO e
   modulando o contexto do Assisted Performer;
-- editor FORM nativo completo com transição, perfis A/B e seis dimensões;
-- nomes e operações de cenas em armazenamento fixo, sem alocação realtime;
+- editor FORM nativo completo com nome, transição, perfis A/B, seis dimensões,
+  lock, add/copy/delete/move e undo/redo estrutural de 64 passos;
+- captura explícita dos bancos nomeados A/B, recall por cena e persistência
+  opcional interoperável no Project v2;
+- nomes e histórico de cenas em armazenamento pré-alocado, sem alocação nas
+  operações executadas pelo callback;
 - estágio MASTER 0–1 após o mixer, com smoothing de 15 ms compartilhado por realtime/offline;
 - perfil `liveSafe` no app: saneamento de não-finitos, bloqueio DC e limiter
   estéreo ligado com lookahead de 5 ms e teto de -1 dBTP depois da soma do

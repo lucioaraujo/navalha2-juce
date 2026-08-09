@@ -14,6 +14,7 @@ ProjectStateV2 captureProjectState(const SessionModel& session) noexcept
     project.patternMemory = session.patternMemory;
     project.patternTransform = session.patternTransform;
     project.formDirector = session.formDirector.state();
+    project.formSliceBanks = session.formSliceBanks;
     project.controlTrace = session.controlTrace;
     project.activeSource = session.activeSource;
     project.currentPattern = session.sequencer.currentPattern();
@@ -62,6 +63,7 @@ void restoreProjectState(const ProjectStateV2& project, SessionModel& session)
     session.patternMemory = project.patternMemory;
     session.patternTransform = project.patternTransform;
     session.formDirector.restore(project.formDirector);
+    session.formSliceBanks = project.formSliceBanks;
     session.controlTrace = project.controlTrace;
     session.patternTransform.patternIndex = std::min(
         session.patternTransform.patternIndex, patternCount - 1);

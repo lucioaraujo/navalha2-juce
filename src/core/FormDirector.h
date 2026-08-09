@@ -2,6 +2,7 @@
 
 #include <array>
 #include <cstddef>
+#include <memory>
 #include <string>
 #include <string_view>
 #include <type_traits>
@@ -9,6 +10,7 @@
 namespace navalha
 {
 constexpr std::size_t maxFormScenes = 16;
+constexpr std::size_t maxFormHistory = 64;
 using FormText = std::array<char, 37>;
 
 [[nodiscard]] FormText makeFormText(std::string_view value) noexcept;
@@ -87,11 +89,39 @@ public:
     [[nodiscard]] bool duplicateScene();
     [[nodiscard]] bool deleteScene() noexcept;
     [[nodiscard]] bool moveScene(int delta) noexcept;
-    [[nodiscard]] bool replaceCurrentScene(FormScene scene);
+    [[nodiscard]] bool replaceCurrentScene(
+        FormScene scene, bool recordHistory = false);
     [[nodiscard]] bool toggleCurrentLock() noexcept;
+    void checkpointEdit() noexcept;
+    [[nodiscard]] bool undoEdit() noexcept;
+    [[nodiscard]] bool redoEdit() noexcept;
+    [[nodiscard]] bool canUndo() const noexcept;
+    [[nodiscard]] bool canRedo() const noexcept;
 
 private:
+    struct EditSnapshot
+    {
+        std::array<FormScene, maxFormScenes> scenes {};
+        std::size_t sceneCount = 0;
+    };
+
+    struct EditHistory
+    {
+        std::array<EditSnapshot, maxFormHistory> undo {};
+        std::array<EditSnapshot, maxFormHistory> redo {};
+        std::size_t undoCount = 0;
+        std::size_t redoCount = 0;
+    };
+
+    void pushUndo() noexcept;
+    static void pushSnapshot(
+        std::array<EditSnapshot, maxFormHistory>& history,
+        std::size_t& count, EditSnapshot snapshot) noexcept;
+    [[nodiscard]] EditSnapshot editSnapshot() const noexcept;
+    void restoreEditSnapshot(EditSnapshot snapshot) noexcept;
+
     FormDirectorState value;
+    std::unique_ptr<EditHistory> history;
 };
 
 [[nodiscard]] const char* toString(FormTransition value) noexcept;

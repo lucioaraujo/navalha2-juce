@@ -80,10 +80,9 @@ herdem a posição do modo dual.
 
 ## Limitações funcionais que não são falhas de layout
 
-Continuam fora do escopo desta auditoria visual: playhead temporal sobre a
-waveform, BASIC/ADVANCED recolhível do mixer, FORM undo/redo e captura de banco,
-construtor de álbum a partir dos takes, importação histórica `.nvl`/`.ptn` e
-preview A/B no painel MASTER. Essas lacunas estão registradas na auditoria de
+Continuam fora do escopo desta auditoria visual: BASIC/ADVANCED recolhível do
+mixer, construtor de álbum a partir dos takes, importação histórica
+`.nvl`/`.ptn` e preview A/B no painel MASTER. Essas lacunas estão registradas na auditoria de
 paridade PD → JUCE e não correspondem a objetos simplesmente ocultos.
 
 ## Validação

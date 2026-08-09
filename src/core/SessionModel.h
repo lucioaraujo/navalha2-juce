@@ -2,6 +2,7 @@
 
 #include <array>
 #include <cstddef>
+#include <memory>
 #include <span>
 #include <stdexcept>
 
@@ -53,6 +54,38 @@ private:
     std::size_t manualCutCount = 0;
     double regionStart = 0.0;
     double regionEnd = 1.0;
+};
+
+constexpr std::size_t sliceBankProfileCount = 7;
+
+class NamedSliceBankStore
+{
+public:
+    NamedSliceBankStore();
+    NamedSliceBankStore(const NamedSliceBankStore& other);
+    NamedSliceBankStore& operator=(const NamedSliceBankStore& other) noexcept;
+    NamedSliceBankStore(NamedSliceBankStore&&) noexcept = default;
+    NamedSliceBankStore& operator=(NamedSliceBankStore&&) noexcept = default;
+
+    [[nodiscard]] SliceBankProfile capture(
+        const SliceBank& workingBank, SliceBankProfile profile) noexcept;
+    [[nodiscard]] bool apply(
+        SliceBank& workingBank, SliceBankProfile profile) noexcept;
+    void set(SliceBankProfile profile, const SliceBank& bank) noexcept;
+    [[nodiscard]] bool has(SliceBankProfile profile) const noexcept;
+    [[nodiscard]] const SliceBank& bank(SliceBankProfile profile) const noexcept;
+    [[nodiscard]] SliceBankProfile active() const noexcept;
+    void setActive(SliceBankProfile profile) noexcept;
+
+private:
+    struct Storage
+    {
+        std::array<SliceBank, sliceBankProfileCount> banks {};
+        std::array<bool, sliceBankProfileCount> valid {};
+        SliceBankProfile activeProfile = SliceBankProfile::working;
+    };
+
+    std::unique_ptr<Storage> storage;
 };
 
 struct MixerChannel
@@ -112,7 +145,7 @@ struct VirtualVoiceState
 class SessionModel
 {
 public:
-    SessionModel() noexcept;
+    SessionModel();
 
     std::array<SourceState, 2> sources;
     SourceMixer mixer;
@@ -122,6 +155,7 @@ public:
     std::array<PatternMemory, patternCount> patternMemory {};
     PatternTransformState patternTransform;
     FormDirector formDirector;
+    std::array<NamedSliceBankStore, 2> formSliceBanks;
     ControlTrace controlTrace;
     AssistedRng assistedRng;
     AssistedPerformerSettings assisted;
@@ -140,6 +174,8 @@ public:
     void commitPatternTransform() noexcept;
     void restorePatternTransform();
     void applyCurrentFormSceneMaterial();
+    [[nodiscard]] SliceBankProfile captureFormSliceBank(
+        std::size_t sourceIndex, SliceBankProfile profile) noexcept;
     [[nodiscard]] AssistedPerformanceContext performanceContext(
         double manualVariation) const noexcept;
 };
