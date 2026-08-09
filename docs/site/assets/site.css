@@ -207,8 +207,7 @@ h3 { font-size: .9rem; letter-spacing: .04em; text-transform: uppercase; }
 .site-footer strong { font-family: var(--display); font-size: 1.4rem; letter-spacing: .08em; }
 .site-footer span, .site-footer small { color: var(--steel); font-size: .65rem; }
 .site-footer nav { display: flex; gap: 18px; }
-.site-footer a, .contact-button { color: var(--yellow); font: inherit; font-size: .68rem; text-decoration: none; }
-.contact-button { padding: 0; border: 0; background: transparent; cursor: pointer; }
+.site-footer a { color: var(--yellow); font-size: .68rem; text-decoration: none; }
 
 @media (max-width: 1120px) {
   .site-header { grid-template-columns: auto auto 1fr; }
