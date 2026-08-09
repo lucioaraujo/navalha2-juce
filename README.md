@@ -231,6 +231,8 @@ para download. O mesmo workflow é disparado ao publicar uma tag `v*`.
 
 As instruções para a pessoa que irá instalar o artefacto estão em
 [`docs/INSTALACAO_DEB_INTERNA.md`](docs/INSTALACAO_DEB_INTERNA.md).
+Os requisitos mínimos estão em
+[`docs/REQUISITOS_MINIMOS_LINUX.md`](docs/REQUISITOS_MINIMOS_LINUX.md).
 
 ## Comparação de WAVs
 

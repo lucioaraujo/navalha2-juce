@@ -2,6 +2,9 @@
 
 Pacote validado: `navalha2_0.1.0_x86_64.deb`.
 
+Os requisitos de computador, tela e sistema estão em
+[`REQUISITOS_MINIMOS_LINUX.md`](REQUISITOS_MINIMOS_LINUX.md).
+
 ## Antes de instalar
 
 - usar uma distribuição Linux de 64 bits (`amd64`);
