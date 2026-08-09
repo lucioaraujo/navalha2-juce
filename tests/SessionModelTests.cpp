@@ -7,12 +7,14 @@
 #include "core/FormDirector.h"
 #include "core/HeritagePitch.h"
 #include "core/Json.h"
+#include "core/LookaheadLimiter.h"
 #include "core/MasteringAnalysis.h"
 #include "core/MasteringAlbum.h"
 #include "core/MasteringAlbumManifest.h"
 #include "core/MasteringProcessor.h"
 #include "core/MasteringRecipe.h"
 #include "core/OfflineRenderer.h"
+#include "core/OutputStage.h"
 #include "core/PatternTransform.h"
 #include "core/PortablePath.h"
 #include "core/PortableArchive.h"
@@ -23,15 +25,19 @@
 #include "core/SessionModel.h"
 #include "core/SlicePlayer.h"
 #include "core/StereoMixer.h"
+#include "core/TakeCatalog.h"
+#include "core/TruePeakDetector.h"
 #include "core/WavStreamWriter.h"
 #include "core/WavMemoryReader.h"
 #include "core/WaveformPeaks.h"
+#include "validation/TruePeakFixtures.h"
 
 #include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <filesystem>
 #include <iostream>
+#include <limits>
 #include <sstream>
 #include <stdexcept>
 #include <thread>
@@ -48,6 +54,30 @@ void require(bool condition, const char* message)
 bool approximately(double left, double right)
 {
     return std::abs(left - right) < 1.0e-12;
+}
+
+double measureTruePeak(const std::vector<float>& signal)
+{
+    navalha::TruePeakDetector detector;
+    detector.prepare(48000.0);
+    double maximum = 0.0;
+    for (const auto sample : signal)
+        maximum = std::max(
+            maximum, static_cast<double>(detector.processSample(sample)));
+    return 20.0 * std::log10(maximum);
+}
+
+navalha::LookaheadLimiterTelemetry measureLimitedTruePeak(
+    const std::vector<float>& signal)
+{
+    navalha::LookaheadLimiter limiter;
+    limiter.prepare(48000.0);
+    for (const auto sample : signal)
+        static_cast<void>(limiter.process({sample, sample}));
+    for (std::size_t frame = 0;
+         frame < limiter.latencySamples() + 128; ++frame)
+        static_cast<void>(limiter.process({}));
+    return limiter.telemetry();
 }
 
 std::uint32_t readU32(const std::string& data, std::size_t offset)
@@ -863,6 +893,347 @@ int main()
                 && engineSession.sequencer.division() == 2,
             "A stopped host must be able to synchronize UI commands before snapshots");
 
+    const auto requireTruePeakTolerance = [] (
+        double measured, double expected, const char* message)
+    {
+        require(measured >= expected - 0.4 && measured <= expected + 0.2,
+                message);
+    };
+    const auto ebuTruePeakFixtures =
+        validation::makeEbuTruePeakFixtures();
+    const auto fixtureFor = [&ebuTruePeakFixtures] (int caseNumber)
+        -> const validation::TruePeakFixture&
+    {
+        const auto found = std::find_if(
+            ebuTruePeakFixtures.begin(), ebuTruePeakFixtures.end(),
+            [caseNumber] (const auto& fixture)
+            {
+                return fixture.caseNumber == caseNumber;
+            });
+        if (found == ebuTruePeakFixtures.end())
+            throw std::logic_error("Missing EBU true-peak fixture");
+        return *found;
+    };
+    for (const auto& fixture : ebuTruePeakFixtures)
+    {
+        requireTruePeakTolerance(
+            measureTruePeak(fixture.samples), fixture.expectedDbtp,
+            "EBU true-peak case 15-23 must remain within tolerance");
+        if (!fixture.derivedTransient)
+            continue;
+        const auto limited = measureLimitedTruePeak(fixture.samples);
+        const auto limitedDbtp = 20.0 * std::log10(limited.outputTruePeak);
+        require(limited.ceilingEngaged
+                    && limited.gainReductionDb > 0.5F
+                    && limitedDbtp <= -1.0 + 0.1
+                    && limitedDbtp >= -1.8,
+                "Limiter must contain synthesized EBU transient case 20-23 near -1 dBTP");
+    }
+
+    LookaheadLimiter limiterContract;
+    limiterContract.prepare(48000.0);
+    require(limiterContract.latencySamples() == 240,
+            "Five-millisecond lookahead must declare 240 samples at 48 kHz");
+    for (const auto rate : std::array<double, 4> {
+             44100.0, 48000.0, 96000.0, 192000.0})
+    {
+        LookaheadLimiter impulseLimiter;
+        impulseLimiter.prepare(rate);
+        static_cast<void>(impulseLimiter.process({4.0F, -2.0F}));
+        for (std::size_t frame = 0;
+             frame < impulseLimiter.latencySamples() + 128; ++frame)
+            static_cast<void>(impulseLimiter.process({}));
+        const auto impulseTelemetry = impulseLimiter.telemetry();
+        require(impulseLimiter.latencySamples()
+                    == static_cast<std::size_t>(
+                        std::llround(rate * 0.005))
+                    && impulseTelemetry.ceilingEngaged
+                    && impulseTelemetry.gainReductionDb > 3.0F
+                    && impulseTelemetry.outputTruePeak
+                        <= std::pow(10.0F, -0.9F / 20.0F),
+                "Impulse limiting and lookahead latency must scale across sample rates");
+    }
+    const auto transparentLimiter = measureLimitedTruePeak(
+        fixtureFor(16).samples);
+    requireTruePeakTolerance(
+        20.0 * std::log10(transparentLimiter.outputTruePeak), -6.0,
+        "Lookahead limiter must preserve a tone below its ceiling");
+    require(transparentLimiter.gainReductionDb < 0.05F
+                && !transparentLimiter.ceilingEngaged,
+            "Lookahead limiter must remain neutral below its ceiling");
+    const auto limitedEbuCase19 = measureLimitedTruePeak(
+        fixtureFor(19).samples);
+    const auto limitedCase19Dbtp = 20.0 * std::log10(
+        limitedEbuCase19.outputTruePeak);
+    require(limitedEbuCase19.ceilingEngaged
+                && limitedEbuCase19.gainReductionDb > 3.0F
+                && limitedCase19Dbtp <= -1.0 + 0.1
+                && limitedCase19Dbtp >= -1.6,
+            "Lookahead limiter must contain EBU case 19 near the -1 dBTP ceiling");
+
+    OutputStage liveSafety;
+    liveSafety.prepare(48000.0);
+    const auto safetyCeiling = liveSafety.ceilingLinear();
+    StereoSample linkedLimited;
+    for (std::size_t frame = 0;
+         frame < liveSafety.latencySamples() + 64; ++frame)
+        linkedLimited = liveSafety.process({4.0F, -2.0F});
+    require(std::abs(linkedLimited.left) <= safetyCeiling + 1.0e-6F
+                && std::abs(linkedLimited.right) <= safetyCeiling + 1.0e-6F,
+            "Live safety must enforce its linked stereo sample ceiling");
+    require(std::abs(linkedLimited.right / linkedLimited.left + 0.5F) < 1.0e-5F,
+            "Linked stereo limiting must preserve the instantaneous channel ratio");
+    const auto guarded = liveSafety.process({
+        std::numeric_limits<float>::quiet_NaN(),
+        std::numeric_limits<float>::infinity()});
+    require(std::isfinite(guarded.left) && std::isfinite(guarded.right)
+                && liveSafety.telemetry().nonFiniteSamples == 2,
+            "Live safety must contain and count non-finite samples");
+    const auto safetyInterval = liveSafety.consumeTelemetry();
+    require(safetyInterval.inputSamplePeak > 1.0F
+                && safetyInterval.outputSamplePeak <= safetyCeiling + 1.0e-6F
+                && safetyInterval.inputTruePeak > 0.0F
+                && safetyInterval.outputTruePeak > 0.0F
+                && safetyInterval.gainReductionDb > 0.0F
+                && safetyInterval.sampleCeilingLatched
+                && safetyInterval.nonFiniteSamples == 2,
+            "Live safety telemetry must expose input/output peaks, GR and guards");
+    require(liveSafety.consumeTelemetry().nonFiniteSamples == 0,
+            "Live safety interval telemetry must be consumable without resetting DSP state");
+    OutputStage dcSafety;
+    dcSafety.prepare(48000.0);
+    StereoSample dcOutput;
+    for (std::size_t frame = 0; frame < 48000; ++frame)
+        dcOutput = dcSafety.process({0.5F, -0.5F});
+    require(std::abs(dcOutput.left) < 1.0e-3F
+                && std::abs(dcOutput.right) < 1.0e-3F,
+            "Live safety DC blocker must reject a sustained offset");
+    require(liveSafety.latencySamples() == 240,
+            "Live true-peak safety must declare its five-millisecond latency");
+    liveSafety.prepare(96000.0);
+    require(liveSafety.latencySamples() == 480
+                && liveSafety.telemetry().nonFiniteSamples == 0,
+            "Output safety re-prepare must reset state and scale latency");
+
+    OutputStage technicalOutput;
+    technicalOutput.prepare(48000.0);
+    double fullLevelSquare = 0.0;
+    double trimmedSquare = 0.0;
+    std::size_t technicalFrame = 0;
+    const auto processTechnicalTone = [&] (std::size_t frames,
+                                           double& squareSum)
+    {
+        for (std::size_t frame = 0; frame < frames; ++frame, ++technicalFrame)
+        {
+            const auto sample = static_cast<float>(0.5 * std::sin(
+                2.0 * 3.14159265358979323846 * 1000.0
+                * static_cast<double>(technicalFrame) / 48000.0));
+            const auto output = technicalOutput.process({sample, sample});
+            if (frame >= frames / 2)
+                squareSum += static_cast<double>(output.left) * output.left;
+        }
+    };
+    processTechnicalTone(2400, fullLevelSquare);
+    technicalOutput.setOutputTrimDb(-6.0F);
+    processTechnicalTone(2400, trimmedSquare);
+    const auto trimRmsRatio = std::sqrt(trimmedSquare / fullLevelSquare);
+    require(std::abs(trimRmsRatio - std::pow(10.0, -6.0 / 20.0)) < 0.01
+                && std::abs(technicalOutput.outputTrimDb() + 6.0F) < 1.0e-6F,
+            "Technical output trim must be a smooth independent dB stage");
+    technicalOutput.setMuted(true);
+    float mutedTailPeak = 0.0F;
+    double previousMuteSample = 0.0;
+    double maximumMuteStep = 0.0;
+    for (std::size_t frame = 0; frame < 1200; ++frame, ++technicalFrame)
+    {
+        const auto sample = static_cast<float>(0.5 * std::sin(
+            2.0 * 3.14159265358979323846 * 1000.0
+            * static_cast<double>(technicalFrame) / 48000.0));
+        const auto output = technicalOutput.process({sample, sample});
+        maximumMuteStep = std::max(
+            maximumMuteStep,
+            std::abs(static_cast<double>(output.left) - previousMuteSample));
+        previousMuteSample = output.left;
+        if (frame >= 1000)
+            mutedTailPeak = std::max(mutedTailPeak, std::abs(output.left));
+    }
+    require(technicalOutput.isMuted() && mutedTailPeak < 1.0e-5F
+                && maximumMuteStep < 0.1,
+            "Technical mute must ramp to digital silence without a large step");
+    technicalOutput.setMuted(false);
+    float unmutedTailPeak = 0.0F;
+    for (std::size_t frame = 0; frame < 1200; ++frame, ++technicalFrame)
+    {
+        const auto sample = static_cast<float>(0.5 * std::sin(
+            2.0 * 3.14159265358979323846 * 1000.0
+            * static_cast<double>(technicalFrame) / 48000.0));
+        const auto output = technicalOutput.process({sample, sample});
+        if (frame >= 1000)
+            unmutedTailPeak = std::max(unmutedTailPeak, std::abs(output.left));
+    }
+    require(!technicalOutput.isMuted() && unmutedTailPeak > 0.20F,
+            "Technical unmute must restore output through the ramp");
+
+    SessionModel previewSafetySession;
+    AudioEngine previewSafetyEngine(previewSafetySession);
+    previewSafetyEngine.setOutputProfile(OutputProfile::liveSafe);
+    require(previewSafetyEngine.setOutputTrimDb(-6.0F)
+                && !previewSafetyEngine.setOutputTrimDb(0.1F)
+                && !previewSafetyEngine.setOutputTrimDb(-24.1F),
+            "Engine output trim must accept only the technical attenuation range");
+    previewSafetyEngine.prepare(48000.0);
+    require(previewSafetyEngine.submitCommand({EngineCommandType::startRecording}),
+            "Post-safety preview recording must be queueable");
+    require(previewSafetyEngine.outputLatencySamples() == 240,
+            "Live engine must expose the output-stage latency");
+    std::array<float, 1024> previewInputLeft;
+    std::array<float, 1024> previewInputRight;
+    std::array<float, 1024> previewOutputLeft {};
+    std::array<float, 1024> previewOutputRight {};
+    for (std::size_t frame = 0; frame < previewInputLeft.size(); ++frame)
+    {
+        const auto polarity = frame % 2 == 0 ? 1.0F : -1.0F;
+        previewInputLeft[frame] = 2.0F * polarity;
+        previewInputRight[frame] = -1.0F * polarity;
+    }
+    previewSafetyEngine.processBlock(
+        previewOutputLeft.data(), previewOutputRight.data(),
+        previewOutputLeft.size(),
+        previewInputLeft.data(), previewInputRight.data());
+    const auto previewMaximum = *std::max_element(
+        previewOutputLeft.begin(), previewOutputLeft.end(),
+        [] (float left, float right)
+        {
+            return std::abs(left) < std::abs(right);
+        });
+    require(std::abs(previewMaximum) <= safetyCeiling + 1.0e-6F,
+            "Library Preview must pass through the live sample ceiling");
+    const auto previewMeter = previewSafetyEngine.consumeOutputPeak();
+    const auto previewSafety = previewSafetyEngine.consumeOutputSafetyTelemetry();
+    require(std::abs(previewMeter.left) <= safetyCeiling + 1.0e-6F
+                && previewMeter.left > 0.0F,
+            "Post-safety meter must observe Library Preview");
+    require(previewSafety.liveSafe && previewSafety.ceilingEngaged
+                && previewSafety.inputSamplePeak > 1.0F
+                && previewSafety.inputTruePeak > 0.0F
+                && previewSafety.outputTruePeak > 0.0F
+                && previewSafety.gainReductionDb > 0.0F
+                && previewSafety.rms.left > 0.0F,
+            "Post-safety telemetry must expose Preview RMS, input peak and GR");
+    require(std::abs(previewSafety.outputTrimDb + 6.0F) < 1.0e-6F
+                && !previewSafety.muted && !previewSafety.suspended,
+            "Output telemetry must distinguish trim, mute and suspension");
+    StereoSample previewRecordedFrame;
+    std::size_t previewRecordedCount = 0;
+    while (previewSafetyEngine.popRecordedFrame(previewRecordedFrame))
+    {
+        if (previewRecordedCount == previewSafetyEngine.outputLatencySamples() + 8)
+            require(std::abs(previewRecordedFrame.left
+                             - previewOutputLeft[previewRecordedCount]) < 1.0e-6F
+                        && std::abs(previewRecordedFrame.right
+                            - previewOutputRight[previewRecordedCount]) < 1.0e-6F,
+                    "Post-safety recording must capture the same preview sent to output");
+        ++previewRecordedCount;
+    }
+    require(previewRecordedCount == previewOutputLeft.size(),
+            "Post-safety recording must capture every preview frame");
+
+    previewSafetyEngine.setOutputMuted(true);
+    previewSafetyEngine.processBlock(
+        previewOutputLeft.data(), previewOutputRight.data(),
+        previewOutputLeft.size(),
+        previewInputLeft.data(), previewInputRight.data());
+    const auto mutedSafety =
+        previewSafetyEngine.consumeOutputSafetyTelemetry();
+    require(mutedSafety.muted && !mutedSafety.suspended
+                && std::abs(previewOutputLeft.back()) < 1.0e-5F,
+            "Engine mute request must reach the audio thread and silence output");
+    previewSafetyEngine.setOutputMuted(false);
+    previewSafetyEngine.suspendOutput();
+    previewSafetyEngine.processBlock(
+        previewOutputLeft.data(), previewOutputRight.data(),
+        previewOutputLeft.size(),
+        previewInputLeft.data(), previewInputRight.data());
+    const auto suspendedSafety =
+        previewSafetyEngine.consumeOutputSafetyTelemetry();
+    require(suspendedSafety.muted && suspendedSafety.suspended
+                && std::abs(previewOutputLeft.back()) < 1.0e-5F,
+            "Suspended device state must keep live output silent");
+    previewSafetyEngine.prepare(96000.0);
+    previewSafetyEngine.resumeOutput();
+    std::array<float, 2048> resumedInput;
+    std::array<float, 2048> resumedOutputLeft {};
+    std::array<float, 2048> resumedOutputRight {};
+    resumedInput.fill(0.25F);
+    previewSafetyEngine.processBlock(
+        resumedOutputLeft.data(), resumedOutputRight.data(),
+        resumedOutputLeft.size(), resumedInput.data(), resumedInput.data());
+    const auto resumedSafety =
+        previewSafetyEngine.consumeOutputSafetyTelemetry();
+    require(!resumedSafety.muted && !resumedSafety.suspended
+                && resumedOutputLeft.front() == 0.0F
+                && resumedOutputLeft.back() > 0.0F,
+            "Reconnect prepare must resume from silence through a safe fade-in");
+
+    SessionModel worstCaseSession;
+    worstCaseSession.masterLevel = 1.0;
+    worstCaseSession.mixer.sourceA.level = 1.25;
+    worstCaseSession.mixer.sourceB.level = 1.25;
+    worstCaseSession.patterns.setCell(0, 0, 0);
+    worstCaseSession.patterns.setCell(0, 1, 128);
+    for (std::size_t voice = 0;
+         voice < worstCaseSession.virtualVoices.size(); ++voice)
+    {
+        auto& state = worstCaseSession.virtualVoices[voice];
+        state.enabled = true;
+        state.sourceIndex = voice;
+        state.division = 1;
+        state.level = 1.0;
+        state.attackSeconds = 0.001;
+        state.releaseSeconds = 1.0;
+    }
+    std::vector<float> worstCaseSamples(48000, 0.95F);
+    StereoAudioBuffer worstCaseBuffer(
+        48000.0, worstCaseSamples, worstCaseSamples);
+    AudioEngine worstCaseEngine(worstCaseSession);
+    worstCaseEngine.setOutputProfile(OutputProfile::liveSafe);
+    worstCaseEngine.prepare(48000.0);
+    worstCaseEngine.setSourceBuffer(0, &worstCaseBuffer);
+    worstCaseEngine.setSourceBuffer(1, &worstCaseBuffer);
+    require(worstCaseEngine.submitCommand({EngineCommandType::start}),
+            "Worst-case live transport must be queueable");
+    constexpr std::size_t worstCaseFrames = 24000;
+    std::vector<float> worstCaseExternal(worstCaseFrames, 0.5F);
+    std::vector<float> worstCaseOutputLeft(worstCaseFrames, 0.0F);
+    std::vector<float> worstCaseOutputRight(worstCaseFrames, 0.0F);
+    worstCaseEngine.processBlock(
+        worstCaseOutputLeft.data(), worstCaseOutputRight.data(),
+        worstCaseFrames,
+        worstCaseExternal.data(), worstCaseExternal.data());
+    const auto worstCaseTelemetry =
+        worstCaseEngine.consumeOutputSafetyTelemetry();
+    require(worstCaseTelemetry.inputSamplePeak > 1.5F
+                && worstCaseTelemetry.gainReductionDb > 0.0F
+                && worstCaseTelemetry.ceilingEngaged,
+            "In-phase sources, virtual voices and Preview must reach live safety");
+    require(worstCaseTelemetry.outputTruePeak
+                    <= std::pow(10.0F, -0.9F / 20.0F)
+                && std::all_of(
+                    worstCaseOutputLeft.begin(), worstCaseOutputLeft.end(),
+                    [safetyCeiling] (float sample)
+                    {
+                        return std::isfinite(sample)
+                            && std::abs(sample) <= safetyCeiling + 1.0e-6F;
+                    })
+                && std::all_of(
+                    worstCaseOutputRight.begin(), worstCaseOutputRight.end(),
+                    [safetyCeiling] (float sample)
+                    {
+                        return std::isfinite(sample)
+                            && std::abs(sample) <= safetyCeiling + 1.0e-6F;
+                    }),
+            "Worst-case live sum must remain finite and below the true-peak ceiling");
+
     SessionModel offlineSession;
     offlineSession.patterns.setCell(0, 0, 0);
     StereoAudioBuffer offlineBuffer(
@@ -1581,6 +1952,53 @@ int main()
         rejected = true;
     }
     require(rejected, "TRACK MASTER must enforce its offline frame limit");
+
+    TakeCatalog takeCatalog;
+    TakeEntry takeEntry;
+    takeEntry.id = "take-20260729-001";
+    takeEntry.audioPath = "/tmp/NAVALHA_2026-07-29_18-00-00.wav";
+    takeEntry.filename = "NAVALHA_2026-07-29_18-00-00.wav";
+    takeEntry.createdAt = "2026-07-29T18:00:00Z";
+    takeEntry.durationSeconds = 12.5;
+    takeEntry.frames = 600000;
+    takeEntry.sampleRate = 48000;
+    takeEntry.sampleFormat = WavSampleFormat::pcm24;
+    takeEntry.metadata = {
+        "Take title", "Lúcio Araújo", "Navalha 2", "2026", "First take"};
+    takeEntry.review = {"SELECTED", 4, "continuous, rupture", "Keep ending"};
+    takeEntry.recipeJson =
+        R"({"format":"navalha-take-recipe","version":1,"seed":"0x12345678"})";
+    takeCatalog.upsert(takeEntry);
+    const auto takeCatalogJson = encodeTakeCatalog(takeCatalog);
+    const auto decodedTakeCatalog = decodeTakeCatalog(takeCatalogJson);
+    const auto* decodedTake = decodedTakeCatalog.find(takeEntry.id);
+    require(decodedTake != nullptr
+                && decodedTake->audioPath == takeEntry.audioPath
+                && decodedTake->sampleFormat == WavSampleFormat::pcm24
+                && decodedTake->review.status == "SELECTED"
+                && decodedTake->review.rating == 4
+                && decodedTake->metadata.artist == "Lúcio Araújo"
+                && decodedTake->recipeJson.find("navalha-take-recipe")
+                    != std::string::npos,
+            "TAKE catalog v1 must preserve provenance, review and recipe");
+    takeEntry.review.status = "UNKNOWN";
+    takeEntry.review.rating = 99;
+    takeCatalog.upsert(takeEntry);
+    require(takeCatalog.find(takeEntry.id)->review.status == "EXPERIMENT"
+                && takeCatalog.find(takeEntry.id)->review.rating == 5
+                && takeCatalog.entries().size() == 1,
+            "TAKE catalog must normalize review values and upsert by id");
+    rejected = false;
+    try
+    {
+        static_cast<void>(decodeTakeCatalog(
+            R"({"format":"navalha-take-catalog","version":2,"takes":[]})"));
+    }
+    catch (const std::invalid_argument&)
+    {
+        rejected = true;
+    }
+    require(rejected, "TAKE catalog must reject unsupported versions");
 
     const MasteringRecipe masteringRecipe {
         "mix.wav", "2026-07-29T18:00:00Z", masteringParameters

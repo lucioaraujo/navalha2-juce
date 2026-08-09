@@ -1,6 +1,7 @@
 #include <juce_audio_utils/juce_audio_utils.h>
 #include <juce_gui_extra/juce_gui_extra.h>
 #include "BinaryData.h"
+#include "UiHelp.h"
 
 #if JUCE_LINUX
 #include <X11/Xlib.h>
@@ -21,6 +22,7 @@
 #include <vector>
 
 #include "core/AudioEngine.h"
+#include "core/Json.h"
 #include "core/MasteringAlbumManifest.h"
 #include "core/MasteringAnalysis.h"
 #include "core/MasteringProcessor.h"
@@ -31,6 +33,7 @@
 #include "core/ProjectState.h"
 #include "core/RecordingWriterService.h"
 #include "core/SessionModel.h"
+#include "core/TakeCatalog.h"
 #include "core/WavMemoryReader.h"
 #include "core/WavStreamWriter.h"
 #include "core/WaveformPeaks.h"
@@ -49,6 +52,54 @@ constexpr auto yellow = 0xffffd84a;
 constexpr auto yellowHigh = 0xfffff08a;
 constexpr auto steel = 0xff78828a;
 constexpr auto red = 0xffe01820;
+constexpr int contextualRailWidth = 340;
+}
+
+juce::Colour tintedPanelSurface(juce::Colour accent, float amount = 0.16F)
+{
+    return juce::Colour(Arcade::surface).interpolatedWith(
+        accent, amount);
+}
+
+void styleEditableTextField(juce::TextEditor& editor)
+{
+    editor.setColour(
+        juce::TextEditor::backgroundColourId,
+        tintedPanelSurface(juce::Colour(Arcade::yellow), 0.13F));
+    editor.setColour(
+        juce::TextEditor::outlineColourId,
+        juce::Colour(Arcade::line).interpolatedWith(
+            juce::Colour(Arcade::yellow), 0.52F));
+    editor.setColour(
+        juce::TextEditor::focusedOutlineColourId,
+        juce::Colour(Arcade::yellowHigh));
+    editor.setColour(
+        juce::TextEditor::textColourId, juce::Colour(Arcade::ink));
+    editor.setColour(
+        juce::TextEditor::highlightColourId,
+        juce::Colour(Arcade::yellow).withAlpha(0.42F));
+    editor.setColour(
+        juce::TextEditor::highlightedTextColourId,
+        juce::Colour(Arcade::ink));
+    editor.setColour(
+        juce::CaretComponent::caretColourId, juce::Colour(Arcade::yellowHigh));
+    editor.setFont(juce::Font(juce::FontOptions(
+        "DejaVu Sans Mono", 11.0F, juce::Font::plain)));
+    editor.setIndents(7, 4);
+}
+
+juce::String utf8(std::string_view value)
+{
+    return juce::String::fromUTF8(
+        value.data(), static_cast<int>(value.size()));
+}
+
+juce::Image navalhaAppIcon()
+{
+    static const auto icon = juce::ImageCache::getFromMemory(
+        BinaryData::navalha2appicon128_png,
+        BinaryData::navalha2appicon128_pngSize);
+    return icon;
 }
 
 struct DecodedSourceFile
@@ -212,8 +263,11 @@ public:
         setDefaultSansSerifTypefaceName("DejaVu Sans Mono");
     }
 
-    juce::Font getTextButtonFont(juce::TextButton&, int height) override
+    juce::Font getTextButtonFont(juce::TextButton& button, int height) override
     {
+        if (button.getProperties().contains("arcadeLargeButton"))
+            return juce::Font(juce::FontOptions(
+                "DejaVu Sans Mono", 14.0F, juce::Font::bold));
         return juce::Font(
             juce::FontOptions("DejaVu Sans Mono", juce::jlimit(11.0F, 15.0F,
                 static_cast<float>(height) * 0.35F), juce::Font::bold));
@@ -224,11 +278,66 @@ public:
         if (label.getProperties().contains("arcadeClock"))
             return juce::Font(juce::FontOptions(
                 "DejaVu Sans Mono", 18.0F, juce::Font::bold));
+        if (label.getProperties().contains("arcadeFontSize"))
+        {
+            const auto size = static_cast<float>(
+                static_cast<double>(label.getProperties()["arcadeFontSize"]));
+            const auto style = static_cast<bool>(
+                label.getProperties()["arcadeFontBold"])
+                ? juce::Font::bold : juce::Font::plain;
+            return juce::Font(juce::FontOptions(
+                "DejaVu Sans Mono", juce::jlimit(9.0F, 26.0F, size), style));
+        }
         return juce::Font(juce::FontOptions(
             "DejaVu Sans Mono",
             label.getProperties().contains("arcadeTitle") ? 23.0F : 12.0F,
             label.getProperties().contains("arcadeTitle")
                 ? juce::Font::bold : juce::Font::plain));
+    }
+
+    juce::Font getComboBoxFont(juce::ComboBox&) override
+    {
+        return juce::Font(juce::FontOptions(
+            "DejaVu Sans Mono", 11.0F, juce::Font::plain));
+    }
+
+    juce::Font getPopupMenuFont() override
+    {
+        return juce::Font(juce::FontOptions(
+            "DejaVu Sans Mono", 11.0F, juce::Font::plain));
+    }
+
+    juce::Slider::SliderLayout getSliderLayout(
+        juce::Slider& slider) override
+    {
+        auto layout = juce::LookAndFeel_V4::getSliderLayout(slider);
+        const auto textPosition = slider.getTextBoxPosition();
+        if (!slider.isHorizontal() || slider.isBar()
+            || (textPosition != juce::Slider::TextBoxLeft
+                && textPosition != juce::Slider::TextBoxRight))
+            return layout;
+
+        const auto bounds = slider.getLocalBounds();
+        const auto thumbIndent = getSliderThumbRadius(slider);
+        // Always reserve at least as much visible width for the track as for
+        // the numeric box, plus a small breathing gap. This automatically
+        // contracts value boxes in dense dual-monitor rows.
+        const auto maximumTextWidth = juce::jmax(
+            16, (bounds.getWidth() - 2 * thumbIndent - 8) / 2);
+        const auto textWidth = juce::jmin(
+            layout.textBoxBounds.getWidth(), maximumTextWidth);
+        layout.textBoxBounds.setWidth(textWidth);
+        layout.textBoxBounds.setX(
+            textPosition == juce::Slider::TextBoxLeft
+                ? 0 : bounds.getWidth() - textWidth);
+
+        layout.sliderBounds = bounds;
+        if (textPosition == juce::Slider::TextBoxLeft)
+            layout.sliderBounds.removeFromLeft(textWidth);
+        else
+            layout.sliderBounds.removeFromRight(textWidth);
+        layout.sliderBounds.reduce(thumbIndent, 0);
+        return layout;
     }
 
     void drawButtonBackground(juce::Graphics& graphics,
@@ -243,9 +352,11 @@ public:
             button.getProperties()["arcadeAccent"].toString();
         const auto accent = accentName == "record"
             ? juce::Colour(Arcade::red)
-            : accentName == "stop"
-                ? juce::Colour(Arcade::ink)
-                : juce::Colour(Arcade::yellow);
+            : accentName == "sourceB"
+                ? juce::Colour(Arcade::red)
+                : accentName == "stop"
+                    ? juce::Colour(Arcade::ink)
+                    : juce::Colour(Arcade::yellow);
         auto top = active ? accent.brighter(0.28F)
                           : juce::Colour(highlighted ? 0xff222724 : 0xff1a1f1f);
         auto bottom = active ? accent
@@ -273,15 +384,57 @@ public:
             button.getProperties()["arcadeAccent"].toString();
         const auto accent = accentName == "record"
             ? juce::Colour(Arcade::red)
-            : accentName == "stop"
-                ? juce::Colour(Arcade::ink)
-                : juce::Colour(Arcade::yellow);
+            : accentName == "sourceB"
+                ? juce::Colour(Arcade::red)
+                : accentName == "stop"
+                    ? juce::Colour(Arcade::ink)
+                    : juce::Colour(Arcade::yellow);
         graphics.setColour(active
             ? juce::Colour(Arcade::background)
             : accentName.isNotEmpty() ? accent : juce::Colour(Arcade::ink));
         graphics.drawFittedText(button.getButtonText(),
                                 button.getLocalBounds().reduced(5, 2),
                                 juce::Justification::centred, 1);
+    }
+
+    void drawToggleButton(juce::Graphics& graphics,
+                          juce::ToggleButton& button,
+                          bool highlighted,
+                          bool down) override
+    {
+        const auto bounds = button.getLocalBounds().toFloat().reduced(0.5F);
+        const auto active = button.getToggleState() || down;
+        const auto accentName =
+            button.getProperties()["arcadeAccent"].toString();
+        const auto accent = accentName == "sourceB"
+            ? juce::Colour(Arcade::red)
+            : juce::Colour(Arcade::yellow);
+        const auto top = active
+            ? accent.brighter(0.28F)
+            : juce::Colour(highlighted ? 0xff222724 : 0xff1a1f1f);
+        const auto bottom = active
+            ? accent
+            : juce::Colour(highlighted ? 0xff141817 : Arcade::surface);
+        juce::ColourGradient gradient(
+            top, bounds.getTopLeft(), bottom, bounds.getBottomLeft(), false);
+        graphics.setGradientFill(gradient);
+        graphics.fillRoundedRectangle(bounds, 3.0F);
+        graphics.setColour(active
+            ? accent
+            : highlighted ? accent : juce::Colour(Arcade::line));
+        graphics.drawRoundedRectangle(bounds, 3.0F, active ? 1.5F : 1.0F);
+
+        graphics.setColour(active
+            ? juce::Colour(Arcade::background)
+            : juce::Colour(Arcade::ink));
+        graphics.setFont(juce::Font(juce::FontOptions(
+            "DejaVu Sans Mono",
+            juce::jlimit(
+                9.0F, 13.0F, static_cast<float>(button.getHeight()) * 0.34F),
+            juce::Font::bold)));
+        graphics.drawFittedText(
+            button.getButtonText(), button.getLocalBounds().reduced(5, 2),
+            juce::Justification::centred, 1, 0.72F);
     }
 };
 
@@ -358,21 +511,28 @@ public:
              sourceIndex < sourceBounds.size(); ++sourceIndex)
         {
             auto lane = sourceBounds[sourceIndex].reduced(4, 3);
+            const auto sourceAccent = sourceIndex == 0
+                ? juce::Colour(Arcade::yellow)
+                : juce::Colour(Arcade::red);
+            const auto sourceAccentHigh = sourceIndex == 0
+                ? juce::Colour(Arcade::yellowHigh)
+                : juce::Colour(Arcade::red).brighter(0.42F);
             const auto dragTarget = dragActive
                 && sourceForY(dragPositionY) == sourceIndex;
             graphics.setColour(
                 dragTarget
-                    ? juce::Colour(Arcade::yellow).withAlpha(0.18F)
+                    ? sourceAccent.withAlpha(0.18F)
                     : sourceIndex == selectedSource
-                    ? juce::Colour(Arcade::surfaceHigh)
+                    ? tintedPanelSurface(sourceAccent, 0.12F)
                     : juce::Colour(Arcade::surface));
             graphics.fillRect(lane);
             graphics.setColour(
                 dragTarget
-                    ? juce::Colour(Arcade::yellowHigh)
+                    ? sourceAccentHigh
                     : sourceIndex == selectedSource
-                    ? juce::Colour(Arcade::yellow)
-                    : juce::Colour(Arcade::line));
+                    ? sourceAccent
+                    : juce::Colour(Arcade::line).interpolatedWith(
+                        sourceAccent, 0.30F));
             graphics.drawRect(
                 lane, dragTarget || sourceIndex == selectedSource ? 2 : 1);
             const auto centre = static_cast<float>(lane.getCentreY());
@@ -385,6 +545,11 @@ public:
                 static_cast<float>(lane.getRight()));
 
             const auto& sourcePeaks = peaks[sourceIndex];
+            // Keep the drop-zone prompt on the same typography as the
+            // SOURCE A/B lane label; the previous default Graphics font made
+            // the two source fields look unrelated.
+            graphics.setFont(juce::Font(juce::FontOptions(
+                "DejaVu Sans Mono", 10.0F, juce::Font::bold)));
             if (sourcePeaks.empty())
             {
                 graphics.setColour(juce::Colour(Arcade::muted));
@@ -445,7 +610,7 @@ public:
                     static_cast<float>(lane.getY()),
                     static_cast<float>(lane.getBottom()));
 
-                graphics.setColour(juce::Colour(Arcade::yellow));
+                graphics.setColour(sourceAccent);
                 const auto& boundaries = sliceBoundaries[sourceIndex];
                 for (std::size_t boundary = 0;
                      boundary < boundaries.size(); ++boundary)
@@ -471,8 +636,9 @@ public:
                 "DejaVu Sans Mono", 10.0F, juce::Font::bold)));
             graphics.setColour(
                 sourceIndex == selectedSource
-                    ? juce::Colour(Arcade::yellowHigh)
-                    : juce::Colour(Arcade::muted));
+                    ? sourceAccentHigh
+                    : juce::Colour(Arcade::muted).interpolatedWith(
+                        sourceAccent, 0.36F));
             graphics.drawFittedText(
                 sourceIndex == 0 ? "SOURCE A" : "SOURCE B",
                 lane.removeFromTop(24).removeFromLeft(110),
@@ -653,9 +819,9 @@ public:
     AudioLibraryList()
     {
         list.setModel(this);
-        list.setRowHeight(46);
+        list.setRowHeight(54);
         list.setColour(
-            juce::ListBox::backgroundColourId, juce::Colour(Arcade::background));
+            juce::ListBox::backgroundColourId, juce::Colour(Arcade::surface));
         list.setColour(
             juce::ListBox::outlineColourId, juce::Colour(Arcade::line));
         list.setOutlineThickness(1);
@@ -722,6 +888,7 @@ private:
 
 public:
     std::function<void(const juce::File&)> onSelection;
+    std::function<void(const juce::File&)> onPreview;
 
     void resized() override
     {
@@ -740,12 +907,14 @@ private:
         void update(const juce::File& newFile,
                     const juce::File& newRoot,
                     bool newSelected,
-                    std::function<void()> selectAction)
+                    std::function<void()> selectAction,
+                    std::function<void()> previewAction)
         {
             file = newFile;
             rootDirectory = newRoot;
             selected = newSelected;
             onSelect = std::move(selectAction);
+            onPreview = std::move(previewAction);
             repaint();
         }
 
@@ -753,38 +922,51 @@ private:
         {
             auto bounds = getLocalBounds();
             graphics.fillAll(selected
-                ? juce::Colour(0xff20251f)
-                : hovered ? juce::Colour(0xff171c1a)
+                ? juce::Colour(Arcade::surfaceHigh).brighter(0.12F)
+                : hovered ? juce::Colour(Arcade::surfaceHigh)
                           : juce::Colour(Arcade::surface));
             graphics.setColour(juce::Colour(Arcade::line));
             graphics.drawHorizontalLine(
                 getHeight() - 1, 6.0F, static_cast<float>(getWidth() - 6));
-
-            auto dragBounds = bounds.removeFromRight(58).reduced(5, 10);
-            graphics.setColour(hovered
-                ? juce::Colour(Arcade::yellowHigh)
-                : juce::Colour(Arcade::yellow));
-            graphics.drawRoundedRectangle(dragBounds.toFloat(), 2.0F, 1.0F);
-            graphics.setFont(juce::Font(
-                juce::FontOptions("DejaVu Sans Mono", 9.0F, juce::Font::bold)));
-            graphics.drawFittedText(
-                "DRAG", dragBounds, juce::Justification::centred, 1);
 
             auto textBounds = bounds.reduced(7, 3);
             graphics.setColour(selected
                 ? juce::Colour(Arcade::yellowHigh)
                 : juce::Colour(Arcade::ink));
             graphics.setFont(juce::Font(
-                juce::FontOptions("DejaVu Sans Mono", 11.5F, juce::Font::bold)));
+                juce::FontOptions("DejaVu Sans Mono", 12.0F, juce::Font::bold)));
             graphics.drawFittedText(
                 file.getFileName(), textBounds.removeFromTop(22),
-                juce::Justification::centredLeft, 1);
+                juce::Justification::centredLeft, 1, 0.70F);
             graphics.setColour(juce::Colour(Arcade::muted));
             graphics.setFont(juce::Font(
-                juce::FontOptions("DejaVu Sans Mono", 8.7F, juce::Font::plain)));
+                juce::FontOptions("DejaVu Sans Mono", 9.2F, juce::Font::plain)));
+            const auto parentName = file.getParentDirectory() == rootDirectory
+                ? rootDirectory.getFileName()
+                : file.getParentDirectory().getFileName();
+            const auto details = parentName + juce::String::fromUTF8(" · ")
+                + file.getFileExtension().trimCharactersAtStart(".").toUpperCase()
+                + juce::String::fromUTF8(" · ")
+                + juce::File::descriptionOfSizeInBytes(file.getSize());
+            auto detailsBounds = textBounds;
+            auto dragChip = detailsBounds.removeFromRight(48).reduced(3, 3);
             graphics.drawFittedText(
-                file.getRelativePathFrom(rootDirectory), textBounds,
-                juce::Justification::centredLeft, 1);
+                details, detailsBounds,
+                juce::Justification::centredLeft, 1, 0.75F);
+
+            graphics.setColour(
+                hovered
+                    ? juce::Colour(Arcade::yellow).withAlpha(0.18F)
+                    : juce::Colour(Arcade::surfaceHigh));
+            graphics.fillRoundedRectangle(dragChip.toFloat(), 2.0F);
+            graphics.setColour(hovered
+                ? juce::Colour(Arcade::yellowHigh)
+                : juce::Colour(Arcade::yellow));
+            graphics.drawRoundedRectangle(dragChip.toFloat(), 2.0F, 1.0F);
+            graphics.setFont(juce::Font(juce::FontOptions(
+                "DejaVu Sans Mono", 8.0F, juce::Font::bold)));
+            graphics.drawFittedText(
+                "DRAG", dragChip, juce::Justification::centred, 1);
         }
 
         void mouseEnter(const juce::MouseEvent&) override
@@ -825,10 +1007,17 @@ private:
             dragStarted = false;
         }
 
+        void mouseDoubleClick(const juce::MouseEvent&) override
+        {
+            if (onPreview)
+                onPreview();
+        }
+
     private:
         juce::File file;
         juce::File rootDirectory;
         std::function<void()> onSelect;
+        std::function<void()> onPreview;
         bool selected = false;
         bool hovered = false;
         bool dragStarted = false;
@@ -848,12 +1037,22 @@ private:
         if (juce::isPositiveAndBelow(row, static_cast<int>(files.size())))
         {
             const auto file = files[static_cast<std::size_t>(row)];
-            rowComponent->update(file, root, selected, [this, row, file]
-            {
-                list.selectRow(row);
-                if (onSelection)
-                    onSelection(file);
-            });
+            rowComponent->update(
+                file, root, selected,
+                [this, row, file]
+                {
+                    list.selectRow(row);
+                    if (onSelection)
+                        onSelection(file);
+                },
+                [this, row, file]
+                {
+                    list.selectRow(row);
+                    if (onSelection)
+                        onSelection(file);
+                    if (onPreview)
+                        onPreview(file);
+                });
         }
         return rowComponent;
     }
@@ -869,19 +1068,14 @@ private:
 
         auto bounds = juce::Rectangle<int>(0, 0, width, height);
         graphics.fillAll(selected
-            ? juce::Colour(0xff20251f)
+            ? juce::Colour(Arcade::surfaceHigh).brighter(0.12F)
             : juce::Colour(Arcade::surface));
         graphics.setColour(juce::Colour(Arcade::line));
         graphics.drawHorizontalLine(
             height - 1, 6.0F, static_cast<float>(width - 6));
 
-        auto sourceBounds = bounds.removeFromRight(58).reduced(5, 10);
         graphics.setColour(juce::Colour(Arcade::yellow));
-        graphics.drawRoundedRectangle(sourceBounds.toFloat(), 2.0F, 1.0F);
-        graphics.setFont(juce::Font(
-            juce::FontOptions("DejaVu Sans Mono", 9.5F, juce::Font::bold)));
-        graphics.drawFittedText(
-            "DRAG", sourceBounds, juce::Justification::centred, 1);
+        graphics.fillRect(bounds.removeFromRight(3).reduced(0, 8));
 
         const auto& file = files[static_cast<std::size_t>(row)];
         auto textBounds = bounds.reduced(7, 3);
@@ -889,10 +1083,10 @@ private:
             ? juce::Colour(Arcade::yellowHigh)
             : juce::Colour(Arcade::ink));
         graphics.setFont(juce::Font(
-            juce::FontOptions("DejaVu Sans Mono", 12.0F, juce::Font::bold)));
-        graphics.drawFittedText(
+            juce::FontOptions("DejaVu Sans Mono", 12.5F, juce::Font::bold)));
+        graphics.drawText(
             file.getFileName(), textBounds.removeFromTop(22),
-            juce::Justification::centredLeft, 1);
+            juce::Justification::centredLeft, true);
         graphics.setColour(juce::Colour(Arcade::muted));
         graphics.setFont(juce::Font(
             juce::FontOptions("DejaVu Sans Mono", 9.0F, juce::Font::plain)));
@@ -916,6 +1110,7 @@ public:
         : deviceManager(manager),
           selector(manager, 0, 0, 2, 2, false, false, true, false)
     {
+        setLookAndFeel(&lookAndFeel);
         heading.setText("AUDIO SETUP", juce::dontSendNotification);
         heading.setJustificationType(juce::Justification::centredLeft);
         heading.getProperties().set("arcadeTitle", true);
@@ -928,16 +1123,19 @@ public:
                 "OUTPUT DEVICE · SAMPLE RATE · BUFFER"),
             juce::dontSendNotification);
         subtitle.setJustificationType(juce::Justification::centredLeft);
+        subtitle.getProperties().set("arcadeFontSize", 10.0);
         subtitle.setColour(
             juce::Label::textColourId, juce::Colour(Arcade::muted));
         addAndMakeVisible(subtitle);
 
         deviceStatus.setJustificationType(juce::Justification::centredLeft);
+        deviceStatus.getProperties().set("arcadeFontSize", 11.0);
         deviceStatus.setColour(
             juce::Label::textColourId, juce::Colour(Arcade::ink));
         addAndMakeVisible(deviceStatus);
 
         formatStatus.setJustificationType(juce::Justification::centredRight);
+        formatStatus.getProperties().set("arcadeFontSize", 11.0);
         formatStatus.setColour(
             juce::Label::textColourId, juce::Colour(Arcade::yellow));
         addAndMakeVisible(formatStatus);
@@ -949,18 +1147,23 @@ public:
             "test; use 128/256 only after stable playback.",
             juce::dontSendNotification);
         safetyNote.setJustificationType(juce::Justification::centredLeft);
+        safetyNote.getProperties().set("arcadeFontSize", 10.0);
         safetyNote.setColour(
             juce::Label::textColourId, juce::Colour(Arcade::muted));
         addAndMakeVisible(safetyNote);
 
+        // The global LEARN listener can therefore explain controls created
+        // internally by JUCE's AudioDeviceSelectorComponent as well.
+        getProperties().set("learnKey", "audio");
         deviceManager.addChangeListener(this);
         refreshDeviceStatus();
-        setSize(760, 680);
+        setSize(760, 640);
     }
 
     ~AudioSettingsPanel() override
     {
         deviceManager.removeChangeListener(this);
+        setLookAndFeel(nullptr);
     }
 
     void paint(juce::Graphics& graphics) override
@@ -968,7 +1171,7 @@ public:
         graphics.fillAll(juce::Colour(Arcade::background));
 
         auto bounds = getLocalBounds().reduced(10);
-        auto header = bounds.removeFromTop(76).toFloat();
+        auto header = bounds.removeFromTop(70).toFloat();
         juce::ColourGradient glow(
             juce::Colour(0x18ffd84a), header.getCentreX(), header.getY(),
             juce::Colours::transparentBlack, header.getCentreX(),
@@ -978,13 +1181,13 @@ public:
         graphics.setColour(juce::Colour(Arcade::yellow));
         graphics.fillRect(header.getX(), header.getY(), 5.0F, header.getHeight());
 
-        auto status = bounds.removeFromTop(58).reduced(0, 5).toFloat();
+        auto status = bounds.removeFromTop(54).reduced(0, 4).toFloat();
         graphics.setColour(juce::Colour(Arcade::surfaceHigh));
         graphics.fillRoundedRectangle(status, 4.0F);
         graphics.setColour(juce::Colour(Arcade::line));
         graphics.drawRoundedRectangle(status, 4.0F, 1.0F);
 
-        auto footer = getLocalBounds().reduced(10).removeFromBottom(54).toFloat();
+        auto footer = getLocalBounds().reduced(10).removeFromBottom(52).toFloat();
         graphics.setColour(juce::Colour(Arcade::surface));
         graphics.fillRoundedRectangle(footer, 4.0F);
         graphics.setColour(juce::Colour(Arcade::line));
@@ -994,17 +1197,17 @@ public:
     void resized() override
     {
         auto area = getLocalBounds().reduced(18, 12);
-        auto header = area.removeFromTop(72);
-        heading.setBounds(header.removeFromTop(43).reduced(10, 0));
+        auto header = area.removeFromTop(68);
+        heading.setBounds(header.removeFromTop(39).reduced(10, 0));
         subtitle.setBounds(header.reduced(10, 0));
 
-        auto status = area.removeFromTop(58).reduced(10, 8);
+        auto status = area.removeFromTop(54).reduced(10, 7);
         deviceStatus.setBounds(status.removeFromLeft(
             static_cast<int>(status.getWidth() * 0.62F)));
         formatStatus.setBounds(status);
 
         area.removeFromTop(6);
-        auto footer = area.removeFromBottom(50);
+        auto footer = area.removeFromBottom(48);
         safetyNote.setBounds(footer.reduced(10, 2));
         area.removeFromBottom(6);
         selector.setBounds(area.reduced(4, 0));
@@ -1040,6 +1243,7 @@ private:
         }
     }
 
+    ArcadeLookAndFeel lookAndFeel;
     juce::AudioDeviceManager& deviceManager;
     juce::AudioDeviceSelectorComponent selector;
     juce::Label heading;
@@ -1052,11 +1256,19 @@ private:
 class PagedViewport final : public juce::Viewport
 {
 public:
-    void mouseWheelMove(const juce::MouseEvent&,
-                        const juce::MouseWheelDetails&) override
+    std::function<void(juce::Rectangle<int>)> onVisibleAreaChanged;
+
+    void mouseWheelMove(const juce::MouseEvent& event,
+                        const juce::MouseWheelDetails& wheel) override
     {
-        // Workspace navigation is explicit. Accidental wheel movement must not
-        // leave module headings or controls cut between two pages.
+        juce::Viewport::mouseWheelMove(event, wheel);
+    }
+
+private:
+    void visibleAreaChanged(const juce::Rectangle<int>& newVisibleArea) override
+    {
+        if (onVisibleAreaChanged)
+            onVisibleAreaChanged(newVisibleArea);
     }
 };
 
@@ -1142,7 +1354,7 @@ public:
             currentPoint.x - 6.0F, currentPoint.y - 6.0F, 12.0F, 12.0F);
 
         graphics.setFont(juce::Font(juce::FontOptions(
-            "DejaVu Sans Mono", 10.0F, juce::Font::bold)));
+            "DejaVu Sans Mono", 10.5F, juce::Font::bold)));
         graphics.drawFittedText(
             "BPM " + juce::String(std::lround(bpm))
                 + " | PITCH " + signedPitch(pitch),
@@ -1267,7 +1479,8 @@ struct PerformanceSnapshot
 
 class MainComponent final : public juce::AudioAppComponent,
                             private juce::Timer,
-                            private juce::ChangeListener
+                            private juce::ChangeListener,
+                            private juce::FocusChangeListener
 {
 public:
     MainComponent()
@@ -1337,9 +1550,36 @@ public:
                 0, 0, master.getValue()}));
         };
         addAndMakeVisible(master);
-        masterLabel.setText("MASTER", juce::dontSendNotification);
-        masterLabel.setJustificationType(juce::Justification::centredRight);
+        masterLabel.setText("MASTER CREATIVE", juce::dontSendNotification);
+        masterLabel.setJustificationType(juce::Justification::centred);
         addAndMakeVisible(masterLabel);
+
+        outputTrim.setRange(-24.0, 0.0, 0.1);
+        outputTrim.setValue(0.0, juce::dontSendNotification);
+        outputTrim.setTextValueSuffix(" dB");
+        outputTrim.setTooltip(
+            "Technical attenuation before the safety limiter; independent "
+            "from the creative MASTER.");
+        outputTrim.onValueChange = [this]
+        {
+            static_cast<void>(engine.setOutputTrimDb(
+                static_cast<float>(outputTrim.getValue())));
+        };
+        outputTrim.onDragEnd = [this] { saveAudioSettings(); };
+        addAndMakeVisible(outputTrim);
+        outputTrimLabel.setText("OUTPUT TRIM", juce::dontSendNotification);
+        outputTrimLabel.setJustificationType(juce::Justification::centred);
+        addAndMakeVisible(outputTrimLabel);
+        outputMute.setButtonText("MUTE");
+        outputMute.setTooltip("Click-free technical mute after MASTER.");
+        outputMute.onClick = [this]
+        {
+            engine.setOutputMuted(outputMute.getToggleState());
+            saveAudioSettings();
+            showStatus(outputMute.getToggleState()
+                ? "OUTPUT MUTED" : "OUTPUT FADE IN");
+        };
+        addAndMakeVisible(outputMute);
 
         configureParameterLabel(tempoLabel, "BPM");
         tempo.setRange(20.0, 400.0, 1.0);
@@ -1408,10 +1648,17 @@ public:
         timingSeedEditor.setText(
             navalha::AssistedRng::formatSeed(timingSeed), false);
         timingSeedEditor.setSelectAllWhenFocused(true);
+        styleEditableTextField(timingSeedEditor);
         addAndMakeVisible(timingSeedEditor);
         configureButton(applyTimingSeed, "APPLY", [this] { updateTimingSeed(); });
         transportInfo.setJustificationType(juce::Justification::centred);
-        transportInfo.setText("STOP", juce::dontSendNotification);
+        transportInfo.setColour(
+            juce::Label::backgroundColourId, juce::Colour(Arcade::surface));
+        transportInfo.setColour(
+            juce::Label::outlineColourId, juce::Colour(Arcade::line));
+        transportInfo.setColour(
+            juce::Label::textColourId, juce::Colour(Arcade::muted));
+        transportInfo.setText("TRANSPORT: STOP", juce::dontSendNotification);
         addAndMakeVisible(transportInfo);
 
         configureParameterLabel(pitchLabel, "PITCH");
@@ -1446,6 +1693,8 @@ public:
                 selectedSliceSource(), selectedSliceIndex()});
             showStatus("HERITAGE PITCH AUDITION");
         });
+        pitchBypass.getProperties().set("arcadeLargeButton", true);
+        pitchAudition.getProperties().set("arcadeLargeButton", true);
         updatePitchModeButtons();
 
         configureParameterLabel(patternCellsLabel, "STEPS");
@@ -1671,6 +1920,7 @@ public:
                 });
         motifName.setTextToShowWhenEmpty("MOTIF NAME", juce::Colour(Arcade::muted));
         motifName.setSelectAllWhenFocused(true);
+        styleEditableTextField(motifName);
         motifName.onTextChange = [this]
         {
             if (syncingMotifControls)
@@ -1703,6 +1953,7 @@ public:
         assistedMaxBpm.setRange(20.0, 400.0, 1.0);
         assistedVariation.setRange(0.0, 100.0, 1.0);
         assistedSeed.setSelectAllWhenFocused(true);
+        styleEditableTextField(assistedSeed);
         addAndMakeVisible(assistedSeed);
         configureButton(assistedApplySeed, "APPLY SEED", [this]
         {
@@ -1728,7 +1979,7 @@ public:
         });
         syncAssistedControls();
 
-        configureParameterLabel(traceLabel, "TRACE XY");
+        configureParameterLabel(traceLabel, "XY MOD");
         configureButton(traceRecord, "RECORD TRACE", [this]
         {
             if (!traceArmed && !traceRecording)
@@ -1846,6 +2097,9 @@ public:
 
         configureParameterLabel(mixerHeaderLabel, "SOURCE MIXER");
         configureParameterLabel(mixerLevelLabel, "LEVEL");
+        mixerLevelLabel.setJustificationType(juce::Justification::centred);
+        mixerLevelLabel.setColour(
+            juce::Label::textColourId, juce::Colour(Arcade::ink));
         configureParameterLabel(mixerPanLabel, "PAN");
         configureParameterLabel(mixerWidthLabel, "WIDTH");
         mixerLevelLabel.setJustificationType(juce::Justification::centred);
@@ -1854,12 +2108,21 @@ public:
         for (std::size_t source = 0; source < mixerLevels.size(); ++source)
         {
             configureParameterLabel(
-                mixerSourceLabels[source], source == 0 ? "SOURCE A" : "SOURCE B");
+                mixerSourceLabels[source],
+                source == 0 ? "SOURCE A" : "SOURCE B");
+            mixerSourceLabels[source].setJustificationType(
+                juce::Justification::centred);
+            const auto sourceColour = source == 0
+                ? juce::Colour(Arcade::yellowHigh)
+                : juce::Colour(Arcade::red);
+            mixerSourceLabels[source].setColour(
+                juce::Label::textColourId, sourceColour);
             auto& level = mixerLevels[source];
             level.setName(source == 0 ? "Source A level" : "Source B level");
             level.setRange(0.0, 1.25, 0.01);
             level.setSliderStyle(juce::Slider::LinearHorizontal);
             level.setTextBoxStyle(juce::Slider::TextBoxRight, false, 58, 24);
+            level.setColour(juce::Slider::thumbColourId, sourceColour);
             level.onValueChange = [this, source] { submitMixer(source); };
             addAndMakeVisible(level);
 
@@ -1868,6 +2131,7 @@ public:
             pan.setRange(-1.0, 1.0, 0.01);
             pan.setSliderStyle(juce::Slider::LinearHorizontal);
             pan.setTextBoxStyle(juce::Slider::TextBoxRight, false, 58, 24);
+            pan.setColour(juce::Slider::thumbColourId, sourceColour);
             pan.onValueChange = [this, source] { submitMixer(source); };
             addAndMakeVisible(pan);
 
@@ -1876,18 +2140,24 @@ public:
             width.setRange(0.0, 2.0, 0.01);
             width.setSliderStyle(juce::Slider::LinearHorizontal);
             width.setTextBoxStyle(juce::Slider::TextBoxRight, false, 58, 24);
+            width.setColour(juce::Slider::thumbColourId, sourceColour);
             width.onValueChange = [this, source] { submitMixer(source); };
             addAndMakeVisible(width);
 
             mixerMutes[source].setButtonText("MUTE");
+            mixerMutes[source].getProperties().set(
+                "arcadeAccent", source == 0 ? "sourceA" : "sourceB");
             mixerMutes[source].onClick = [this, source] { submitMixer(source); };
             addAndMakeVisible(mixerMutes[source]);
             mixerSolos[source].setButtonText("SOLO");
+            mixerSolos[source].getProperties().set(
+                "arcadeAccent", source == 0 ? "sourceA" : "sourceB");
             mixerSolos[source].onClick = [this, source] { submitMixer(source); };
             addAndMakeVisible(mixerSolos[source]);
         }
         syncMixerControls();
-        configureParameterLabel(mixerBalanceLabel, "BALANCE");
+        configureParameterLabel(mixerBalanceLabel, "A/B BALANCE");
+        mixerBalanceLabel.setJustificationType(juce::Justification::centred);
         mixerBalance.setRange(-1.0, 1.0, 0.01);
         mixerBalance.onValueChange = [this]
         {
@@ -2136,6 +2406,8 @@ public:
         libraryLabel.setJustificationType(juce::Justification::centredLeft);
         libraryLabel.setFont(juce::Font(
             juce::FontOptions("DejaVu Sans Mono", 13.0F, juce::Font::bold)));
+        libraryLabel.getProperties().set("arcadeFontSize", 13.0);
+        libraryLabel.getProperties().set("arcadeFontBold", true);
         libraryLabel.setColour(
             juce::Label::textColourId, juce::Colour(Arcade::yellowHigh));
         libraryLabel.setColour(
@@ -2146,6 +2418,7 @@ public:
             juce::File::userMusicDirectory);
         if (!libraryRoot.isDirectory())
             libraryRoot = juce::File::getCurrentWorkingDirectory();
+        previewFormatManager.registerBasicFormats();
         audioLibrary.setRootDirectory(libraryRoot);
         audioLibrary.onSelection = [this] (const juce::File& file)
         {
@@ -2154,10 +2427,15 @@ public:
                 static_cast<double>(file.getSize()) / (1024.0 * 1024.0);
             selectedInfo.setText(
                 file.getFileName() + "\n"
-                    + file.getParentDirectory().getFullPathName() + "\n"
-                    + juce::String(sizeInMb, 1)
+                    + file.getFileExtension().trimCharactersAtStart(".").toUpperCase()
+                    + " | " + juce::String(sizeInMb, 1)
                     + juce::String::fromUTF8(" MB · READY TO LOAD"),
                 juce::dontSendNotification);
+            selectedInfo.setTooltip(file.getFullPathName());
+        };
+        audioLibrary.onPreview = [this] (const juce::File& file)
+        {
+            startAudioPreview(file);
         };
         addAndMakeVisible(audioLibrary);
         configureButton(loadSelectedA, "LOAD A", [this]
@@ -2174,6 +2452,14 @@ public:
             else
                 showStatus("SELECT AN AUDIO FILE FIRST");
         });
+        configureButton(previewSelected, "PREVIEW", [this]
+        {
+            if (selectedLibraryFile.existsAsFile())
+                startAudioPreview(selectedLibraryFile);
+            else
+                showStatus("SELECT AN AUDIO FILE FIRST");
+        });
+        configureButton(stopPreview, "STOP", [this] { stopAudioPreview(); });
         configureButton(
             chooseLibraryFolder, "CHOOSE FOLDER...",
             [this] { chooseAudioLibraryDirectory(); });
@@ -2192,28 +2478,30 @@ public:
             juce::Label::textColourId, juce::Colour(Arcade::ink));
         libraryPath.setFont(juce::Font(
             juce::FontOptions("DejaVu Sans Mono", 10.0F, juce::Font::plain)));
+        libraryPath.getProperties().set("arcadeFontSize", 10.0);
         addAndMakeVisible(libraryPath);
         librarySearch.setTextToShowWhenEmpty(
-            "filter files...", juce::Colour(Arcade::muted));
+            "SEARCH FILES...", juce::Colour(Arcade::muted));
+        styleEditableTextField(librarySearch);
         librarySearch.onTextChange = [this]
         {
             audioLibrary.setFilterText(librarySearch.getText());
             refreshLibraryHint();
         };
-        librarySearch.setColour(
-            juce::TextEditor::backgroundColourId, juce::Colour(Arcade::surface));
-        librarySearch.setColour(
-            juce::TextEditor::outlineColourId, juce::Colour(Arcade::line));
         addAndMakeVisible(librarySearch);
         libraryHint.setJustificationType(juce::Justification::centredLeft);
         libraryHint.setColour(
             juce::Label::textColourId, juce::Colour(Arcade::muted));
+        libraryHint.setColour(
+            juce::Label::backgroundColourId, juce::Colour(Arcade::surface));
         addAndMakeVisible(libraryHint);
         refreshLibraryHint();
         configureParameterLabel(logLabel, "ACTIVITY LOG");
         logLabel.setJustificationType(juce::Justification::centredLeft);
         logLabel.setFont(juce::Font(
             juce::FontOptions("DejaVu Sans Mono", 12.0F, juce::Font::bold)));
+        logLabel.getProperties().set("arcadeFontSize", 12.0);
+        logLabel.getProperties().set("arcadeFontBold", true);
         logLabel.setColour(
             juce::Label::textColourId, juce::Colour(Arcade::yellowHigh));
         logLabel.setColour(
@@ -2232,8 +2520,12 @@ public:
         configureParameterLabel(selectedLabel, "SELECTED FILE");
         selectedInfo.setText("No file selected", juce::dontSendNotification);
         selectedInfo.setJustificationType(juce::Justification::topLeft);
+        selectedInfo.setFont(juce::Font(
+            juce::FontOptions("DejaVu Sans Mono", 10.0F, juce::Font::plain)));
         selectedInfo.setColour(
             juce::Label::textColourId, juce::Colour(Arcade::muted));
+        selectedInfo.setColour(
+            juce::Label::backgroundColourId, juce::Colour(Arcade::surface));
         addAndMakeVisible(selectedInfo);
         activityLog.setMultiLine(true);
         activityLog.setReadOnly(true);
@@ -2249,6 +2541,40 @@ public:
         activityLog.setFont(juce::Font(
             juce::FontOptions("DejaVu Sans Mono", 11.0F, juce::Font::plain)));
         addAndMakeVisible(activityLog);
+        learnModeLabel.setText("LEARNING MODE", juce::dontSendNotification);
+        learnModeLabel.setJustificationType(juce::Justification::centredLeft);
+        learnModeLabel.setFont(juce::Font(juce::FontOptions(
+            "DejaVu Sans Mono", 10.5F, juce::Font::bold)));
+        learnModeLabel.getProperties().set("arcadeFontSize", 10.5);
+        learnModeLabel.getProperties().set("arcadeFontBold", true);
+        learnModeLabel.setColour(
+            juce::Label::textColourId, juce::Colour(Arcade::yellowHigh));
+        learnModeLabel.setColour(
+            juce::Label::backgroundColourId, juce::Colour(Arcade::surfaceHigh));
+        addChildComponent(learnModeLabel);
+        learnTitle.setJustificationType(juce::Justification::centredLeft);
+        learnTitle.setFont(juce::Font(juce::FontOptions(
+            "DejaVu Sans Mono", 11.0F, juce::Font::bold)));
+        learnTitle.getProperties().set("arcadeFontSize", 11.0);
+        learnTitle.getProperties().set("arcadeFontBold", true);
+        learnTitle.setColour(
+            juce::Label::textColourId, juce::Colour(Arcade::ink));
+        learnTitle.setColour(
+            juce::Label::backgroundColourId, juce::Colour(Arcade::surface));
+        addChildComponent(learnTitle);
+        learnBody.setMultiLine(true);
+        learnBody.setReadOnly(true);
+        learnBody.setScrollbarsShown(false);
+        learnBody.setCaretVisible(false);
+        learnBody.setFont(juce::Font(juce::FontOptions(
+            "DejaVu Sans Mono", 10.5F, juce::Font::plain)));
+        learnBody.setColour(
+            juce::TextEditor::backgroundColourId, juce::Colour(Arcade::surface));
+        learnBody.setColour(
+            juce::TextEditor::outlineColourId, juce::Colour(Arcade::line));
+        learnBody.setColour(
+            juce::TextEditor::textColourId, juce::Colour(Arcade::muted));
+        addChildComponent(learnBody);
         waveform.onFileDropped =
             [this] (std::size_t sourceIndex, const juce::File& file)
             {
@@ -2279,8 +2605,21 @@ public:
                  &voicePatternLabel})
             promoteModuleHeading(*heading);
         promoteModuleHeading(selectedLabel, true);
-        setSize(1100, 1620);
+        selectedLabel.setColour(
+            juce::Label::backgroundColourId, juce::Colour(Arcade::surfaceHigh));
+        mixerHeaderLabel.setColour(
+            juce::Label::backgroundColourId, juce::Colour(Arcade::surfaceHigh));
+        setSize(1100, 1366);
         initialiseAudioDevice();
+        initialiseUiPreferences();
+        configureLearningMetadata();
+#if JUCE_DEBUG
+        for (int index = 0; index < getNumChildComponents(); ++index)
+            jassert(getChildComponent(index)->getProperties().contains(
+                "learnKey"));
+#endif
+        addMouseListener(this, true);
+        juce::Desktop::getInstance().addFocusChangeListener(this);
         deviceManager.addChangeListener(this);
         refreshAudioConnectionStatus();
         startTimerHz(30);
@@ -2303,12 +2642,15 @@ public:
 
         const auto drawModule = [&graphics, this] (int y, int height,
                                                     const juce::String& name,
-                                                    juce::Colour accent)
+                                                    juce::Colour accent,
+                                                    bool floatingLabel)
         {
             auto bounds = juce::Rectangle<float>(
                 8.0F, static_cast<float>(y),
                 static_cast<float>(getWidth() - 16), static_cast<float>(height));
-            graphics.setColour(juce::Colour(Arcade::surface));
+            // Each workspace carries a restrained translucent wash of its
+            // rail colour; child controls remain opaque for legibility.
+            graphics.setColour(tintedPanelSurface(accent));
             graphics.fillRoundedRectangle(bounds, 4.0F);
             graphics.setColour(juce::Colour(Arcade::line));
             graphics.drawRoundedRectangle(bounds, 4.0F, 1.0F);
@@ -2321,45 +2663,89 @@ public:
             graphics.drawRect(rail, 1.0F);
             if (name.isNotEmpty())
             {
+                auto labelRail = rail;
+                if (floatingLabel)
+                {
+                    auto visibleArea = getLocalBounds().toFloat();
+                    if (auto* viewport =
+                            findParentComponentOfClass<juce::Viewport>())
+                        visibleArea = viewport->getViewArea().toFloat();
+                    const auto visibleRail = rail.getIntersection(
+                        visibleArea);
+                    if (!visibleRail.isEmpty())
+                    {
+                        constexpr float labelHeight = 190.0F;
+                        const auto halfHeight = labelHeight * 0.5F;
+                        const auto centreY = juce::jlimit(
+                            rail.getY() + halfHeight,
+                            rail.getBottom() - halfHeight,
+                            visibleRail.getCentreY());
+                        labelRail = juce::Rectangle<float>(
+                            rail.getX(), centreY - halfHeight,
+                            rail.getWidth(), labelHeight);
+                    }
+                }
                 graphics.saveState();
                 graphics.addTransform(
                     juce::AffineTransform::rotation(
                         -juce::MathConstants<float>::halfPi)
-                        .translated(rail.getX(), rail.getBottom()));
+                        .translated(labelRail.getX(), labelRail.getBottom()));
                 graphics.setColour(accent.brighter(0.35F));
                 graphics.setFont(juce::Font(juce::FontOptions(
                     "DejaVu Sans Mono", 10.0F, juce::Font::bold)));
                 graphics.drawFittedText(
                     name, 4, 0,
-                    static_cast<int>(rail.getHeight()) - 8,
-                    static_cast<int>(rail.getWidth()),
+                    static_cast<int>(labelRail.getHeight()) - 8,
+                    static_cast<int>(labelRail.getWidth()),
                     juce::Justification::centred, 1);
                 graphics.restoreState();
             }
         };
-        drawModule(8, 280, "TOP / TRANSPORT", juce::Colour(Arcade::steel));
-        drawModule(288, 288, "PREPARE / WAVEFORM", juce::Colour(Arcade::yellow));
-        drawModule(576, 640, "PERFORM / CREATE", juce::Colour(Arcade::red));
-        drawModule(1216, 200, "VIRTUAL VOICES", juce::Colour(Arcade::yellow));
+        const auto topBottom = dualMonitorLayout ? 168 : 208;
+        drawModule(
+            8, topBottom - 8, "TOP / TRANSPORT",
+            juce::Colour(Arcade::steel), false);
+        drawModule(
+            topBottom, dualMonitorLayout ? 224 : 288, "PREPARE / WAVEFORM",
+            juce::Colour(Arcade::yellow), false);
+        if (dualMonitorLayout)
+        {
+            drawModule(
+                392, juce::jmax(120, getHeight() - 396),
+                "CREATE / VOICES", juce::Colour(Arcade::red), false);
+        }
+        else
+        {
+            drawModule(
+                496, 640, "PERFORM / CREATE", juce::Colour(Arcade::red), true);
+            drawModule(
+                1136, 226, "VIRTUAL VOICES",
+                juce::Colour(Arcade::yellow), false);
+        }
 
-        auto mixerPanel = juce::Rectangle<float>(
-            static_cast<float>(getWidth() - 322), 968.0F, 310.0F, 342.0F);
+        auto visibleArea = visibleViewportArea.isEmpty()
+            ? getLocalBounds() : visibleViewportArea;
+        auto contextualRail = juce::Rectangle<float>(
+            static_cast<float>(getWidth() - 12 - Arcade::contextualRailWidth),
+            static_cast<float>(visibleArea.getY()),
+            static_cast<float>(Arcade::contextualRailWidth),
+            static_cast<float>(juce::jmax(1, visibleArea.getHeight() - 4)));
         graphics.setColour(juce::Colour(Arcade::surface));
-        graphics.fillRect(mixerPanel);
-        graphics.setColour(juce::Colour(Arcade::steel));
-        graphics.fillRect(
-            mixerPanel.getX(), mixerPanel.getY(), 5.0F, mixerPanel.getHeight());
-        graphics.drawRect(mixerPanel, 1.0F);
+        graphics.fillRect(contextualRail);
+        graphics.setColour(juce::Colour(Arcade::line));
+        graphics.drawRect(contextualRail, 1.0F);
 
         // The approved Arcade brand is the topmost header element. Module
         // backgrounds must never cover it.
         if (arcadeLogo != nullptr)
         {
+            constexpr float brandShift = 28.0F;
             const auto logoBounds = juce::Rectangle<float>(
-                18.0F, 18.0F, 300.0F, 62.0F);
+                18.0F + brandShift, 18.0F, 300.0F, 62.0F);
             graphics.saveState();
             graphics.reduceClipRegion(
-                juce::Rectangle<int>(128, 8, 200, 80));
+                juce::Rectangle<int>(
+                    128 + static_cast<int>(brandShift), 8, 200, 80));
             arcadeLogo->drawWithin(
                 graphics, logoBounds,
                 juce::RectanglePlacement::centred, 1.0F);
@@ -2367,12 +2753,13 @@ public:
 
             graphics.saveState();
             graphics.reduceClipRegion(
-                juce::Rectangle<int>(18, 8, 90, 76));
+                juce::Rectangle<int>(
+                    18 + static_cast<int>(brandShift), 8, 90, 76));
             const auto mascotScale = 74.0F / 440.0F;
             const auto mascotTransform =
                 juce::AffineTransform::translation(-16.0F, -20.0F)
                     .scaled(mascotScale)
-                    .translated(18.0F, 8.0F);
+                    .translated(18.0F + brandShift, 8.0F);
             arcadeLogo->draw(graphics, 1.0F, mascotTransform);
             graphics.restoreState();
         }
@@ -2381,33 +2768,57 @@ public:
     ~MainComponent() override
     {
         stopTimer();
+        juce::Desktop::getInstance().removeFocusChangeListener(this);
+        removeMouseListener(this);
         deviceManager.removeChangeListener(this);
+        saveTakeCatalog();
         saveAudioSettings();
         recorder.stop();
+        stopAudioPreview(false);
+        engine.suspendOutput();
         shutdownAudio();
     }
 
-    void prepareToPlay(int, double sampleRate) override
+    void prepareToPlay(int samplesPerBlockExpected, double sampleRate) override
     {
         activeSampleRate.store(sampleRate, std::memory_order_release);
+        engine.setOutputProfile(navalha::OutputProfile::liveSafe);
         engine.prepare(sampleRate);
+        previewTransport.prepareToPlay(samplesPerBlockExpected, sampleRate);
+        engine.resumeOutput();
     }
 
     void getNextAudioBlock(const juce::AudioSourceChannelInfo& output) override
     {
         output.clearActiveBufferRegion();
 
+        const float* previewLeft = nullptr;
+        const float* previewRight = nullptr;
+        if (previewTransport.isPlaying()
+            && output.numSamples <= previewScratch.getNumSamples())
+        {
+            previewScratch.clear();
+            juce::AudioSourceChannelInfo preview(
+                &previewScratch, 0, output.numSamples);
+            previewTransport.getNextAudioBlock(preview);
+            previewLeft = previewScratch.getReadPointer(0);
+            previewRight = previewScratch.getReadPointer(1);
+        }
+
         if (output.buffer->getNumChannels() >= 2)
         {
             engine.processBlock(
                 output.buffer->getWritePointer(0, output.startSample),
                 output.buffer->getWritePointer(1, output.startSample),
-                static_cast<std::size_t>(output.numSamples));
+                static_cast<std::size_t>(output.numSamples),
+                previewLeft, previewRight);
         }
     }
 
     void releaseResources() override
     {
+        engine.suspendOutput();
+        previewTransport.releaseResources();
         engine.stop();
     }
 
@@ -2415,113 +2826,280 @@ public:
     {
         auto area = getLocalBounds().reduced(12);
         area.removeFromLeft(34);
-        area.removeFromTop(18);
-        auto headerRow = area.removeFromTop(72);
-        title.setBounds(headerRow.removeFromLeft(320));
-        auto controls = headerRow.reduced(0, 12);
-        auto transportModule = controls.removeFromRight(
-            juce::jmin(470, controls.getWidth() / 2));
-        const auto headerButtonWidth = controls.getWidth() / 3;
-        openProject.setBounds(controls.removeFromLeft(headerButtonWidth).reduced(4));
-        saveProject.setBounds(controls.removeFromLeft(headerButtonWidth).reduced(4));
-        savePortable.setBounds(controls.reduced(4));
+        auto rightRailColumn = area.removeFromRight(
+            juce::jmin(Arcade::contextualRailWidth, area.getWidth() / 4));
+        area.removeFromRight(8);
+        auto visibleArea = visibleViewportArea.isEmpty()
+            ? getLocalBounds() : visibleViewportArea;
+        auto rightRail = juce::Rectangle<int>(
+            rightRailColumn.getX(), visibleArea.getY(),
+            rightRailColumn.getWidth(),
+            juce::jmax(120, visibleArea.getHeight() - 4));
+        area.removeFromTop(10);
+        auto transportPanel = rightRail.removeFromTop(76);
         transportClock.setBounds(
-            transportModule.removeFromLeft(160).reduced(4));
-        const auto transportButtonWidth = transportModule.getWidth() / 4;
+            transportPanel.removeFromTop(34).reduced(2, 1));
+        auto transportButtons = transportPanel;
+        const auto railButtonWidth = transportButtons.getWidth() / 4;
         stop.setBounds(
-            transportModule.removeFromLeft(transportButtonWidth).reduced(4));
+            transportButtons.removeFromLeft(railButtonWidth).reduced(2));
         play.setBounds(
-            transportModule.removeFromLeft(transportButtonWidth).reduced(4));
+            transportButtons.removeFromLeft(railButtonWidth).reduced(2));
         record.setBounds(
-            transportModule.removeFromLeft(transportButtonWidth).reduced(4));
-        resetTransport.setBounds(transportModule.reduced(4));
-        controls = area.removeFromTop(42);
-        masterLabel.setBounds(controls.removeFromLeft(90).reduced(4));
-        master.setBounds(controls.removeFromLeft(240).reduced(4));
-        controls.removeFromLeft(20);
-        pitchBypass.setBounds(controls.removeFromLeft(160).reduced(3));
-        pitchZero.setBounds(controls.removeFromLeft(80).reduced(3));
-        pitchAudition.setBounds(controls.removeFromLeft(125).reduced(3));
-        auto sequencerControls = area.removeFromTop(48);
-        tempoLabel.setBounds(sequencerControls.removeFromLeft(55).reduced(4));
-        tempo.setBounds(sequencerControls.removeFromLeft(160).reduced(4));
-        divisionLabel.setBounds(sequencerControls.removeFromLeft(55).reduced(4));
-        division.setBounds(sequencerControls.removeFromLeft(85).reduced(4));
-        patternLabel.setBounds(sequencerControls.removeFromLeft(75).reduced(4));
-        pattern.setBounds(sequencerControls.removeFromLeft(75).reduced(4));
-        timingLabel.setBounds(sequencerControls.removeFromLeft(65).reduced(4));
-        timing.setBounds(sequencerControls.removeFromLeft(105).reduced(4));
-        pitchLabel.setBounds(sequencerControls.removeFromLeft(55).reduced(4));
-        pitchSemitones.setBounds(sequencerControls.removeFromLeft(145).reduced(4));
-        pitchMixLabel.setBounds(sequencerControls.removeFromLeft(85).reduced(4));
-        pitchMix.setBounds(sequencerControls.reduced(4));
-        auto timingControls = area.removeFromTop(42);
-        jitterLabel.setBounds(timingControls.removeFromLeft(85).reduced(3));
-        jitterControl.setBounds(timingControls.removeFromLeft(260).reduced(3));
-        timingSeedLabel.setBounds(timingControls.removeFromLeft(115).reduced(3));
-        timingSeedEditor.setBounds(timingControls.removeFromLeft(220).reduced(3));
-        applyTimingSeed.setBounds(timingControls.removeFromLeft(80).reduced(3));
-        transportInfo.setBounds(timingControls.reduced(3));
-        auto patternControls = area.removeFromTop(52);
+            transportButtons.removeFromLeft(railButtonWidth).reduced(2));
+        resetTransport.setBounds(transportButtons.reduced(2));
+        rightRail.removeFromTop(8);
+
+        const auto placeEngineStatusStrip = [this] (
+            juce::Rectangle<int> strip)
+        {
+            audioConnectionStatus.setBounds(
+                strip.removeFromLeft(145).reduced(2, 4));
+            status.setBounds(
+                strip.removeFromLeft(90).reduced(2, 4));
+            outputMeterLabel.setBounds(
+                strip.removeFromLeft(75).reduced(2, 4));
+            outputLeftMeter.setBounds(
+                strip.removeFromLeft(78).reduced(2, 4));
+            outputRightMeter.setBounds(
+                strip.removeFromLeft(78).reduced(2, 4));
+            recordingFormatLabel.setBounds(
+                strip.removeFromLeft(78).reduced(2, 4));
+            recordingFormat.setBounds(
+                strip.removeFromLeft(86).reduced(2, 4));
+            recordingInfo.setBounds(strip.reduced(2, 4));
+        };
+
+        auto headerRow = area.removeFromTop(54);
+        title.setBounds(headerRow.removeFromLeft(320));
+        auto controls = headerRow.reduced(0, 5);
+        auto projectModule = controls.removeFromLeft(
+            juce::jmin(
+                dualMonitorLayout ? 330 : 300,
+                controls.getWidth() / 2));
+        const auto headerButtonWidth = projectModule.getWidth() / 3;
+        openProject.setBounds(
+            projectModule.removeFromLeft(headerButtonWidth).reduced(4));
+        saveProject.setBounds(
+            projectModule.removeFromLeft(headerButtonWidth).reduced(4));
+        savePortable.setBounds(projectModule.reduced(4));
+        juce::Rectangle<int> heritageHeader;
+        if (!dualMonitorLayout)
+        {
+            heritageHeader = controls.removeFromRight(
+                juce::jmin(280,
+                           juce::jmax(250, controls.getWidth() / 2)));
+            pitchBypass.setBounds(
+                heritageHeader.removeFromLeft(
+                    heritageHeader.getWidth() * 3 / 5).reduced(4));
+            pitchAudition.setBounds(heritageHeader.reduced(4));
+        }
+        if (dualMonitorLayout)
+        {
+            if (controls.getWidth() >= 760)
+            {
+                // Wide dual-monitor header: one consistent-height strip uses
+                // the full width instead of leaving large status-label gaps.
+                placeEngineStatusStrip(controls);
+            }
+            else
+            {
+                // Compact fallback for mixed-resolution dual-monitor setups.
+                auto engineStatusRow = controls.removeFromTop(
+                    controls.getHeight() / 2);
+                audioConnectionStatus.setBounds(
+                    engineStatusRow.removeFromLeft(
+                        juce::jmin(150, engineStatusRow.getWidth() / 2))
+                        .reduced(2, 1));
+                status.setBounds(engineStatusRow.reduced(2, 1));
+                auto meterRow = controls;
+                const auto cellWidth = juce::jmax(
+                    48, meterRow.getWidth() / 6);
+                outputMeterLabel.setBounds(
+                    meterRow.removeFromLeft(cellWidth).reduced(2, 1));
+                outputLeftMeter.setBounds(
+                    meterRow.removeFromLeft(cellWidth).reduced(2, 1));
+                outputRightMeter.setBounds(
+                    meterRow.removeFromLeft(cellWidth).reduced(2, 1));
+                recordingFormatLabel.setBounds(
+                    meterRow.removeFromLeft(cellWidth).reduced(2, 1));
+                recordingFormat.setBounds(
+                    meterRow.removeFromLeft(cellWidth).reduced(2, 1));
+                recordingInfo.setBounds(meterRow.reduced(2, 1));
+            }
+        }
+        auto sequencerControls = area.removeFromTop(44);
+        auto heritageControls = sequencerControls.removeFromRight(
+            dualMonitorLayout ? 320 : 90);
+        heritageControls.removeFromLeft(10);
+        if (dualMonitorLayout)
+        {
+            constexpr int fixedLabelsAndApply =
+                38 + 38 + 48 + 45 + 48 + 60 + 52 + 38 + 45;
+            const auto valueWidth = juce::jmax(
+                74,
+                (sequencerControls.getWidth() - fixedLabelsAndApply) / 8);
+            const auto place = [&sequencerControls, valueWidth]
+                (juce::Label& label, int labelWidth, juce::Component& value)
+            {
+                label.setBounds(
+                    sequencerControls.removeFromLeft(labelWidth).reduced(2));
+                value.setBounds(
+                    sequencerControls.removeFromLeft(valueWidth).reduced(2));
+            };
+            place(tempoLabel, 38, tempo);
+            place(divisionLabel, 38, division);
+            place(patternLabel, 48, pattern);
+            place(timingLabel, 45, timing);
+            place(jitterLabel, 48, jitterControl);
+            timingSeedLabel.setBounds(
+                sequencerControls.removeFromLeft(60).reduced(2));
+            timingSeedEditor.setBounds(
+                sequencerControls.removeFromLeft(valueWidth).reduced(2));
+            applyTimingSeed.setBounds(
+                sequencerControls.removeFromLeft(52).reduced(2));
+            place(pitchLabel, 38, pitchSemitones);
+            pitchMixLabel.setBounds(
+                sequencerControls.removeFromLeft(45).reduced(2));
+            pitchMix.setBounds(sequencerControls.reduced(2));
+            transportInfo.setBounds(0, 0, 0, 0);
+        }
+        else
+        {
+            constexpr int sequencerLabelWidth = 320;
+            const auto sequencerValueWidth = juce::jmax(
+                70, (sequencerControls.getWidth() - sequencerLabelWidth) / 6);
+            tempoLabel.setBounds(
+                sequencerControls.removeFromLeft(45).reduced(3));
+            tempo.setBounds(sequencerControls.removeFromLeft(
+                sequencerValueWidth).reduced(3));
+            divisionLabel.setBounds(
+                sequencerControls.removeFromLeft(45).reduced(3));
+            division.setBounds(sequencerControls.removeFromLeft(
+                sequencerValueWidth).reduced(3));
+            patternLabel.setBounds(
+                sequencerControls.removeFromLeft(60).reduced(3));
+            pattern.setBounds(sequencerControls.removeFromLeft(
+                sequencerValueWidth).reduced(3));
+            timingLabel.setBounds(
+                sequencerControls.removeFromLeft(55).reduced(3));
+            timing.setBounds(sequencerControls.removeFromLeft(
+                sequencerValueWidth).reduced(3));
+            pitchLabel.setBounds(
+                sequencerControls.removeFromLeft(45).reduced(3));
+            pitchSemitones.setBounds(sequencerControls.removeFromLeft(
+                sequencerValueWidth).reduced(3));
+            pitchMixLabel.setBounds(
+                sequencerControls.removeFromLeft(70).reduced(3));
+            pitchMix.setBounds(sequencerControls.removeFromLeft(
+                sequencerValueWidth).reduced(3));
+        }
+        if (dualMonitorLayout)
+        {
+            pitchBypass.setBounds(
+                heritageControls.removeFromLeft(130).reduced(3));
+            pitchZero.setBounds(
+                heritageControls.removeFromLeft(52).reduced(3));
+            pitchAudition.setBounds(heritageControls.reduced(3));
+        }
+        else
+        {
+            pitchBypass.setBounds(
+                heritageHeader.removeFromLeft(
+                    heritageHeader.getWidth() * 3 / 5).reduced(4));
+            pitchAudition.setBounds(heritageHeader.reduced(4));
+            pitchZero.setBounds(heritageControls.reduced(3));
+
+            // Single-monitor fallback: reserve a deterministic header strip
+            // so these two controls cannot collapse when the surrounding
+            // project/status blocks become narrow.
+            const auto headerStrip = juce::Rectangle<int>(
+                headerRow.getRight() - 280, headerRow.getY() + 5, 280, 44);
+            auto largeHeritage = headerStrip;
+            pitchBypass.setBounds(largeHeritage.removeFromLeft(168).reduced(4));
+            pitchAudition.setBounds(largeHeritage.reduced(4));
+        }
+        if (!dualMonitorLayout)
+        {
+            auto timingControls = area.removeFromTop(40);
+            jitterLabel.setBounds(timingControls.removeFromLeft(85).reduced(3));
+            jitterControl.setBounds(timingControls.removeFromLeft(260).reduced(3));
+            timingSeedLabel.setBounds(
+                timingControls.removeFromLeft(115).reduced(3));
+            timingSeedEditor.setBounds(
+                timingControls.removeFromLeft(220).reduced(3));
+            applyTimingSeed.setBounds(
+                timingControls.removeFromLeft(80).reduced(3));
+            transportInfo.setBounds(timingControls.reduced(3));
+        }
+        auto patternControls = area.removeFromTop(48);
         patternCellsLabel.setBounds(patternControls.removeFromLeft(70).reduced(4));
         const auto cellWidth = patternControls.getWidth() / 8;
         for (auto& cell : patternCells)
             cell.setBounds(patternControls.removeFromLeft(cellWidth).reduced(3));
 
-        // Keep one continuous library rail, now on the right so the coloured
-        // module spine connects directly to the operational controls.
-        auto bodyArea = area;
-        auto rightRail = bodyArea.removeFromRight(
-            juce::jmin(310, bodyArea.getWidth() / 4));
+        // Continue the fixed black rail below transport with library, log/LEARN
+        // and SOURCE MIXER. The production workspace never scrolls over it.
+        constexpr int mixerRailHeight = 364;
         auto libraryRail = rightRail.removeFromTop(
-            juce::jmin(674, rightRail.getHeight()));
+            juce::jmax(280, rightRail.getHeight() - mixerRailHeight - 8));
         rightRail.removeFromTop(8);
         auto mixerRail = rightRail;
-        bodyArea.removeFromRight(8);
-        area = bodyArea;
 
         libraryLabel.setBounds(libraryRail.removeFromTop(24));
-        auto libraryFolderRow = libraryRail.removeFromTop(38);
+        auto libraryFolderRow = libraryRail.removeFromTop(34);
         chooseLibraryFolder.setBounds(
             libraryFolderRow.removeFromLeft(132).reduced(0, 2));
         libraryPath.setBounds(libraryFolderRow.reduced(4, 2));
-        librarySearch.setBounds(libraryRail.removeFromTop(32).reduced(0, 2));
-        libraryHint.setBounds(libraryRail.removeFromTop(20).reduced(4, 0));
-        auto logPanel = libraryRail.removeFromBottom(150);
+        librarySearch.setBounds(libraryRail.removeFromTop(28).reduced(0, 2));
+        libraryHint.setBounds(libraryRail.removeFromTop(18).reduced(4, 0));
+        auto logPanel = libraryRail.removeFromBottom(
+            learningMode
+                ? (dualMonitorLayout ? 164 : 190)
+                : (dualMonitorLayout ? 120 : 170));
         auto logHeader = logPanel.removeFromTop(26);
         logLabel.setBounds(logHeader.removeFromLeft(
             juce::jmax(80, logHeader.getWidth() - 116)));
         copyLog.setBounds(logHeader.removeFromLeft(56).reduced(2));
         clearLog.setBounds(logHeader.reduced(2));
+        if (learningMode)
+        {
+            // Three text lines are the safe minimum for detailed help and
+            // translations; the default two-line message must never clip.
+            auto learnPanel = logPanel.removeFromBottom(82);
+            learnModeLabel.setBounds(learnPanel.removeFromTop(18));
+            learnTitle.setBounds(learnPanel.removeFromTop(20).reduced(4, 0));
+            learnBody.setBounds(learnPanel.reduced(2));
+        }
         activityLog.setBounds(logPanel);
-        auto selectedPanel = libraryRail.removeFromBottom(130);
+        auto selectedPanel = libraryRail.removeFromBottom(
+            dualMonitorLayout ? 94 : 106);
         selectedLabel.setBounds(selectedPanel.removeFromTop(22));
-        auto selectedActions = selectedPanel.removeFromBottom(34);
+        selectedInfo.setBounds(selectedPanel.removeFromTop(38).reduced(4, 1));
+        auto selectedActions = selectedPanel;
+        const auto selectedActionWidth = selectedActions.getWidth() / 4;
+        previewSelected.setBounds(
+            selectedActions.removeFromLeft(selectedActionWidth).reduced(2));
+        stopPreview.setBounds(
+            selectedActions.removeFromLeft(selectedActionWidth).reduced(2));
         loadSelectedA.setBounds(
-            selectedActions.removeFromLeft(
-                selectedActions.getWidth() / 2).reduced(2));
+            selectedActions.removeFromLeft(selectedActionWidth).reduced(2));
         loadSelectedB.setBounds(selectedActions.reduced(2));
-        selectedInfo.setBounds(selectedPanel.reduced(4, 2));
         audioLibrary.setBounds(libraryRail.withTrimmedBottom(8));
 
         // Preserve the original Navalha hierarchy: PREPARE and its waveform
         // remain visible before the denser performance/director controls.
         area.removeFromTop(18);
-        auto prepareArea = area.removeFromTop(270);
-        auto engineStatusRow = prepareArea.removeFromTop(30);
-        audioConnectionStatus.setBounds(
-            engineStatusRow.removeFromLeft(190).reduced(4, 2));
-        status.setBounds(engineStatusRow.reduced(4, 2));
+        auto prepareArea = area.removeFromTop(dualMonitorLayout ? 206 : 270);
+        if (!dualMonitorLayout)
+        {
+            // Single-monitor mode keeps the complete engine strip in
+            // PREPARE / WAVEFORM, but uses the same one-line order as dual.
+            placeEngineStatusStrip(prepareArea.removeFromTop(44));
+        }
         // Output/recording status belongs above the waveform. The interaction
         // strip immediately below the waveform is reserved for region and
         // slice editing, matching the direct-manipulation PD workflow.
-        auto meterRow = prepareArea.removeFromTop(34);
-        outputMeterLabel.setBounds(meterRow.removeFromLeft(110).reduced(3));
-        outputLeftMeter.setBounds(meterRow.removeFromLeft(210).reduced(3));
-        outputRightMeter.setBounds(meterRow.removeFromLeft(210).reduced(3));
-        recordingFormatLabel.setBounds(meterRow.removeFromLeft(100).reduced(3));
-        recordingFormat.setBounds(meterRow.removeFromLeft(105).reduced(3));
-        recordingInfo.setBounds(meterRow.reduced(3));
         auto waveEditRow = prepareArea.removeFromBottom(44);
         auto prepareContent = prepareArea.reduced(4);
         waveform.setBounds(prepareContent);
@@ -2546,17 +3124,57 @@ public:
 
         // Slice preparation belongs directly below the waveform in EDIT.
         area.removeFromTop(18);
-        auto sliceRow = area.removeFromTop(46);
-        sliceEditorLabel.setBounds(sliceRow.removeFromLeft(82).reduced(3));
-        sliceSource.setBounds(sliceRow.removeFromLeft(122).reduced(3));
-        sliceIndex.setBounds(sliceRow.removeFromLeft(74).reduced(3));
-        sliceStart.setBounds(sliceRow.removeFromLeft(180).reduced(3));
-        sliceEnd.setBounds(sliceRow.removeFromLeft(180).reduced(3));
-        setSlice.setBounds(sliceRow.removeFromLeft(78).reduced(3));
-        playSlice.setBounds(sliceRow.removeFromLeft(
-            juce::jmin(120, sliceRow.getWidth())).reduced(3));
+        juce::Rectangle<int> dualAssistedArea;
+        if (dualMonitorLayout)
+        {
+            auto lowerArea = area;
+            area = lowerArea.removeFromLeft(
+                (lowerArea.getWidth() - 8) / 2);
+            lowerArea.removeFromLeft(8);
+            dualAssistedArea = lowerArea;
+        }
+        // In the dual layout CREATE / VOICES is a two-column module. Derive
+        // its row height from the real monitor height so the controls expand
+        // into the available space and still contract safely at 850 px.
+        const auto dualCreateRowHeight = dualMonitorLayout
+            ? juce::jlimit(34, 52, (area.getHeight() - 24) / 12)
+            : 0;
+        const auto placeEqual = [] (
+            juce::Rectangle<int> row,
+            std::initializer_list<juce::Component*> components)
+        {
+            auto remaining = static_cast<int>(components.size());
+            for (auto* component : components)
+            {
+                const auto width = remaining > 1
+                    ? row.getWidth() / remaining : row.getWidth();
+                component->setBounds(row.removeFromLeft(width).reduced(2, 3));
+                --remaining;
+            }
+        };
 
-        auto orderRow = area.removeFromTop(44);
+        auto sliceRow = area.removeFromTop(
+            dualMonitorLayout ? dualCreateRowHeight : 46);
+        if (dualMonitorLayout)
+        {
+            placeEqual(sliceRow, {
+                &sliceEditorLabel, &sliceSource, &sliceIndex, &sliceStart,
+                &sliceEnd, &setSlice, &playSlice});
+        }
+        else
+        {
+            sliceEditorLabel.setBounds(sliceRow.removeFromLeft(82).reduced(3));
+            sliceSource.setBounds(sliceRow.removeFromLeft(122).reduced(3));
+            sliceIndex.setBounds(sliceRow.removeFromLeft(74).reduced(3));
+            sliceStart.setBounds(sliceRow.removeFromLeft(180).reduced(3));
+            sliceEnd.setBounds(sliceRow.removeFromLeft(180).reduced(3));
+            setSlice.setBounds(sliceRow.removeFromLeft(78).reduced(3));
+            playSlice.setBounds(sliceRow.removeFromLeft(
+                juce::jmin(120, sliceRow.getWidth())).reduced(3));
+        }
+
+        auto orderRow = area.removeFromTop(
+            dualMonitorLayout ? dualCreateRowHeight : 44);
         orderLabel.setBounds(orderRow.removeFromLeft(68).reduced(3));
         std::array<juce::TextButton*, 8> orderButtons {
             &randomA, &randomB, &randomAB, &interleave,
@@ -2567,117 +3185,192 @@ public:
             button->setBounds(
                 orderRow.removeFromLeft(orderButtonWidth).reduced(2, 3));
 
-        auto gestureRow = area.removeFromTop(48);
-        gestureLabel.setBounds(gestureRow.removeFromLeft(75).reduced(3));
-        gestureStep.setBounds(gestureRow.removeFromLeft(90).reduced(3));
-        memoryToggle.setBounds(gestureRow.removeFromLeft(82).reduced(3));
-        mutationAmount.setBounds(gestureRow.removeFromLeft(125).reduced(3));
-        erosionAmount.setBounds(gestureRow.removeFromLeft(125).reduced(3));
-        deconstructAmount.setBounds(gestureRow.removeFromLeft(125).reduced(3));
-        commitTransform.setBounds(gestureRow.removeFromLeft(72).reduced(3));
-        restoreTransform.setBounds(gestureRow.removeFromLeft(78).reduced(3));
-        stutter.setBounds(gestureRow.removeFromLeft(92).reduced(3));
-        burst.setBounds(gestureRow.removeFromLeft(82).reduced(3));
-        micro.setBounds(gestureRow.removeFromLeft(82).reduced(3));
-        reverseSlice.setBounds(gestureRow.removeFromLeft(110).reduced(3));
-        auto formRow = area.removeFromTop(44);
-        formLabel.setBounds(formRow.removeFromLeft(55).reduced(3));
-        formScene.setBounds(formRow.removeFromLeft(150).reduced(3));
-        formEnable.setBounds(formRow.removeFromLeft(95).reduced(3));
-        formHold.setBounds(formRow.removeFromLeft(70).reduced(3));
-        formNext.setBounds(formRow.removeFromLeft(70).reduced(3));
-        formReset.setBounds(formRow.removeFromLeft(70).reduced(3));
-        formBars.setBounds(formRow.removeFromLeft(140).reduced(3));
-        formEnergy.setBounds(formRow.removeFromLeft(155).reduced(3));
-        formVariation.setBounds(formRow.reduced(3));
-        auto tracePanel = area.removeFromTop(176);
-        auto traceRow = tracePanel.removeFromTop(44);
+        if (dualMonitorLayout)
+        {
+            placeEqual(area.removeFromTop(dualCreateRowHeight), {
+                &gestureLabel, &gestureStep, &memoryToggle,
+                &mutationAmount, &erosionAmount, &deconstructAmount});
+            placeEqual(area.removeFromTop(dualCreateRowHeight), {
+                &commitTransform, &restoreTransform, &stutter,
+                &burst, &micro, &reverseSlice});
+        }
+        else
+        {
+            auto gestureRow = area.removeFromTop(48);
+            gestureLabel.setBounds(gestureRow.removeFromLeft(75).reduced(3));
+            gestureStep.setBounds(gestureRow.removeFromLeft(90).reduced(3));
+            memoryToggle.setBounds(gestureRow.removeFromLeft(82).reduced(3));
+            mutationAmount.setBounds(gestureRow.removeFromLeft(125).reduced(3));
+            erosionAmount.setBounds(gestureRow.removeFromLeft(125).reduced(3));
+            deconstructAmount.setBounds(gestureRow.removeFromLeft(125).reduced(3));
+            commitTransform.setBounds(gestureRow.removeFromLeft(72).reduced(3));
+            restoreTransform.setBounds(gestureRow.removeFromLeft(78).reduced(3));
+            stutter.setBounds(gestureRow.removeFromLeft(92).reduced(3));
+            burst.setBounds(gestureRow.removeFromLeft(82).reduced(3));
+            micro.setBounds(gestureRow.removeFromLeft(82).reduced(3));
+            reverseSlice.setBounds(gestureRow.removeFromLeft(110).reduced(3));
+        }
+        auto formRow = area.removeFromTop(
+            dualMonitorLayout ? dualCreateRowHeight : 44);
+        if (dualMonitorLayout)
+        {
+            placeEqual(formRow, {
+                &formLabel, &formScene, &formEnable, &formHold, &formNext,
+                &formReset, &formBars, &formEnergy, &formVariation});
+        }
+        else
+        {
+            formLabel.setBounds(formRow.removeFromLeft(55).reduced(3));
+            formScene.setBounds(formRow.removeFromLeft(150).reduced(3));
+            formEnable.setBounds(formRow.removeFromLeft(95).reduced(3));
+            formHold.setBounds(formRow.removeFromLeft(70).reduced(3));
+            formNext.setBounds(formRow.removeFromLeft(70).reduced(3));
+            formReset.setBounds(formRow.removeFromLeft(70).reduced(3));
+            formBars.setBounds(formRow.removeFromLeft(140).reduced(3));
+            formEnergy.setBounds(formRow.removeFromLeft(155).reduced(3));
+            formVariation.setBounds(formRow.reduced(3));
+        }
+        const auto traceHeight = dualMonitorLayout
+            ? juce::jmax(
+                dualCreateRowHeight + 64,
+                area.getHeight() - 3 * dualCreateRowHeight - 4)
+            : 176;
+        auto tracePanel = area.removeFromTop(traceHeight);
+        auto traceRow = tracePanel.removeFromTop(
+            dualMonitorLayout ? dualCreateRowHeight : 44);
         traceLabel.setBounds(traceRow.removeFromLeft(75).reduced(3));
         traceRecord.setBounds(traceRow.removeFromLeft(125).reduced(3));
         traceLoop.setBounds(traceRow.removeFromLeft(110).reduced(3));
         traceClear.setBounds(traceRow.removeFromLeft(80).reduced(3));
         traceInfo.setBounds(traceRow.reduced(3));
         tracePad.setBounds(tracePanel.reduced(3, 1));
-        auto formAdvancedRow = area.removeFromTop(44);
-        formTransition.setBounds(
-            formAdvancedRow.removeFromLeft(125).reduced(3));
-        formBankA.setBounds(formAdvancedRow.removeFromLeft(110).reduced(3));
-        formBankB.setBounds(formAdvancedRow.removeFromLeft(110).reduced(3));
-        formDensity.setBounds(formAdvancedRow.removeFromLeft(150).reduced(3));
-        formTension.setBounds(formAdvancedRow.removeFromLeft(150).reduced(3));
-        formStability.setBounds(formAdvancedRow.removeFromLeft(150).reduced(3));
-        formLock.setBounds(formAdvancedRow.removeFromLeft(70).reduced(3));
-        formAdd.setBounds(formAdvancedRow.removeFromLeft(60).reduced(3));
-        formDuplicate.setBounds(formAdvancedRow.removeFromLeft(92).reduced(3));
-        auto formCharacterRow = area.removeFromTop(44);
-        formContinuity.setBounds(
-            formCharacterRow.removeFromLeft(190).reduced(3));
-        formContrast.setBounds(
-            formCharacterRow.removeFromLeft(190).reduced(3));
-        formStereoMotion.setBounds(
-            formCharacterRow.removeFromLeft(190).reduced(3));
-        formDelete.setBounds(
-            formCharacterRow.removeFromLeft(85).reduced(3));
-        formMoveUp.setBounds(
-            formCharacterRow.removeFromLeft(55).reduced(3));
-        formMoveDown.setBounds(
-            formCharacterRow.removeFromLeft(55).reduced(3));
-        auto assistedActionRow = area.removeFromTop(44);
-        assistedLabel.setBounds(
-            assistedActionRow.removeFromLeft(80).reduced(3));
-        assistedEnable.setBounds(
-            assistedActionRow.removeFromLeft(70).reduced(3));
-        assistedRepeat.setBounds(
-            assistedActionRow.removeFromLeft(90).reduced(3));
-        assistedSource.setBounds(
-            assistedActionRow.removeFromLeft(85).reduced(3));
-        assistedOrder.setBounds(
-            assistedActionRow.removeFromLeft(90).reduced(3));
-        assistedRegion.setBounds(
-            assistedActionRow.removeFromLeft(85).reduced(3));
-        assistedTransform.setBounds(
-            assistedActionRow.removeFromLeft(110).reduced(3));
-        assistedGaps.setBounds(
-            assistedActionRow.removeFromLeft(75).reduced(3));
-        assistedPitch.setBounds(
-            assistedActionRow.removeFromLeft(75).reduced(3));
-        assistedFragments.setBounds(
-            assistedActionRow.removeFromLeft(110).reduced(3));
-        assistedCuts.setBounds(
-            assistedActionRow.removeFromLeft(70).reduced(3));
-        assistedMix.setBounds(
-            assistedActionRow.removeFromLeft(65).reduced(3));
-        assistedNext.setBounds(
-            assistedActionRow.removeFromLeft(72).reduced(3));
-        assistedKeep.setBounds(
-            assistedActionRow.removeFromLeft(72).reduced(3));
-        assistedRestore.setBounds(assistedActionRow.reduced(3));
+        if (dualMonitorLayout)
+        {
+            placeEqual(area.removeFromTop(dualCreateRowHeight), {
+                &formTransition, &formBankA, &formBankB,
+                &formDensity, &formTension});
+            placeEqual(area.removeFromTop(dualCreateRowHeight), {
+                &formStability, &formLock, &formAdd, &formDuplicate});
+            placeEqual(area.removeFromTop(dualCreateRowHeight), {
+                &formContinuity, &formContrast, &formStereoMotion,
+                &formDelete, &formMoveUp, &formMoveDown});
+            area = dualAssistedArea;
+        }
+        else
+        {
+            auto formAdvancedRow = area.removeFromTop(44);
+            formTransition.setBounds(
+                formAdvancedRow.removeFromLeft(125).reduced(3));
+            formBankA.setBounds(formAdvancedRow.removeFromLeft(110).reduced(3));
+            formBankB.setBounds(formAdvancedRow.removeFromLeft(110).reduced(3));
+            formDensity.setBounds(formAdvancedRow.removeFromLeft(150).reduced(3));
+            formTension.setBounds(formAdvancedRow.removeFromLeft(150).reduced(3));
+            formStability.setBounds(formAdvancedRow.removeFromLeft(150).reduced(3));
+            formLock.setBounds(formAdvancedRow.removeFromLeft(70).reduced(3));
+            formAdd.setBounds(formAdvancedRow.removeFromLeft(60).reduced(3));
+            formDuplicate.setBounds(formAdvancedRow.removeFromLeft(92).reduced(3));
+            auto formCharacterRow = area.removeFromTop(44);
+            formContinuity.setBounds(
+                formCharacterRow.removeFromLeft(190).reduced(3));
+            formContrast.setBounds(
+                formCharacterRow.removeFromLeft(190).reduced(3));
+            formStereoMotion.setBounds(
+                formCharacterRow.removeFromLeft(190).reduced(3));
+            formDelete.setBounds(
+                formCharacterRow.removeFromLeft(85).reduced(3));
+            formMoveUp.setBounds(
+                formCharacterRow.removeFromLeft(55).reduced(3));
+            formMoveDown.setBounds(
+                formCharacterRow.removeFromLeft(55).reduced(3));
+        }
+        if (dualMonitorLayout)
+        {
+            placeEqual(area.removeFromTop(dualCreateRowHeight), {
+                &assistedLabel, &assistedEnable, &assistedRepeat,
+                &assistedSource, &assistedOrder});
+            placeEqual(area.removeFromTop(dualCreateRowHeight), {
+                &assistedRegion, &assistedTransform, &assistedGaps,
+                &assistedPitch, &assistedFragments});
+            placeEqual(area.removeFromTop(dualCreateRowHeight), {
+                &assistedCuts, &assistedMix, &assistedNext,
+                &assistedKeep, &assistedRestore});
+            placeEqual(area.removeFromTop(dualCreateRowHeight), {
+                &assistedSeed, &assistedApplySeed, &assistedRewind});
+            placeEqual(area.removeFromTop(dualCreateRowHeight), {
+                &assistedMinBpm, &assistedMaxBpm, &assistedVariation});
 
-        auto assistedSettingsRow = area.removeFromTop(44);
-        assistedSeed.setBounds(
-            assistedSettingsRow.removeFromLeft(210).reduced(3));
-        assistedApplySeed.setBounds(
-            assistedSettingsRow.removeFromLeft(110).reduced(3));
-        assistedRewind.setBounds(
-            assistedSettingsRow.removeFromLeft(90).reduced(3));
-        assistedMinBpm.setBounds(
-            assistedSettingsRow.removeFromLeft(245).reduced(3));
-        assistedMaxBpm.setBounds(
-            assistedSettingsRow.removeFromLeft(245).reduced(3));
-        assistedVariation.setBounds(assistedSettingsRow.reduced(3));
+            auto motifSlotsRow = area.removeFromTop(dualCreateRowHeight);
+            motifLabel.setBounds(
+                motifSlotsRow.removeFromLeft(100).reduced(2, 3));
+            const auto slotWidth = motifSlotsRow.getWidth()
+                / static_cast<int>(motifSlotButtons.size());
+            for (auto& slot : motifSlotButtons)
+                slot.setBounds(
+                    motifSlotsRow.removeFromLeft(slotWidth).reduced(2, 3));
+            placeEqual(area.removeFromTop(dualCreateRowHeight), {
+                &motifName, &motifCapture, &motifRecall,
+                &motifVary, &motifDelete, &motifInfo});
+        }
+        else
+        {
+            auto assistedActionRow = area.removeFromTop(44);
+            assistedLabel.setBounds(
+                assistedActionRow.removeFromLeft(80).reduced(3));
+            assistedEnable.setBounds(
+                assistedActionRow.removeFromLeft(70).reduced(3));
+            assistedRepeat.setBounds(
+                assistedActionRow.removeFromLeft(90).reduced(3));
+            assistedSource.setBounds(
+                assistedActionRow.removeFromLeft(85).reduced(3));
+            assistedOrder.setBounds(
+                assistedActionRow.removeFromLeft(90).reduced(3));
+            assistedRegion.setBounds(
+                assistedActionRow.removeFromLeft(85).reduced(3));
+            assistedTransform.setBounds(
+                assistedActionRow.removeFromLeft(110).reduced(3));
+            assistedGaps.setBounds(
+                assistedActionRow.removeFromLeft(75).reduced(3));
+            assistedPitch.setBounds(
+                assistedActionRow.removeFromLeft(75).reduced(3));
+            assistedFragments.setBounds(
+                assistedActionRow.removeFromLeft(110).reduced(3));
+            assistedCuts.setBounds(
+                assistedActionRow.removeFromLeft(70).reduced(3));
+            assistedMix.setBounds(
+                assistedActionRow.removeFromLeft(65).reduced(3));
+            assistedNext.setBounds(
+                assistedActionRow.removeFromLeft(72).reduced(3));
+            assistedKeep.setBounds(
+                assistedActionRow.removeFromLeft(72).reduced(3));
+            assistedRestore.setBounds(assistedActionRow.reduced(3));
 
-        auto motifRow = area.removeFromTop(44);
-        motifLabel.setBounds(motifRow.removeFromLeft(115).reduced(3));
-        for (auto& slot : motifSlotButtons)
-            slot.setBounds(motifRow.removeFromLeft(44).reduced(2, 3));
-        motifName.setBounds(motifRow.removeFromLeft(170).reduced(3));
-        motifCapture.setBounds(motifRow.removeFromLeft(82).reduced(3));
-        motifRecall.setBounds(motifRow.removeFromLeft(76).reduced(3));
-        motifVary.setBounds(motifRow.removeFromLeft(64).reduced(3));
-        motifDelete.setBounds(motifRow.removeFromLeft(72).reduced(3));
-        motifInfo.setBounds(motifRow.reduced(3));
+            auto assistedSettingsRow = area.removeFromTop(44);
+            assistedSeed.setBounds(
+                assistedSettingsRow.removeFromLeft(210).reduced(3));
+            assistedApplySeed.setBounds(
+                assistedSettingsRow.removeFromLeft(110).reduced(3));
+            assistedRewind.setBounds(
+                assistedSettingsRow.removeFromLeft(90).reduced(3));
+            assistedMinBpm.setBounds(
+                assistedSettingsRow.removeFromLeft(245).reduced(3));
+            assistedMaxBpm.setBounds(
+                assistedSettingsRow.removeFromLeft(245).reduced(3));
+            assistedVariation.setBounds(assistedSettingsRow.reduced(3));
 
-        auto assistedLocksRow = area.removeFromTop(44);
+            auto motifRow = area.removeFromTop(44);
+            motifLabel.setBounds(motifRow.removeFromLeft(115).reduced(3));
+            for (auto& slot : motifSlotButtons)
+                slot.setBounds(motifRow.removeFromLeft(44).reduced(2, 3));
+            motifName.setBounds(motifRow.removeFromLeft(170).reduced(3));
+            motifCapture.setBounds(motifRow.removeFromLeft(82).reduced(3));
+            motifRecall.setBounds(motifRow.removeFromLeft(76).reduced(3));
+            motifVary.setBounds(motifRow.removeFromLeft(64).reduced(3));
+            motifDelete.setBounds(motifRow.removeFromLeft(72).reduced(3));
+            motifInfo.setBounds(motifRow.reduced(3));
+        }
+
+        auto assistedLocksRow = area.removeFromTop(
+            dualMonitorLayout ? dualCreateRowHeight : 44);
         const auto lockWidth = assistedLocksRow.getWidth() / 8;
         for (auto* lock : {
                  &lockSource, &lockCuts, &lockPattern, &lockTransform,
@@ -2685,8 +3378,12 @@ public:
             lock->setBounds(
                 assistedLocksRow.removeFromLeft(lockWidth).reduced(3));
 
-        mixerHeaderLabel.setBounds(mixerRail.removeFromTop(28));
-        auto mixerSources = mixerRail.removeFromTop(28);
+        mixerHeaderLabel.setBounds(mixerRail.removeFromTop(26));
+        auto mixerSources = mixerRail.removeFromTop(20);
+        const auto mixerLevelHeading = mixerSources.withSizeKeepingCentre(
+            juce::jmin(72, mixerSources.getWidth() / 4),
+            mixerSources.getHeight());
+        mixerLevelLabel.setBounds(mixerLevelHeading);
         mixerSourceLabels[0].setBounds(
             mixerSources.removeFromLeft(mixerSources.getWidth() / 2).reduced(2));
         mixerSourceLabels[1].setBounds(mixerSources.reduced(2));
@@ -2694,16 +3391,20 @@ public:
             [&mixerRail] (juce::Label& label,
                           std::array<juce::Slider, 2>& sliders)
         {
-            label.setBounds(mixerRail.removeFromTop(18).reduced(4, 0));
-            auto row = mixerRail.removeFromTop(38);
+            label.setBounds(mixerRail.removeFromTop(16).reduced(4, 0));
+            auto row = mixerRail.removeFromTop(34);
             sliders[0].setBounds(
                 row.removeFromLeft(row.getWidth() / 2).reduced(2));
             sliders[1].setBounds(row.reduced(2));
         };
-        placeMixerPair(mixerLevelLabel, mixerLevels);
+        auto mixerLevelRow = mixerRail.removeFromTop(34);
+        mixerLevels[0].setBounds(
+            mixerLevelRow.removeFromLeft(
+                mixerLevelRow.getWidth() / 2).reduced(2));
+        mixerLevels[1].setBounds(mixerLevelRow.reduced(2));
         placeMixerPair(mixerPanLabel, mixerPans);
         placeMixerPair(mixerWidthLabel, mixerWidths);
-        auto mixerSwitches = mixerRail.removeFromTop(38);
+        auto mixerSwitches = mixerRail.removeFromTop(34);
         for (std::size_t source = 0; source < mixerLevels.size(); ++source)
         {
             auto sourceSwitches = mixerSwitches.removeFromLeft(
@@ -2715,37 +3416,80 @@ public:
             mixerSolos[source].setBounds(sourceSwitches.reduced(2));
         }
         mixerBalanceLabel.setBounds(
-            mixerRail.removeFromTop(18).reduced(4, 0));
-        mixerBalance.setBounds(mixerRail.removeFromTop(38).reduced(2));
+            mixerRail.removeFromTop(16).reduced(4, 0));
+        mixerBalance.setBounds(mixerRail.removeFromTop(34).reduced(2));
+        masterLabel.setBounds(mixerRail.removeFromTop(16).reduced(4, 0));
+        master.setBounds(mixerRail.removeFromTop(34).reduced(2));
+        outputTrimLabel.setBounds(mixerRail.removeFromTop(16).reduced(4, 0));
+        auto technicalOutputRow = mixerRail.removeFromTop(34);
+        outputTrim.setBounds(
+            technicalOutputRow.removeFromLeft(
+                technicalOutputRow.getWidth() * 2 / 3).reduced(2));
+        outputMute.setBounds(technicalOutputRow.reduced(2));
 
-        voicesHeaderLabel.setBounds(area.removeFromTop(24).reduced(3));
+        const auto voicesHeaderHeight = dualMonitorLayout ? 20 : 24;
+        const auto voiceControlRowHeight = dualMonitorLayout
+            ? dualCreateRowHeight
+            : juce::jmax(
+                42,
+                (area.getHeight() - voicesHeaderHeight - 4) / 4);
+        voicesHeaderLabel.setBounds(
+            area.removeFromTop(voicesHeaderHeight).reduced(3));
         for (std::size_t voice = 0; voice < voiceEnabled.size(); ++voice)
         {
-            auto voiceRow = area.removeFromTop(42);
-            voiceLabels[voice].setBounds(voiceRow.removeFromLeft(100).reduced(3));
-            voiceEnabled[voice].setBounds(voiceRow.removeFromLeft(80).reduced(3));
-            voiceSources[voice].setBounds(voiceRow.removeFromLeft(110).reduced(3));
-            voiceDivisions[voice].setBounds(voiceRow.removeFromLeft(100).reduced(3));
-            voicePitches[voice].setBounds(voiceRow.removeFromLeft(190).reduced(3));
-            voiceLevels[voice].setBounds(voiceRow.removeFromLeft(220).reduced(3));
-            voicePans[voice].setBounds(voiceRow.reduced(3));
+            auto voiceRow = area.removeFromTop(voiceControlRowHeight);
+            if (dualMonitorLayout)
+            {
+                placeEqual(voiceRow, {
+                    &voiceLabels[voice], &voiceEnabled[voice],
+                    &voiceSources[voice], &voiceDivisions[voice],
+                    &voicePitches[voice], &voiceLevels[voice],
+                    &voicePans[voice]});
+            }
+            else
+            {
+                voiceLabels[voice].setBounds(
+                    voiceRow.removeFromLeft(100).reduced(3));
+                voiceEnabled[voice].setBounds(
+                    voiceRow.removeFromLeft(80).reduced(3));
+                voiceSources[voice].setBounds(
+                    voiceRow.removeFromLeft(110).reduced(3));
+                voiceDivisions[voice].setBounds(
+                    voiceRow.removeFromLeft(100).reduced(3));
+                voicePitches[voice].setBounds(
+                    voiceRow.removeFromLeft(190).reduced(3));
+                voiceLevels[voice].setBounds(
+                    voiceRow.removeFromLeft(220).reduced(3));
+                voicePans[voice].setBounds(voiceRow.reduced(3));
+            }
         }
-        auto advancedVoiceRow = area.removeFromTop(46);
-        voiceAdvancedLabel.setBounds(
-            advancedVoiceRow.removeFromLeft(110).reduced(3));
-        voiceEditor.setBounds(advancedVoiceRow.removeFromLeft(110).reduced(3));
-        voicePatternLength.setBounds(
-            advancedVoiceRow.removeFromLeft(155).reduced(3));
-        voiceFocusStart.setBounds(
-            advancedVoiceRow.removeFromLeft(175).reduced(3));
-        voiceFocusEnd.setBounds(
-            advancedVoiceRow.removeFromLeft(175).reduced(3));
-        voiceAttack.setBounds(
-            advancedVoiceRow.removeFromLeft(175).reduced(3));
-        voiceRelease.setBounds(advancedVoiceRow.reduced(3));
-        auto virtualPatternRow = area.removeFromTop(46);
-        voicePatternLabel.setBounds(
-            virtualPatternRow.removeFromLeft(120).reduced(3));
+        auto advancedVoiceRow = area.removeFromTop(voiceControlRowHeight);
+        if (dualMonitorLayout)
+        {
+            placeEqual(advancedVoiceRow, {
+                &voiceAdvancedLabel, &voiceEditor, &voicePatternLength,
+                &voiceFocusStart, &voiceFocusEnd, &voiceAttack,
+                &voiceRelease});
+        }
+        else
+        {
+            voiceAdvancedLabel.setBounds(
+                advancedVoiceRow.removeFromLeft(110).reduced(3));
+            voiceEditor.setBounds(
+                advancedVoiceRow.removeFromLeft(110).reduced(3));
+            voicePatternLength.setBounds(
+                advancedVoiceRow.removeFromLeft(155).reduced(3));
+            voiceFocusStart.setBounds(
+                advancedVoiceRow.removeFromLeft(175).reduced(3));
+            voiceFocusEnd.setBounds(
+                advancedVoiceRow.removeFromLeft(175).reduced(3));
+            voiceAttack.setBounds(
+                advancedVoiceRow.removeFromLeft(175).reduced(3));
+            voiceRelease.setBounds(advancedVoiceRow.reduced(3));
+        }
+        auto virtualPatternRow = area.removeFromTop(voiceControlRowHeight);
+        voicePatternLabel.setBounds(virtualPatternRow.removeFromLeft(
+            dualMonitorLayout ? 90 : 120).reduced(3));
         const auto virtualCellWidth =
             virtualPatternRow.getWidth() / static_cast<int>(voicePatternCells.size());
         for (auto& cell : voicePatternCells)
@@ -2759,8 +3503,12 @@ public:
             transport.running,
             recorder.isRunning(),
             transport.step,
-            transport.bpm,
-            transport.pitch,
+            // The main XY MOD updates these controls immediately, while the
+            // audio-thread telemetry may publish one callback later.  Use
+            // the shared UI values here so the detached PERFORM pad mirrors
+            // the large pad without a visible lag or stale position.
+            tempo.getValue(),
+            static_cast<int>(std::lround(pitchSemitones.getValue())),
             transport.currentPattern,
             selectedSliceSource(),
             session.sequencer.timing(),
@@ -2878,21 +3626,583 @@ public:
         showStatus("REVERSE SLICE");
     }
 
-    void remoteCommitTransform() { commitTransformState(); }
-    void remoteRestoreTransform() { restoreTransformState(); }
+    void remoteCommitTransform()
+    {
+        if (!uiPatternTransform.hasBase)
+        {
+            showStatus("COMMIT | NO ACTIVE TRANSFORM");
+            return;
+        }
+        commitTransformState();
+    }
+    void remoteRestoreTransform()
+    {
+        if (!uiPatternTransform.hasBase)
+        {
+            showStatus("RESTORE | NO ACTIVE TRANSFORM");
+            return;
+        }
+        restoreTransformState();
+    }
     void remoteToggleForm() { formEnable.triggerClick(); }
     void remoteToggleFormHold() { formHold.triggerClick(); }
     void remoteNextForm() { formNext.triggerClick(); }
     void remoteResetForm() { formReset.triggerClick(); }
     void remoteToggleRecording() { record.triggerClick(); }
 
+    void setUiLanguage(navalha::ui::Language language)
+    {
+        uiLanguage = language;
+        updateLibrarySearchPlaceholder();
+        if (auto* settings = applicationProperties.getUserSettings())
+        {
+            settings->setValue(
+                "uiLanguage", navalha::ui::languageCode(uiLanguage));
+            static_cast<void>(settings->saveIfNeeded());
+        }
+        if (activeLearnKey.isNotEmpty())
+            explainLearnKey(activeLearnKey);
+        else
+            showDefaultLearnText();
+    }
+
+    [[nodiscard]] navalha::ui::Language getUiLanguage() const noexcept
+    {
+        return uiLanguage;
+    }
+
+    void setLearningMode(bool enabled)
+    {
+        learningMode = enabled;
+        learnModeLabel.setVisible(enabled);
+        learnTitle.setVisible(enabled);
+        learnBody.setVisible(enabled);
+        if (!enabled)
+            activeLearnKey.clear();
+        showDefaultLearnText();
+        if (auto* settings = applicationProperties.getUserSettings())
+        {
+            settings->setValue("learnMode", enabled);
+            static_cast<void>(settings->saveIfNeeded());
+        }
+        resized();
+        repaint();
+    }
+
+    [[nodiscard]] bool isLearningMode() const noexcept
+    {
+        return learningMode;
+    }
+
+    void setVisibleViewportArea(juce::Rectangle<int> newArea)
+    {
+        if (newArea == visibleViewportArea)
+            return;
+        visibleViewportArea = newArea;
+        resized();
+        repaint();
+    }
+
+    void explainLearnKey(const juce::String& key)
+    {
+        if (!learningMode)
+            return;
+        const auto* entry = navalha::ui::findLearnEntry(key.toStdString());
+        if (entry == nullptr)
+            return;
+        activeLearnKey = key;
+        learnTitle.setText(
+            navalha::ui::text(entry->title, uiLanguage),
+            juce::dontSendNotification);
+        learnBody.setText(
+            navalha::ui::text(entry->body, uiLanguage), false);
+    }
+
+    void setDualMonitorLayout(bool enabled)
+    {
+        if (dualMonitorLayout == enabled)
+            return;
+        dualMonitorLayout = enabled;
+        resized();
+        repaint();
+    }
+
+    [[nodiscard]] bool prefersDualMonitor()
+    {
+        if (auto* settings = applicationProperties.getUserSettings())
+            return settings->getBoolValue("dualMonitorEnabled", true);
+        return true;
+    }
+
+    void setPrefersDualMonitor(bool enabled)
+    {
+        if (auto* settings = applicationProperties.getUserSettings())
+        {
+            settings->setValue("dualMonitorEnabled", enabled);
+            static_cast<void>(settings->saveIfNeeded());
+        }
+    }
+
+    [[nodiscard]] const std::vector<navalha::TakeEntry>& takes() const noexcept
+    {
+        return takeCatalog.entries();
+    }
+
+    [[nodiscard]] const navalha::TakeEntry* take(std::string_view id) const noexcept
+    {
+        return takeCatalog.find(id);
+    }
+
+    bool updateTake(navalha::TakeEntry entry)
+    {
+        try
+        {
+            takeCatalog.upsert(std::move(entry));
+            saveTakeCatalog();
+            showStatus("TAKE METADATA SAVED");
+            return true;
+        }
+        catch (const std::exception& exception)
+        {
+            showStatus("TAKE SAVE FAILED | " + juce::String(exception.what()));
+            return false;
+        }
+    }
+
+    bool useTakeAsSource(std::string_view id, std::size_t sourceIndex)
+    {
+        const auto* entry = takeCatalog.find(id);
+        if (entry == nullptr || sourceIndex > 1)
+            return false;
+        const juce::File file(utf8(entry->audioPath));
+        if (!file.existsAsFile())
+        {
+            showStatus("TAKE AUDIO MISSING | " + file.getFileName());
+            return false;
+        }
+        loadSource(sourceIndex, file);
+        showStatus("TAKE → SOURCE "
+                   + juce::String(sourceIndex == 0 ? "A | " : "B | ")
+                   + file.getFileName());
+        return true;
+    }
+
+    std::pair<int, int> importTakeDirectory(const juce::File& directory)
+    {
+        if (!directory.isDirectory())
+            return {0, 1};
+        juce::Array<juce::File> files;
+        directory.findChildFiles(
+            files, juce::File::findFiles, true, "*.wav;*.wave");
+        juce::AudioFormatManager formats;
+        formats.registerBasicFormats();
+        int imported = 0;
+        int errors = 0;
+        for (const auto& file : files)
+        {
+            if (takeCatalog.entries().size()
+                >= navalha::maximumTakeCatalogEntries)
+                break;
+            const auto path = file.getFullPathName().toStdString();
+            const auto alreadyPresent = std::any_of(
+                takeCatalog.entries().begin(), takeCatalog.entries().end(),
+                [&path] (const auto& entry) { return entry.audioPath == path; });
+            if (alreadyPresent)
+                continue;
+            auto reader = std::unique_ptr<juce::AudioFormatReader>(
+                formats.createReaderFor(file));
+            if (reader == nullptr || reader->sampleRate <= 0.0
+                || reader->lengthInSamples <= 0)
+            {
+                ++errors;
+                continue;
+            }
+            try
+            {
+                auto created = file.getCreationTime();
+                if (created.toMilliseconds() <= 0)
+                    created = file.getLastModificationTime();
+                navalha::TakeEntry entry;
+                const auto fullPath = file.getFullPathName();
+                std::uint64_t identity = 14695981039346656037ULL;
+                for (const auto* character = fullPath.toRawUTF8();
+                     *character != '\0'; ++character)
+                {
+                    identity ^= static_cast<std::uint8_t>(*character);
+                    identity *= 1099511628211ULL;
+                }
+                entry.id = ("import-" + juce::String::toHexString(
+                    static_cast<juce::int64>(identity))).toStdString();
+                entry.audioPath = path;
+                entry.filename = file.getFileName().toStdString();
+                entry.createdAt = created.toISO8601(true).toStdString();
+                entry.frames = static_cast<std::uint64_t>(reader->lengthInSamples);
+                entry.sampleRate = static_cast<std::uint32_t>(
+                    std::lround(reader->sampleRate));
+                entry.durationSeconds = static_cast<double>(entry.frames)
+                    / reader->sampleRate;
+                entry.sampleFormat = reader->bitsPerSample <= 16
+                    ? navalha::WavSampleFormat::pcm16
+                    : reader->bitsPerSample <= 24
+                        ? navalha::WavSampleFormat::pcm24
+                        : navalha::WavSampleFormat::float32;
+                const auto metadataValue = [&reader]
+                    (std::initializer_list<const char*> keys)
+                {
+                    for (const auto* key : keys)
+                    {
+                        const auto value = reader->metadataValues[key].trim();
+                        if (value.isNotEmpty())
+                            return value.toStdString();
+                    }
+                    return std::string {};
+                };
+                entry.metadata = {
+                    metadataValue({"INAM", "Title", "title"}),
+                    metadataValue({"IART", "Artist", "artist"}),
+                    metadataValue({"IPRD", "Album", "project"}),
+                    metadataValue({"ICRD", "Year", "date"}),
+                    metadataValue({"ICMT", "Comment", "comment",
+                                   "bwavDescription"})};
+                takeCatalog.upsert(std::move(entry));
+                ++imported;
+            }
+            catch (...)
+            {
+                ++errors;
+            }
+        }
+        saveTakeCatalog();
+        showStatus(
+            "TAKE IMPORT | " + juce::String(imported) + " ADDED | "
+            + juce::String(errors) + " ERRORS");
+        return {imported, errors};
+    }
+
 private:
+    void initialiseUiPreferences()
+    {
+        if (auto* settings = applicationProperties.getUserSettings())
+        {
+            uiLanguage = navalha::ui::languageFromCode(
+                settings->getValue("uiLanguage", "en"));
+            learningMode = settings->getBoolValue("learnMode", false);
+        }
+        learnModeLabel.setVisible(learningMode);
+        learnTitle.setVisible(learningMode);
+        learnBody.setVisible(learningMode);
+        updateLibrarySearchPlaceholder();
+        showDefaultLearnText();
+    }
+
+    void updateLibrarySearchPlaceholder()
+    {
+        librarySearch.setTextToShowWhenEmpty(
+            navalha::ui::text(
+                {"SEARCH FILES...", "BUSCAR ARQUIVOS...",
+                 "RECHERCHER DES FICHIERS...", "BUSCAR ARCHIVOS..."},
+                uiLanguage),
+            juce::Colour(Arcade::muted));
+    }
+
+    void showDefaultLearnText()
+    {
+        const navalha::ui::LocalizedText titleText {
+            "Move over a control", "Passe sobre um controle",
+            "Passez sur un contrôle", "Pase sobre un control"};
+        const navalha::ui::LocalizedText bodyText {
+            "Its function will be explained here without covering the instrument.",
+            "Sua função será explicada aqui sem cobrir o instrumento.",
+            "Sa fonction sera expliquée ici sans couvrir l’instrument.",
+            "Su función se explicará aquí sin cubrir el instrumento."};
+        learnModeLabel.setText(
+            navalha::ui::text({"LEARNING MODE", "MODO DE APRENDIZAGEM",
+                               "MODE D’APPRENTISSAGE", "MODO DE APRENDIZAJE"},
+                              uiLanguage),
+            juce::dontSendNotification);
+        learnTitle.setText(
+            navalha::ui::text(titleText, uiLanguage),
+            juce::dontSendNotification);
+        learnBody.setText(navalha::ui::text(bodyText, uiLanguage), false);
+    }
+
+    static void registerLearn(juce::Component& component,
+                              const char* key)
+    {
+        jassert(navalha::ui::findLearnEntry(key) != nullptr);
+        component.getProperties().set("learnKey", key);
+    }
+
+    void configureLearningMetadata()
+    {
+        registerLearn(title, "app");
+        registerLearn(audioConnectionStatus, "audio");
+        registerLearn(status, "audio");
+        registerLearn(openProject, "openproject");
+        registerLearn(saveProject, "saveproject");
+        registerLearn(savePortable, "saveportable");
+        registerLearn(play, "play");
+        registerLearn(stop, "stop");
+        registerLearn(resetTransport, "reset");
+        registerLearn(record, "rec");
+        registerLearn(transportClock, "transportclock");
+        registerLearn(transportInfo, "transportclock");
+        registerLearn(audioLibrary, "library");
+        registerLearn(libraryLabel, "library");
+        registerLearn(libraryPath, "library");
+        registerLearn(libraryHint, "library");
+        registerLearn(selectedLabel, "library");
+        registerLearn(selectedInfo, "library");
+        registerLearn(chooseLibraryFolder, "library");
+        registerLearn(librarySearch, "librarysearch");
+        registerLearn(loadSelectedA, "library");
+        registerLearn(loadSelectedB, "library");
+        registerLearn(previewSelected, "librarypreview");
+        registerLearn(stopPreview, "librarypreview");
+        registerLearn(logLabel, "activitylog");
+        registerLearn(activityLog, "activitylog");
+        registerLearn(copyLog, "activitylog");
+        registerLearn(clearLog, "activitylog");
+        registerLearn(learnModeLabel, "learn");
+        registerLearn(learnTitle, "learn");
+        registerLearn(learnBody, "learn");
+        registerLearn(waveform, "waveform");
+        registerLearn(waveEditLabel, "waveform");
+        registerLearn(selectRegionMode, "selectregion");
+        registerLearn(editSliceMode, "editslice");
+        registerLearn(bladeMode, "blade");
+        registerLearn(wholeRegion, "selectregion");
+        registerLearn(undoBlade, "blade");
+        registerLearn(playSlice, "editslice");
+        registerLearn(setSlice, "editslice");
+        registerLearn(sliceEditorLabel, "slice");
+        registerLearn(sliceSource, "slice");
+        registerLearn(sliceIndex, "slice");
+        registerLearn(sliceStart, "slice");
+        registerLearn(sliceEnd, "slice");
+        registerLearn(divideRegionLabel, "divide");
+        for (auto& button : divideRegionButtons)
+            registerLearn(button, "divide");
+        registerLearn(tempo, "bpm");
+        registerLearn(tempoLabel, "bpm");
+        registerLearn(division, "timing");
+        registerLearn(divisionLabel, "timing");
+        registerLearn(pattern, "pattern");
+        registerLearn(patternLabel, "pattern");
+        registerLearn(patternCellsLabel, "pattern");
+        for (auto& cell : patternCells)
+            registerLearn(cell, "pattern");
+        registerLearn(timing, "timing");
+        registerLearn(timingLabel, "timing");
+        registerLearn(jitterControl, "timing");
+        registerLearn(jitterLabel, "timing");
+        registerLearn(timingSeedEditor, "timing");
+        registerLearn(timingSeedLabel, "timing");
+        registerLearn(applyTimingSeed, "timing");
+        registerLearn(pitchSemitones, "pitch");
+        registerLearn(pitchLabel, "pitch");
+        registerLearn(pitchMix, "pitch");
+        registerLearn(pitchMixLabel, "pitch");
+        registerLearn(pitchBypass, "pitch");
+        registerLearn(pitchZero, "pitch");
+        registerLearn(pitchAudition, "pitch");
+        for (auto* button : {
+                 &randomA, &randomB, &randomAB, &interleave, &forwardOrder,
+                 &reverseOrder, &zeroOrder, &gapOrder})
+            registerLearn(*button, "order");
+        registerLearn(orderLabel, "order");
+        registerLearn(gestureLabel, "gesture");
+        registerLearn(gestureStep, "gesture");
+        registerLearn(memoryToggle, "gesture");
+        registerLearn(mutationAmount, "gesture");
+        registerLearn(erosionAmount, "gesture");
+        registerLearn(deconstructAmount, "gesture");
+        for (auto* button : {
+                 &commitTransform, &restoreTransform, &stutter, &burst,
+                 &micro, &reverseSlice})
+            registerLearn(*button, "gesture");
+        registerLearn(assistedEnable, "assisted");
+        registerLearn(assistedLabel, "assisted");
+        for (auto* toggle : {
+                 &assistedRepeat, &assistedSource, &assistedOrder,
+                 &assistedRegion, &assistedCuts, &assistedMix,
+                 &assistedTransform, &assistedGaps, &assistedPitch,
+                 &assistedFragments})
+            registerLearn(*toggle, "assisted");
+        for (auto* control : {
+                 static_cast<juce::Component*>(&assistedMinBpm),
+                 static_cast<juce::Component*>(&assistedMaxBpm),
+                 static_cast<juce::Component*>(&assistedVariation),
+                 static_cast<juce::Component*>(&assistedSeed),
+                 static_cast<juce::Component*>(&assistedApplySeed),
+                 static_cast<juce::Component*>(&assistedRewind),
+                 static_cast<juce::Component*>(&assistedNext),
+                 static_cast<juce::Component*>(&assistedKeep),
+                 static_cast<juce::Component*>(&assistedRestore)})
+            registerLearn(*control, "assisted");
+        registerLearn(formLabel, "form");
+        registerLearn(formEnable, "form");
+        for (auto* control : {
+                 static_cast<juce::Component*>(&formScene),
+                 static_cast<juce::Component*>(&formHold),
+                 static_cast<juce::Component*>(&formNext),
+                 static_cast<juce::Component*>(&formReset),
+                 static_cast<juce::Component*>(&formBars),
+                 static_cast<juce::Component*>(&formEnergy),
+                 static_cast<juce::Component*>(&formVariation),
+                 static_cast<juce::Component*>(&formTransition),
+                 static_cast<juce::Component*>(&formBankA),
+                 static_cast<juce::Component*>(&formBankB),
+                 static_cast<juce::Component*>(&formDensity),
+                 static_cast<juce::Component*>(&formTension),
+                 static_cast<juce::Component*>(&formStability),
+                 static_cast<juce::Component*>(&formContinuity),
+                 static_cast<juce::Component*>(&formContrast),
+                 static_cast<juce::Component*>(&formStereoMotion),
+                 static_cast<juce::Component*>(&formLock),
+                 static_cast<juce::Component*>(&formAdd),
+                 static_cast<juce::Component*>(&formDuplicate),
+                 static_cast<juce::Component*>(&formDelete),
+                 static_cast<juce::Component*>(&formMoveUp),
+                 static_cast<juce::Component*>(&formMoveDown)})
+            registerLearn(*control, "form");
+        registerLearn(tracePad, "trace");
+        registerLearn(traceLabel, "trace");
+        registerLearn(traceInfo, "trace");
+        registerLearn(traceRecord, "trace");
+        registerLearn(traceLoop, "trace");
+        registerLearn(traceClear, "trace");
+        registerLearn(motifLabel, "motif");
+        for (auto& button : motifSlotButtons)
+            registerLearn(button, "motif");
+        registerLearn(motifName, "motif");
+        registerLearn(motifInfo, "motif");
+        for (auto* button : {
+                 &motifCapture, &motifRecall, &motifVary, &motifDelete})
+            registerLearn(*button, "motif");
+        for (auto* toggle : {
+                 &lockSource, &lockCuts, &lockPattern, &lockTransform,
+                 &lockPitch, &lockGap, &lockMix, &lockVoices})
+            registerLearn(*toggle, "motif");
+        registerLearn(mixerHeaderLabel, "mixer");
+        registerLearn(mixerLevelLabel, "mixerlevel");
+        registerLearn(mixerPanLabel, "mixerpan");
+        registerLearn(mixerWidthLabel, "mixerwidth");
+        registerLearn(mixerBalanceLabel, "mixerbalance");
+        registerLearn(mixerBalance, "mixerbalance");
+        for (std::size_t source = 0; source < 2; ++source)
+        {
+            registerLearn(mixerSourceLabels[source], "mixerlevel");
+            registerLearn(mixerLevels[source], "mixerlevel");
+            registerLearn(mixerPans[source], "mixerpan");
+            registerLearn(mixerWidths[source], "mixerwidth");
+            registerLearn(mixerMutes[source], "mixermute");
+            registerLearn(mixerSolos[source], "mixersolo");
+        }
+        registerLearn(master, "output");
+        registerLearn(masterLabel, "output");
+        registerLearn(outputTrim, "output");
+        registerLearn(outputTrimLabel, "output");
+        registerLearn(outputMute, "output");
+        registerLearn(outputMeterLabel, "output");
+        registerLearn(outputLeftMeter, "output");
+        registerLearn(outputRightMeter, "output");
+        registerLearn(recordingFormat, "recordformat");
+        registerLearn(recordingFormatLabel, "recordformat");
+        registerLearn(recordingInfo, "recordformat");
+        registerLearn(voicesHeaderLabel, "voices");
+        registerLearn(voiceAdvancedLabel, "voices");
+        registerLearn(voicePatternLabel, "voices");
+        registerLearn(voiceEditor, "voices");
+        registerLearn(voicePatternLength, "voices");
+        registerLearn(voiceFocusStart, "voices");
+        registerLearn(voiceFocusEnd, "voices");
+        registerLearn(voiceAttack, "voices");
+        registerLearn(voiceRelease, "voices");
+        for (auto& cell : voicePatternCells)
+            registerLearn(cell, "voices");
+        for (std::size_t voice = 0; voice < 2; ++voice)
+        {
+            registerLearn(voiceLabels[voice], "voices");
+            registerLearn(voiceEnabled[voice], "voices");
+            registerLearn(voiceSources[voice], "voices");
+            registerLearn(voiceDivisions[voice], "voices");
+            registerLearn(voicePitches[voice], "voices");
+            registerLearn(voiceLevels[voice], "voices");
+            registerLearn(voicePans[voice], "voices");
+        }
+    }
+
+    void mouseEnter(const juce::MouseEvent& event) override
+    {
+        if (!learningMode)
+            return;
+        auto* component = event.originalComponent;
+        while (component != nullptr && component != this)
+        {
+            if (component->getProperties().contains("learnKey"))
+            {
+                explainLearnKey(
+                    component->getProperties()["learnKey"].toString());
+                return;
+            }
+            component = component->getParentComponent();
+        }
+    }
+
+    void globalFocusChanged(juce::Component* focusedComponent) override
+    {
+        if (!learningMode)
+            return;
+        auto* component = focusedComponent;
+        while (component != nullptr)
+        {
+            if (component->getProperties().contains("learnKey"))
+            {
+                explainLearnKey(
+                    component->getProperties()["learnKey"].toString());
+                return;
+            }
+            component = component->getParentComponent();
+        }
+    }
+
     void refreshLibraryHint()
     {
         libraryHint.setText(
             juce::String(audioLibrary.fileCount())
                 + " FILES | DRAG WAV/AIFF TO SOURCE A/B",
             juce::dontSendNotification);
+    }
+
+    void startAudioPreview(const juce::File& file)
+    {
+        stopAudioPreview(false);
+        auto* reader = previewFormatManager.createReaderFor(file);
+        if (reader == nullptr)
+        {
+            showStatus("PREVIEW FAILED | " + file.getFileName());
+            return;
+        }
+        const auto sourceRate = reader->sampleRate;
+        previewReader = std::make_unique<juce::AudioFormatReaderSource>(
+            reader, true);
+        previewTransport.setSource(
+            previewReader.get(), 0, nullptr, sourceRate);
+        previewTransport.setGain(0.70F);
+        previewTransport.start();
+        showStatus("PREVIEW | " + file.getFileName());
+    }
+
+    void stopAudioPreview(bool announce = true)
+    {
+        const auto wasActive = previewTransport.isPlaying()
+            || previewReader != nullptr;
+        previewTransport.stop();
+        previewTransport.setSource(nullptr);
+        previewReader.reset();
+        if (announce && wasActive)
+            showStatus("PREVIEW STOPPED");
     }
 
     void changeListenerCallback(juce::ChangeBroadcaster*) override
@@ -2912,17 +4222,65 @@ private:
 
         std::unique_ptr<juce::XmlElement> savedState;
         if (auto* settings = applicationProperties.getUserSettings())
+        {
             savedState = juce::parseXML(settings->getValue("audioDeviceState"));
+            const auto savedTrim = juce::jlimit(
+                -24.0, 0.0, settings->getDoubleValue("outputTrimDb", 0.0));
+            const auto savedMute = settings->getBoolValue(
+                "outputMuted", false);
+            outputTrim.setValue(savedTrim, juce::dontSendNotification);
+            outputMute.setToggleState(savedMute, juce::dontSendNotification);
+            static_cast<void>(engine.setOutputTrimDb(
+                static_cast<float>(savedTrim)));
+            engine.setOutputMuted(savedMute);
+            const auto catalogJson = settings->getValue("takeCatalogV1");
+            if (catalogJson.isNotEmpty())
+            {
+                try
+                {
+                    takeCatalog = navalha::decodeTakeCatalog(
+                        catalogJson.toStdString());
+                }
+                catch (const std::exception& exception)
+                {
+                    showStatus("TAKE CATALOG IGNORED | "
+                               + juce::String(exception.what()));
+                }
+            }
+        }
         setAudioChannels(0, 2, savedState.get());
+    }
+
+    void saveTakeCatalog()
+    {
+        auto* settings = applicationProperties.getUserSettings();
+        if (settings == nullptr)
+            return;
+        try
+        {
+            settings->setValue(
+                "takeCatalogV1",
+                utf8(navalha::encodeTakeCatalog(takeCatalog)));
+            static_cast<void>(settings->saveIfNeeded());
+        }
+        catch (const std::exception& exception)
+        {
+            showStatus("TAKE CATALOG SAVE FAILED | "
+                       + juce::String(exception.what()));
+        }
     }
 
     void saveAudioSettings()
     {
         auto state = deviceManager.createStateXml();
         auto* settings = applicationProperties.getUserSettings();
-        if (state != nullptr && settings != nullptr)
+        if (settings != nullptr)
         {
-            settings->setValue("audioDeviceState", state.get());
+            if (state != nullptr)
+                settings->setValue("audioDeviceState", state.get());
+            settings->setValue("outputTrimDb", outputTrim.getValue());
+            settings->setValue(
+                "outputMuted", outputMute.getToggleState());
             static_cast<void>(settings->saveIfNeeded());
         }
     }
@@ -2978,12 +4336,64 @@ private:
     void timerCallback() override
     {
         const auto peak = engine.consumeOutputPeak();
+        const auto safety = engine.consumeOutputSafetyTelemetry();
         meterLeft = std::max(
             static_cast<double>(std::clamp(peak.left, 0.0F, 1.0F)),
             meterLeft * 0.86);
         meterRight = std::max(
             static_cast<double>(std::clamp(peak.right, 0.0F, 1.0F)),
             meterRight * 0.86);
+        const auto dbText = [] (float value)
+        {
+            if (value <= 1.0e-6F) return juce::String("-inf");
+            return juce::String(20.0 * std::log10(value), 1);
+        };
+        outputLeftMeter.setTextToDisplay(
+            "L " + dbText(peak.left) + " dBFS");
+        outputRightMeter.setTextToDisplay(
+            "R " + dbText(peak.right) + " dBFS");
+        if (safety.ceilingEngaged || safety.nonFiniteSamples != 0)
+        {
+            safetyHoldTicks = 60;
+            heldSafetyGainReductionDb = std::max(
+                heldSafetyGainReductionDb,
+                static_cast<double>(safety.gainReductionDb));
+        }
+        else if (safetyHoldTicks > 0)
+            --safetyHoldTicks;
+        if (safetyHoldTicks == 0)
+            heldSafetyGainReductionDb = 0.0;
+        const auto safetyActive = safetyHoldTicks > 0;
+        const auto meterColour = safetyActive
+            ? juce::Colour(Arcade::red) : juce::Colour(Arcade::yellow);
+        outputLeftMeter.setColour(
+            juce::ProgressBar::foregroundColourId, meterColour);
+        outputRightMeter.setColour(
+            juce::ProgressBar::foregroundColourId, meterColour);
+        juce::String outputStatus = "MASTER SAFE";
+        if (safety.suspended)
+            outputStatus = "RECONNECT SAFE";
+        else if (safety.muted)
+            outputStatus = "OUTPUT MUTED";
+        else if (safety.nonFiniteSamples != 0)
+            outputStatus = "INVALID";
+        else if (safetyActive)
+            outputStatus = "SAFE -" + juce::String(heldSafetyGainReductionDb, 1);
+        outputMeterLabel.setText(outputStatus, juce::dontSendNotification);
+        outputMeterLabel.setTooltip(
+            "Post-safety sample peak and block RMS. Input peak: "
+            + dbText(safety.inputSamplePeak) + " dBFS | RMS L/R: "
+            + dbText(safety.rms.left) + " / " + dbText(safety.rms.right)
+            + " dBFS | true peak in/out: "
+            + dbText(safety.inputTruePeak) + " / "
+            + dbText(safety.outputTruePeak) + " dBTP"
+            + " | GR: " + juce::String(safety.gainReductionDb, 1)
+            + " dB | output trim: "
+            + juce::String(safety.outputTrimDb, 1) + " dB"
+            + (safety.suspended ? " | reconnect suspended"
+                                : (safety.muted ? " | muted" : ""))
+            + ". True peak 4x; linked lookahead 5 ms; EBU 15-23 passed "
+              "(20-23 derived); official WAV cross-check pending.");
         outputLeftMeter.repaint();
         outputRightMeter.repaint();
 
@@ -3062,8 +4472,8 @@ private:
         }
         transportInfo.setText(
             transport.running
-                ? "PLAY | NEXT " + juce::String(transport.step + 1)
-                : "STOP",
+                ? "TRANSPORT: PLAY | NEXT " + juce::String(transport.step + 1)
+                : "TRANSPORT: STOP",
             juce::dontSendNotification);
         if (transport.running != displayedTransportRunning
             || transport.step != displayedTransportStep)
@@ -3081,6 +4491,20 @@ private:
         }
 
         const auto isRecording = recorder.isRunning();
+        // Keep unattended captures bounded.  The writer also receives the
+        // same limit below, while this timer finalizes the take cleanly and
+        // gives the user an explicit status message at the five-minute mark.
+        constexpr std::uint64_t maxRecordingSeconds = 5ULL * 60ULL;
+        const auto recordingRate = activeSampleRate.load(std::memory_order_acquire);
+        if (isRecording && recordingRate > 0
+            && recorder.framesWritten()
+                   >= static_cast<std::uint64_t>(recordingRate)
+                          * maxRecordingSeconds)
+        {
+            finalizeRecording();
+            showStatus("RECORDING AUTO-STOP | 5 MIN LIMIT");
+            return;
+        }
         record.setToggleState(isRecording, juce::dontSendNotification);
         const auto recordText = isRecording
                                             ? juce::String::fromUTF8("REC • STOP")
@@ -3111,11 +4535,25 @@ private:
         const auto writerError = recorder.error();
         if (!writerError.empty())
             showStatus("RECORDING FAILED | " + juce::String(writerError));
-        else if (drops != 0)
-            showStatus(
-                "RECORDING FINALIZED | " + juce::String(drops) + " DROPPED FRAMES");
         else
-            showStatus("RECORDING FINALIZED");
+        {
+            try
+            {
+                registerFinalizedTake();
+                if (drops != 0)
+                    showStatus(
+                        "TAKE FINALIZED | " + juce::String(drops)
+                        + " DROPPED FRAMES");
+                else
+                    showStatus("TAKE FINALIZED | ADDED TO TIMELINE");
+            }
+            catch (const std::exception& exception)
+            {
+                showStatus("TAKE CATALOG FAILED | "
+                           + juce::String(exception.what()));
+            }
+        }
+        clearActiveRecordingRegistration();
     }
 
     void configureButton(juce::TextButton& button,
@@ -3141,6 +4579,8 @@ private:
                       : juce::Justification::centred);
         label.setFont(juce::Font(
             juce::FontOptions("DejaVu Sans Mono", 10.5F, juce::Font::bold)));
+        label.getProperties().set("arcadeFontSize", 10.5);
+        label.getProperties().set("arcadeFontBold", true);
         label.setColour(
             juce::Label::textColourId, juce::Colour(Arcade::yellowHigh));
         label.setColour(
@@ -3627,6 +5067,7 @@ private:
 
     void stopAudioAndSynchronize()
     {
+        engine.suspendOutput();
         shutdownAudio();
         engine.synchronizePendingCommands();
     }
@@ -3651,6 +5092,10 @@ private:
         pitchMix.setValue(session.heritagePitchMode, juce::dontSendNotification);
         updatePitchModeButtons();
         master.setValue(session.masterLevel, juce::dontSendNotification);
+        // Technical output controls are device preferences, not Project state.
+        static_cast<void>(engine.setOutputTrimDb(
+            static_cast<float>(outputTrim.getValue())));
+        engine.setOutputMuted(outputMute.getToggleState());
         uiPatterns = session.patterns;
         uiPatternMemory = session.patternMemory;
         uiPatternTransform = session.patternTransform;
@@ -4558,11 +6003,12 @@ private:
                 static_cast<double>(file.getSize()) / (1024.0 * 1024.0);
             selectedInfo.setText(
                 file.getFileName() + "\n"
-                    + file.getParentDirectory().getFullPathName() + "\n"
-                    + juce::String(sizeInMb, 1)
+                    + file.getFileExtension().trimCharactersAtStart(".").toUpperCase()
+                    + " | " + juce::String(sizeInMb, 1)
                     + juce::String::fromUTF8(" MB · SOURCE ")
                     + (sourceIndex == 0 ? "A" : "B") + " READY",
                 juce::dontSendNotification);
+            selectedInfo.setTooltip(file.getFullPathName());
             engine.setSourceBuffer(sourceIndex, sourceBuffers[sourceIndex].get());
             session.selectSource(sourceIndex);
             uiSliceBanks[sourceIndex] = session.sources[sourceIndex].sliceBank;
@@ -4819,6 +6265,109 @@ private:
         }
     }
 
+    [[nodiscard]] std::string captureTakeRecipe() const
+    {
+        navalha::ProjectStateV2 snapshot;
+        for (std::size_t source = 0; source < snapshot.sources.size(); ++source)
+        {
+            snapshot.sources[source].sliceBank = uiSliceBanks[source];
+            snapshot.sources[source].hasAudio = sourceBuffers[source] != nullptr;
+            const auto& file = sourceFiles[source];
+            if (file.existsAsFile())
+            {
+                auto& reference = snapshot.sourceReferences[source];
+                reference.filename = file.getFileName().toStdString();
+                reference.size = static_cast<std::uint64_t>(file.getSize());
+                reference.lastModified = static_cast<std::uint64_t>(std::max(
+                    juce::int64 {0},
+                    file.getLastModificationTime().toMilliseconds()));
+                reference.mediaType = sourceMediaTypes[source];
+            }
+        }
+        snapshot.patterns = uiPatterns;
+        snapshot.mixer = uiMixer;
+        snapshot.virtualVoices = uiVirtualVoices;
+        snapshot.patternMemory = uiPatternMemory;
+        snapshot.patternTransform = uiPatternTransform;
+        snapshot.formDirector = uiFormDirector.state();
+        snapshot.controlTrace = uiControlTrace;
+        snapshot.activeSource = selectedSliceSource();
+        snapshot.currentPattern = static_cast<std::size_t>(
+            std::max(0, pattern.getSelectedItemIndex()));
+        snapshot.bpm = tempo.getValue();
+        snapshot.divisionMode = static_cast<std::size_t>(
+            std::max(0, division.getSelectedItemIndex()));
+        snapshot.timingMode = static_cast<navalha::TimingMode>(
+            std::clamp(timing.getSelectedItemIndex(), 0, 2));
+        snapshot.jitter = jitterAmount;
+        snapshot.timingSeed = timingSeed;
+        snapshot.heritagePitchSemitones = static_cast<int>(
+            std::lround(pitchSemitones.getValue()));
+        snapshot.heritagePitchMode = pitchMix.getValue();
+        snapshot.masterLevel = master.getValue();
+        snapshot.assistedSeed = uiAssistedSeed;
+        snapshot.assistedState = uiAssistedSeed;
+        snapshot.assistedCursor = 0;
+        snapshot.assisted = uiAssisted;
+        snapshot.motifLocks = uiMotifLocks;
+        snapshot.motifSlots = uiMotifSlots;
+        snapshot.selectedMotifSlot = selectedMotifSlot;
+
+        const auto project = navalha::parseJson(
+            navalha::encodeProjectJson(snapshot));
+        return navalha::serializeJson(navalha::Json::Object {
+            {"format", "navalha-take-recipe"},
+            {"version", 1},
+            {"appVersion", JUCE_APPLICATION_VERSION_STRING},
+            {"capturedAt", juce::Time::getCurrentTime().toISO8601(true).toStdString()},
+            {"captureScope", "ui-state-before-recording"},
+            {"assistedCursorAvailable", false},
+            {"project", project}
+        }) + "\n";
+    }
+
+    [[nodiscard]] static std::string makeTakeId(
+        const juce::File& file, const juce::Time& created)
+    {
+        return ("take-"
+                + juce::String::toHexString(created.toMilliseconds()) + "-"
+                + file.getFileNameWithoutExtension()
+                      .retainCharacters(
+                          "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_")
+                      .substring(0, 80)).toStdString();
+    }
+
+    void registerFinalizedTake()
+    {
+        if (!activeRecordingFile.existsAsFile()
+            || activeRecordingRate == 0
+            || activeRecordingCreatedAt.toMilliseconds() <= 0)
+            return;
+        navalha::TakeEntry entry;
+        entry.id = makeTakeId(activeRecordingFile, activeRecordingCreatedAt);
+        entry.audioPath = activeRecordingFile.getFullPathName().toStdString();
+        entry.filename = activeRecordingFile.getFileName().toStdString();
+        entry.createdAt = activeRecordingCreatedAt.toISO8601(true).toStdString();
+        entry.frames = recorder.framesWritten();
+        entry.sampleRate = activeRecordingRate;
+        entry.durationSeconds = static_cast<double>(entry.frames)
+            / static_cast<double>(entry.sampleRate);
+        entry.sampleFormat = activeRecordingFormat;
+        entry.metadata = activeRecordingMetadata;
+        entry.recipeJson = activeRecordingRecipe;
+        takeCatalog.upsert(std::move(entry));
+        saveTakeCatalog();
+    }
+
+    void clearActiveRecordingRegistration()
+    {
+        activeRecordingFile = juce::File {};
+        activeRecordingCreatedAt = {};
+        activeRecordingRate = 0;
+        activeRecordingRecipe.clear();
+        activeRecordingMetadata = {};
+    }
+
     void chooseRecordingPath()
     {
         if (recorder.isRunning())
@@ -4864,25 +6413,55 @@ private:
                     }
                     const auto spaceFrames =
                         (freeBytes - diskReserve) / bytesPerFrame;
-                    const auto oneHourFrames =
-                        static_cast<std::uint64_t>(rate) * 3600ULL;
+                    constexpr auto maxRecordingSeconds = 5ULL * 60ULL;
+                    const auto fiveMinuteFrames =
+                        static_cast<std::uint64_t>(rate) * maxRecordingSeconds;
                     const auto riffFrames =
                         std::numeric_limits<std::uint32_t>::max() / bytesPerFrame;
                     const auto maximumFrames =
-                        std::min({spaceFrames, oneHourFrames, riffFrames});
+                        std::min({spaceFrames, fiveMinuteFrames, riffFrames});
                     if (maximumFrames < static_cast<std::uint64_t>(rate) * 10ULL)
                     {
                         showStatus("RECORDING REFUSED | INSUFFICIENT SAFE SPACE");
                         fileChooser.reset();
                         return;
                     }
+                    const navalha::WavMetadata metadata {
+                        "Navalha 2 recording", "Navalha 2",
+                        "JUCE migration", "", ""};
+                    std::string recipe;
+                    try
+                    {
+                        recipe = captureTakeRecipe();
+                    }
+                    catch (const std::exception& exception)
+                    {
+                        showStatus("RECORDING RECIPE FAILED | "
+                                   + juce::String(exception.what()));
+                        fileChooser.reset();
+                        return;
+                    }
+                    const auto createdAt = juce::Time::getCurrentTime();
                     const auto started = recorder.start(
                         file.getFullPathName().toStdString(),
                         rate,
                         format,
-                        {"Navalha 2 recording", "Navalha 2", "JUCE migration", "", ""},
+                        metadata,
                         maximumFrames);
                     recorderObservedRunning = started;
+                    if (started)
+                    {
+                        activeRecordingFile = file;
+                        activeRecordingCreatedAt = createdAt;
+                        activeRecordingRate = rate;
+                        activeRecordingFormat = format;
+                        activeRecordingMetadata = metadata;
+                        activeRecordingRecipe = std::move(recipe);
+                    }
+                    else
+                    {
+                        clearActiveRecordingRegistration();
+                    }
                     showStatus(started ? "RECORDING | " + file.getFileName()
                                        : "RECORDING FAILED | "
                                            + juce::String(recorder.error()));
@@ -4905,6 +6484,14 @@ private:
     navalha::SessionModel session;
     navalha::AudioEngine engine;
     navalha::RecordingWriterService recorder {engine};
+    navalha::TakeCatalog takeCatalog;
+    juce::File activeRecordingFile;
+    juce::Time activeRecordingCreatedAt;
+    std::uint32_t activeRecordingRate = 0;
+    navalha::WavSampleFormat activeRecordingFormat =
+        navalha::WavSampleFormat::pcm24;
+    navalha::WavMetadata activeRecordingMetadata;
+    std::string activeRecordingRecipe;
     std::atomic<double> activeSampleRate {44100.0};
     std::array<std::unique_ptr<navalha::StereoAudioBuffer>, 2> sourceBuffers;
     std::array<std::vector<std::uint8_t>, 2> sourceWavData;
@@ -4924,7 +6511,11 @@ private:
     juce::Label libraryPath;
     juce::TextEditor librarySearch;
     juce::TextEditor activityLog;
+    juce::Label learnModeLabel;
+    juce::Label learnTitle;
+    juce::TextEditor learnBody;
     juce::Label masterLabel;
+    juce::Label outputTrimLabel;
     juce::Label tempoLabel;
     juce::Label divisionLabel;
     juce::Label patternLabel;
@@ -4965,6 +6556,7 @@ private:
     juce::TextButton saveProject;
     juce::TextButton savePortable;
     juce::TextButton record;
+    juce::ToggleButton outputMute;
     juce::TextButton pitchBypass;
     juce::TextButton pitchZero;
     juce::TextButton pitchAudition;
@@ -4973,7 +6565,11 @@ private:
     juce::TextButton chooseLibraryFolder;
     juce::TextButton loadSelectedA;
     juce::TextButton loadSelectedB;
+    juce::TextButton previewSelected;
+    juce::TextButton stopPreview;
     juce::Slider master {juce::Slider::LinearHorizontal, juce::Slider::TextBoxRight};
+    juce::Slider outputTrim {
+        juce::Slider::LinearHorizontal, juce::Slider::TextBoxRight};
     juce::Slider tempo {juce::Slider::LinearHorizontal, juce::Slider::TextBoxRight};
     juce::ComboBox division;
     juce::ComboBox pattern;
@@ -5144,10 +6740,17 @@ private:
     std::array<juce::Slider, 16> voicePatternCells;
     double meterLeft = 0.0;
     double meterRight = 0.0;
+    int safetyHoldTicks = 0;
+    double heldSafetyGainReductionDb = 0.0;
     juce::ProgressBar outputLeftMeter {meterLeft};
     juce::ProgressBar outputRightMeter {meterRight};
     juce::ComboBox recordingFormat;
     juce::ApplicationProperties applicationProperties;
+    navalha::ui::Language uiLanguage = navalha::ui::Language::english;
+    juce::String activeLearnKey;
+    bool learningMode = false;
+    bool dualMonitorLayout = false;
+    juce::Rectangle<int> visibleViewportArea;
     bool recorderObservedRunning = false;
     bool displayedTransportRunning = false;
     std::size_t displayedTransportStep = navalha::stepsPerPattern;
@@ -5162,6 +6765,451 @@ private:
     std::unique_ptr<juce::Drawable> arcadeLogo;
     AudioLibraryList audioLibrary;
     juce::File selectedLibraryFile;
+    juce::AudioFormatManager previewFormatManager;
+    std::unique_ptr<juce::AudioFormatReaderSource> previewReader;
+    juce::AudioTransportSource previewTransport;
+    juce::AudioBuffer<float> previewScratch {2, 8192};
+};
+
+class TakeTimelineComponent final : public juce::Component,
+                                    private juce::ListBoxModel,
+                                    private juce::Timer
+{
+public:
+    TakeTimelineComponent(
+        MainComponent& owner,
+        std::function<void(const juce::File&)> sendAction = {})
+        : main(owner), sendToMasterAction(std::move(sendAction))
+    {
+        setLookAndFeel(&lookAndFeel);
+        heading.setText("TAKE TIMELINE", juce::dontSendNotification);
+        heading.setFont(juce::Font(
+            juce::FontOptions("DejaVu Sans Mono", 18.0F, juce::Font::bold)));
+        heading.getProperties().set("arcadeFontSize", 18.0);
+        heading.getProperties().set("arcadeFontBold", true);
+        heading.setColour(
+            juce::Label::textColourId, juce::Colour(Arcade::yellowHigh));
+        addAndMakeVisible(heading);
+
+        summary.setJustificationType(juce::Justification::centredRight);
+        summary.setColour(
+            juce::Label::textColourId, juce::Colour(Arcade::muted));
+        addAndMakeVisible(summary);
+        configureButton(importFolder, "IMPORT WAV FOLDER", [this]
+        {
+            chooseImportDirectory();
+        });
+
+        list.setModel(this);
+        list.setRowHeight(58);
+        list.setColour(
+            juce::ListBox::backgroundColourId, juce::Colour(Arcade::background));
+        list.setColour(
+            juce::ListBox::outlineColourId, juce::Colour(Arcade::line));
+        list.setOutlineThickness(1);
+        addAndMakeVisible(list);
+
+        configureLabel(selectedLabel, "SELECTED TAKE");
+        selectedName.setColour(
+            juce::Label::textColourId, juce::Colour(Arcade::yellowHigh));
+        selectedName.setFont(juce::Font(
+            juce::FontOptions("DejaVu Sans Mono", 13.0F, juce::Font::bold)));
+        selectedName.getProperties().set("arcadeFontSize", 13.0);
+        selectedName.getProperties().set("arcadeFontBold", true);
+        addAndMakeVisible(selectedName);
+        selectedInfo.setColour(
+            juce::Label::textColourId, juce::Colour(Arcade::muted));
+        addAndMakeVisible(selectedInfo);
+
+        configureLabel(titleLabel, "TITLE");
+        configureLabel(artistLabel, "ARTIST");
+        configureLabel(projectLabel, "PROJECT / ALBUM");
+        configureLabel(yearLabel, "YEAR");
+        configureLabel(commentLabel, "COMMENT");
+        configureLabel(statusLabel, "STATUS");
+        configureLabel(ratingLabel, "RATING");
+        configureLabel(tagsLabel, "TAGS");
+        configureLabel(notesLabel, "REVIEW NOTES");
+        for (auto* editor : {
+                 &title, &artist, &project, &year, &comment, &tags, &notes})
+        {
+            styleEditableTextField(*editor);
+            addAndMakeVisible(*editor);
+        }
+        status.addItemList({
+            "EXPERIMENT", "CANDIDATE", "SELECTED",
+            "APPROVED", "REJECTED", "MASTER"}, 1);
+        rating.addItemList(
+            {juce::String::fromUTF8("—"), "1", "2", "3", "4", "5"}, 1);
+        addAndMakeVisible(status);
+        addAndMakeVisible(rating);
+
+        configureButton(useA, "USE AS SOURCE A", [this]
+        {
+            if (!selectedId.empty())
+                static_cast<void>(main.useTakeAsSource(selectedId, 0));
+        });
+        configureButton(useB, "USE AS SOURCE B", [this]
+        {
+            if (!selectedId.empty())
+                static_cast<void>(main.useTakeAsSource(selectedId, 1));
+        });
+        configureButton(save, "SAVE METADATA / REVIEW", [this] { saveSelected(); });
+        configureButton(exportRecipe, "EXPORT RECIPE JSON", [this]
+        {
+            exportSelectedRecipe();
+        });
+        configureButton(sendToMaster, "SEND TO MASTER", [this]
+        {
+            const auto* entry = main.take(selectedId);
+            if (entry == nullptr || !sendToMasterAction)
+                return;
+            const juce::File file(utf8(entry->audioPath));
+            if (file.existsAsFile())
+                sendToMasterAction(file);
+        });
+        useA.getProperties().set("arcadeAccent", "play");
+        useB.getProperties().set("arcadeAccent", "play");
+        save.getProperties().set("arcadeAccent", "record");
+        sendToMaster.getProperties().set("arcadeAccent", "play");
+        sendToMaster.getProperties().set("learnKey", "masterwindow");
+
+        note.setText(
+            "The recorded WAV remains unchanged. Review data and the performance "
+            "recipe are stored in Navalha's private TAKE catalog.",
+            juce::dontSendNotification);
+        note.setColour(
+            juce::Label::textColourId, juce::Colour(Arcade::muted));
+        note.setJustificationType(juce::Justification::centredLeft);
+        addAndMakeVisible(note);
+
+        // LEARN is displayed in the fixed panel of the main window.  Giving
+        // this detached workspace a key also covers list rows and editor
+        // internals that JUCE creates as child components.
+        getProperties().set("learnKey", "takes");
+
+        setSize(1120, 740);
+        setEditorEnabled(false);
+        refreshCatalog();
+        startTimerHz(2);
+    }
+
+    ~TakeTimelineComponent() override
+    {
+        stopTimer();
+        setLookAndFeel(nullptr);
+        list.setModel(nullptr);
+    }
+
+    void paint(juce::Graphics& graphics) override
+    {
+        graphics.fillAll(tintedPanelSurface(
+            juce::Colour(Arcade::red), 0.10F));
+        graphics.setColour(
+            juce::Colour(Arcade::line).interpolatedWith(
+                juce::Colour(Arcade::red), 0.55F));
+        graphics.drawRect(getLocalBounds().toFloat().reduced(0.5F));
+    }
+
+    void resized() override
+    {
+        auto area = getLocalBounds().reduced(16);
+        auto header = area.removeFromTop(42);
+        heading.setBounds(header.removeFromLeft(260));
+        importFolder.setBounds(header.removeFromLeft(170).reduced(2));
+        summary.setBounds(header);
+        area.removeFromTop(8);
+        auto left = area.removeFromLeft(420);
+        area.removeFromLeft(14);
+        list.setBounds(left);
+
+        auto selectedRow = area.removeFromTop(28);
+        selectedLabel.setBounds(selectedRow.removeFromLeft(130));
+        selectedName.setBounds(selectedRow);
+        selectedInfo.setBounds(area.removeFromTop(24));
+        area.removeFromTop(8);
+
+        layoutEditorRow(area, titleLabel, title);
+        layoutEditorRow(area, artistLabel, artist);
+        layoutEditorRow(area, projectLabel, project);
+        layoutEditorRow(area, yearLabel, year);
+        layoutEditorRow(area, commentLabel, comment);
+        auto reviewRow = area.removeFromTop(42);
+        statusLabel.setBounds(reviewRow.removeFromLeft(70).reduced(2));
+        status.setBounds(reviewRow.removeFromLeft(150).reduced(2));
+        ratingLabel.setBounds(reviewRow.removeFromLeft(70).reduced(2));
+        rating.setBounds(reviewRow.removeFromLeft(90).reduced(2));
+        layoutEditorRow(area, tagsLabel, tags);
+        layoutEditorRow(area, notesLabel, notes);
+        area.removeFromTop(8);
+        auto sourceActions = area.removeFromTop(42);
+        useA.setBounds(sourceActions.removeFromLeft(
+            sourceActions.getWidth() / 2).reduced(2));
+        useB.setBounds(sourceActions.reduced(2));
+        auto saveActions = area.removeFromTop(42);
+        const auto saveActionWidth = saveActions.getWidth() / 3;
+        save.setBounds(
+            saveActions.removeFromLeft(saveActionWidth).reduced(2));
+        exportRecipe.setBounds(
+            saveActions.removeFromLeft(saveActionWidth).reduced(2));
+        sendToMaster.setBounds(saveActions.reduced(2));
+        note.setBounds(area.removeFromTop(48).reduced(4));
+    }
+
+private:
+    void timerCallback() override
+    {
+        refreshCatalog();
+    }
+
+    int getNumRows() override
+    {
+        return static_cast<int>(main.takes().size());
+    }
+
+    const navalha::TakeEntry* entryForRow(int row) const noexcept
+    {
+        const auto& entries = main.takes();
+        if (!juce::isPositiveAndBelow(row, static_cast<int>(entries.size())))
+            return nullptr;
+        return &entries[entries.size() - 1 - static_cast<std::size_t>(row)];
+    }
+
+    void paintListBoxItem(int row,
+                          juce::Graphics& graphics,
+                          int width,
+                          int height,
+                          bool selected) override
+    {
+        const auto* entry = entryForRow(row);
+        if (entry == nullptr)
+            return;
+        graphics.fillAll(selected
+            ? juce::Colour(0xff20251f) : juce::Colour(Arcade::surface));
+        graphics.setColour(juce::Colour(Arcade::line));
+        graphics.drawHorizontalLine(height - 1, 5.0F, width - 5.0F);
+        auto bounds = juce::Rectangle<int>(0, 0, width, height).reduced(8, 4);
+        graphics.setColour(selected
+            ? juce::Colour(Arcade::yellowHigh) : juce::Colour(Arcade::ink));
+        graphics.setFont(juce::Font(
+            juce::FontOptions("DejaVu Sans Mono", 11.0F, juce::Font::bold)));
+        graphics.drawFittedText(
+            utf8(entry->filename), bounds.removeFromTop(23),
+            juce::Justification::centredLeft, 1);
+        const auto stars = entry->review.rating == 0
+            ? juce::String() : " | " + juce::String::repeatedString(
+                  "*", entry->review.rating);
+        const auto availability = juce::File(utf8(entry->audioPath))
+                .existsAsFile()
+            ? juce::String() : " | AUDIO MISSING";
+        graphics.setColour(juce::Colour(Arcade::muted));
+        graphics.setFont(juce::Font(
+            juce::FontOptions("DejaVu Sans Mono", 9.0F, juce::Font::plain)));
+        graphics.drawFittedText(
+            utf8(entry->review.status) + stars + " | "
+                + juce::String(entry->durationSeconds, 2) + " s"
+                + availability,
+            bounds, juce::Justification::centredLeft, 1);
+    }
+
+    void selectedRowsChanged(int row) override
+    {
+        const auto* entry = entryForRow(row);
+        if (entry == nullptr)
+        {
+            selectedId.clear();
+            setEditorEnabled(false);
+            return;
+        }
+        selectedId = entry->id;
+        selectedName.setText(utf8(entry->filename), juce::dontSendNotification);
+        selectedInfo.setText(
+            utf8(entry->createdAt) + " | "
+                + juce::String(entry->sampleRate) + " Hz | "
+                + navalha::toString(entry->sampleFormat) + " | "
+                + juce::String(entry->frames) + " FRAMES",
+            juce::dontSendNotification);
+        title.setText(utf8(entry->metadata.title), false);
+        artist.setText(utf8(entry->metadata.artist), false);
+        project.setText(utf8(entry->metadata.project), false);
+        year.setText(utf8(entry->metadata.year), false);
+        comment.setText(utf8(entry->metadata.comment), false);
+        tags.setText(utf8(entry->review.tags), false);
+        notes.setText(utf8(entry->review.notes), false);
+        status.setText(utf8(entry->review.status), juce::dontSendNotification);
+        rating.setSelectedItemIndex(
+            std::clamp(entry->review.rating, 0, 5),
+            juce::dontSendNotification);
+        setEditorEnabled(true);
+        exportRecipe.setEnabled(!entry->recipeJson.empty());
+        sendToMaster.setEnabled(
+            static_cast<bool>(sendToMasterAction)
+            && juce::File(utf8(entry->audioPath)).existsAsFile());
+    }
+
+    void refreshCatalog()
+    {
+        const auto count = main.takes().size();
+        if (count != displayedCount)
+        {
+            displayedCount = count;
+            list.updateContent();
+            if (count != 0 && selectedId.empty())
+                list.selectRow(0);
+        }
+        list.repaint();
+        summary.setText(
+            juce::String(count) + (count == 1 ? " TAKE" : " TAKES"),
+            juce::dontSendNotification);
+    }
+
+    void saveSelected()
+    {
+        const auto* current = main.take(selectedId);
+        if (current == nullptr)
+            return;
+        auto entry = *current;
+        entry.metadata = {
+            title.getText().toStdString(), artist.getText().toStdString(),
+            project.getText().toStdString(), year.getText().toStdString(),
+            comment.getText().toStdString()};
+        entry.review = {
+            status.getText().toStdString(),
+            std::max(0, rating.getSelectedItemIndex()),
+            tags.getText().toStdString(), notes.getText().toStdString()};
+        if (main.updateTake(std::move(entry)))
+        {
+            list.repaint();
+            selectedRowsChanged(list.getSelectedRow());
+        }
+    }
+
+    void exportSelectedRecipe()
+    {
+        const auto* entry = main.take(selectedId);
+        if (entry == nullptr || entry->recipeJson.empty())
+            return;
+        auto suggested = juce::File(utf8(entry->filename))
+            .withFileExtension("recipe.json");
+        chooser = std::make_unique<juce::FileChooser>(
+            "Export TAKE recipe", suggested, "*.json");
+        const auto id = selectedId;
+        chooser->launchAsync(
+            juce::FileBrowserComponent::saveMode
+                | juce::FileBrowserComponent::canSelectFiles
+                | juce::FileBrowserComponent::warnAboutOverwriting,
+            [this, id] (const juce::FileChooser& selected)
+            {
+                auto file = selected.getResult();
+                const auto* current = main.take(id);
+                if (file != juce::File {} && current != nullptr)
+                {
+                    if (!file.hasFileExtension("json"))
+                        file = file.withFileExtension("json");
+                    static_cast<void>(file.replaceWithText(current->recipeJson));
+                }
+                chooser.reset();
+            });
+    }
+
+    void chooseImportDirectory()
+    {
+        chooser = std::make_unique<juce::FileChooser>(
+            "Import previous Navalha WAV recordings",
+            juce::File::getSpecialLocation(juce::File::userMusicDirectory),
+            "*");
+        chooser->launchAsync(
+            juce::FileBrowserComponent::openMode
+                | juce::FileBrowserComponent::canSelectDirectories,
+            [this] (const juce::FileChooser& selected)
+            {
+                const auto directory = selected.getResult();
+                if (directory.isDirectory())
+                {
+                    static_cast<void>(main.importTakeDirectory(directory));
+                    refreshCatalog();
+                }
+                chooser.reset();
+            });
+    }
+
+    void setEditorEnabled(bool enabled)
+    {
+        const std::array<juce::Component*, 14> components {
+            &title, &artist, &project, &year, &comment, &status, &rating,
+            &tags, &notes, &useA, &useB, &save, &exportRecipe,
+            &sendToMaster};
+        for (auto* component : components)
+            component->setEnabled(enabled);
+    }
+
+    void configureLabel(juce::Label& label, const juce::String& text)
+    {
+        label.setText(text, juce::dontSendNotification);
+        label.setColour(
+            juce::Label::textColourId, juce::Colour(Arcade::muted));
+        label.setFont(juce::Font(
+            juce::FontOptions("DejaVu Sans Mono", 10.0F, juce::Font::bold)));
+        label.getProperties().set("arcadeFontSize", 10.0);
+        label.getProperties().set("arcadeFontBold", true);
+        addAndMakeVisible(label);
+    }
+
+    void configureButton(juce::TextButton& button,
+                         const juce::String& text,
+                         std::function<void()> action)
+    {
+        button.setButtonText(text);
+        button.onClick = std::move(action);
+        addAndMakeVisible(button);
+    }
+
+    static void layoutEditorRow(juce::Rectangle<int>& area,
+                                juce::Label& label,
+                                juce::TextEditor& editor)
+    {
+        auto row = area.removeFromTop(42);
+        label.setBounds(row.removeFromLeft(120).reduced(2));
+        editor.setBounds(row.reduced(2));
+    }
+
+    MainComponent& main;
+    juce::Label heading;
+    juce::Label summary;
+    juce::ListBox list;
+    juce::Label selectedLabel;
+    juce::Label selectedName;
+    juce::Label selectedInfo;
+    juce::Label titleLabel;
+    juce::Label artistLabel;
+    juce::Label projectLabel;
+    juce::Label yearLabel;
+    juce::Label commentLabel;
+    juce::Label statusLabel;
+    juce::Label ratingLabel;
+    juce::Label tagsLabel;
+    juce::Label notesLabel;
+    juce::TextEditor title;
+    juce::TextEditor artist;
+    juce::TextEditor project;
+    juce::TextEditor year;
+    juce::TextEditor comment;
+    juce::ComboBox status;
+    juce::ComboBox rating;
+    juce::TextEditor tags;
+    juce::TextEditor notes;
+    ArcadeLookAndFeel lookAndFeel;
+    juce::TextButton useA;
+    juce::TextButton useB;
+    juce::TextButton save;
+    juce::TextButton exportRecipe;
+    juce::TextButton sendToMaster;
+    juce::TextButton importFolder;
+    juce::Label note;
+    std::unique_ptr<juce::FileChooser> chooser;
+    std::function<void(const juce::File&)> sendToMasterAction;
+    std::string selectedId;
+    std::size_t displayedCount = std::numeric_limits<std::size_t>::max();
 };
 
 class PerformanceXYPad final : public juce::Component
@@ -5248,7 +7296,7 @@ public:
     {
         setLookAndFeel(&lookAndFeel);
         title.setText(
-            "NAVALHA 2 | DETACHED PERFORM | ONE ENGINE",
+            "DETACHED PERFORM | ONE ENGINE",
             juce::dontSendNotification);
         title.setColour(
             juce::Label::textColourId, juce::Colour(Arcade::yellowHigh));
@@ -5264,8 +7312,14 @@ public:
         configure(next, "NEXT", [this] { main.remoteNextAssisted(); });
         configure(record, "REC", [this] { main.remoteToggleRecording(); });
         record.getProperties().set("arcadeAccent", "record");
-        configure(sourceA, "SOURCE A", [this] { main.remoteToggleSource(); });
-        sourceA.setTooltip("Switch the active performance source between A and B.");
+        configure(sourceA, "SOURCE A", [this] { main.remoteSetSource(0); });
+        configure(sourceB, "SOURCE B", [this] { main.remoteSetSource(1); });
+        sourceA.setClickingTogglesState(true);
+        sourceB.setClickingTogglesState(true);
+        sourceA.setTooltip("Use SOURCE A for the performance.");
+        sourceB.setTooltip("Use SOURCE B for the performance.");
+        sourceA.getProperties().set("arcadeAccent", "sourceA");
+        sourceB.getProperties().set("arcadeAccent", "sourceB");
 
         tempo.setRange(20.0, 400.0, 1.0);
         tempo.setTextValueSuffix(" BPM");
@@ -5390,6 +7444,43 @@ public:
                 juce::Label::outlineColourId, juce::Colour(Arcade::line));
             addAndMakeVisible(steps[step]);
         }
+
+        getProperties().set("learnKey", "dual");
+        title.getProperties().set("learnKey", "dual");
+        status.getProperties().set("learnKey", "dual");
+        play.getProperties().set("learnKey", "play");
+        stop.getProperties().set("learnKey", "stop");
+        reset.getProperties().set("learnKey", "reset");
+        next.getProperties().set("learnKey", "assisted");
+        record.getProperties().set("learnKey", "rec");
+        sourceA.getProperties().set("learnKey", "mixer");
+        sourceB.getProperties().set("learnKey", "mixer");
+        assisted.getProperties().set("learnKey", "assisted");
+        repeat.getProperties().set("learnKey", "assisted");
+        tempo.getProperties().set("learnKey", "bpm");
+        pattern.getProperties().set("learnKey", "pattern");
+        timing.getProperties().set("learnKey", "timing");
+        pitch.getProperties().set("learnKey", "pitch");
+        master.getProperties().set("learnKey", "output");
+        balance.getProperties().set("learnKey", "mixerbalance");
+        for (std::size_t index = 0; index < parameterCaptions.size(); ++index)
+        {
+            const std::array<const char*, 6> keys {
+                "bpm", "pattern", "timing", "pitch", "output",
+                "mixerbalance"};
+            parameterCaptions[index].getProperties().set(
+                "learnKey", keys[index]);
+        }
+        orderHeading.getProperties().set("learnKey", "order");
+        for (auto& button : orderButtons)
+            button.getProperties().set("learnKey", "order");
+        liveHeading.getProperties().set("learnKey", "gesture");
+        for (auto* button : {
+                 &stutter, &burst, &micro, &reverse, &commit, &restore})
+            button->getProperties().set("learnKey", "gesture");
+        for (auto* button : {&formArm, &formHold, &formNext, &formReset})
+            button->getProperties().set("learnKey", "form");
+        xyPad.getProperties().set("learnKey", "trace");
     }
 
     ~PerformanceRemoteComponent() override
@@ -5427,7 +7518,8 @@ public:
         play.setBounds(transport.removeFromLeft(90).reduced(4));
         reset.setBounds(transport.removeFromLeft(90).reduced(4));
         record.setBounds(transport.removeFromLeft(90).reduced(4));
-        sourceA.setBounds(transport.removeFromLeft(110).reduced(4));
+        sourceA.setBounds(transport.removeFromLeft(85).reduced(4));
+        sourceB.setBounds(transport.removeFromLeft(85).reduced(4));
         assisted.setBounds(transport.removeFromLeft(90).reduced(4));
         repeat.setBounds(transport.removeFromLeft(100).reduced(4));
         next.setBounds(transport.removeFromLeft(90).reduced(4));
@@ -5519,8 +7611,8 @@ private:
         assisted.setToggleState(
             state.assisted, juce::dontSendNotification);
         repeat.setToggleState(state.repeat, juce::dontSendNotification);
-        sourceA.setButtonText(state.source == 0 ? "SOURCE A" : "SOURCE B");
-        sourceA.setToggleState(true, juce::dontSendNotification);
+        sourceA.setToggleState(state.source == 0, juce::dontSendNotification);
+        sourceB.setToggleState(state.source == 1, juce::dontSendNotification);
         record.setToggleState(state.recording, juce::dontSendNotification);
         record.setButtonText(state.recording ? "STOP REC" : "REC");
         formArm.setButtonText(state.formEnabled ? "FORM ON" : "ARM FORM");
@@ -5554,6 +7646,7 @@ private:
     juce::TextButton next;
     juce::TextButton record;
     juce::TextButton sourceA;
+    juce::TextButton sourceB;
     juce::ToggleButton assisted;
     juce::ToggleButton repeat;
     juce::Slider tempo {
@@ -5692,8 +7785,12 @@ public:
     {
         setLookAndFeel(&lookAndFeel);
         title.setText(
-            "NAVALHA 2 | MASTER | INTERNAL ESTIMATES",
+            "MASTER | INTERNAL ESTIMATES",
             juce::dontSendNotification);
+        title.setFont(juce::Font(
+            juce::FontOptions("DejaVu Sans Mono", 18.0F, juce::Font::bold)));
+        title.getProperties().set("arcadeFontSize", 18.0);
+        title.getProperties().set("arcadeFontBold", true);
         title.setJustificationType(juce::Justification::centred);
         title.setColour(
             juce::Label::textColourId, juce::Colour(Arcade::yellowHigh));
@@ -5750,6 +7847,7 @@ public:
             juce::Label::textColourId, juce::Colour(Arcade::muted));
         status.setJustificationType(juce::Justification::centredLeft);
         addAndMakeVisible(status);
+        getProperties().set("learnKey", "masterwindow");
         updateMode();
     }
 
@@ -5758,9 +7856,40 @@ public:
         setLookAndFeel(nullptr);
     }
 
+    bool loadTrackFile(const juce::File& file)
+    {
+        if (busy.load() || !file.existsAsFile())
+        {
+            setStatus("TRACK LOAD FAILED | FILE NOT AVAILABLE");
+            return false;
+        }
+        try
+        {
+            auto decoded = decodeSourceFile(file);
+            source = std::move(decoded.audio);
+            sourceFile = file;
+            mode.setSelectedItemIndex(0, juce::dontSendNotification);
+            updateMode();
+            sourceInfo.setText(
+                file.getFileName() + " | "
+                    + juce::String(source->sampleRate(), 0) + " Hz | "
+                    + juce::String(source->size()) + " frames",
+                juce::dontSendNotification);
+            analyzeLoadedTrack();
+            return true;
+        }
+        catch (const std::exception& exception)
+        {
+            setStatus("TRACK LOAD FAILED | "
+                      + juce::String(exception.what()));
+            return false;
+        }
+    }
+
     void paint(juce::Graphics& graphics) override
     {
-        graphics.fillAll(juce::Colour(Arcade::background));
+        graphics.fillAll(tintedPanelSurface(
+            juce::Colour(Arcade::yellow), 0.14F));
         graphics.setColour(juce::Colour(Arcade::yellow));
         graphics.drawRect(getLocalBounds().toFloat().reduced(8.5F), 1.0F);
     }
@@ -5903,25 +8032,7 @@ private:
             {
                 const auto file = selected.getResult();
                 if (file.existsAsFile())
-                {
-                    try
-                    {
-                        auto decoded = decodeSourceFile(file);
-                        source = std::move(decoded.audio);
-                        sourceFile = file;
-                        sourceInfo.setText(
-                            file.getFileName() + " | "
-                                + juce::String(source->sampleRate(), 0) + " Hz | "
-                                + juce::String(source->size()) + " frames",
-                            juce::dontSendNotification);
-                        analyzeLoadedTrack();
-                    }
-                    catch (const std::exception& exception)
-                    {
-                        setStatus("TRACK LOAD FAILED | "
-                                  + juce::String(exception.what()));
-                    }
-                }
+                    static_cast<void>(loadTrackFile(file));
                 chooser.reset();
             });
     }
@@ -6266,61 +8377,43 @@ private:
     std::atomic<bool> busy {false};
 };
 
-class NavigationContainer final : public juce::Component,
-                                  public juce::DragAndDropContainer
+class ProductionWorkspaceComponent final : public juce::Component
 {
 public:
-    NavigationContainer(std::function<void(MainComponent&, bool)> showPerform,
-                        std::function<void()> showMaster)
-        : openPerform(std::move(showPerform)),
-          openMaster(std::move(showMaster))
+    explicit ProductionWorkspaceComponent(MainComponent& main)
+        : takes(main, [this] (const juce::File& file)
+          {
+              if (mastering.loadTrackFile(file))
+              {
+                  selectedPage = 1;
+                  updatePageVisibility();
+              }
+          })
     {
-        setLookAndFeel(&arcadeLookAndFeel);
-        viewport.setScrollBarsShown(false, false);
-        mainContent = new MainComponent();
-        viewport.setViewedComponent(mainContent, true);
-        addAndMakeVisible(viewport);
-
-        footer.setText(juce::String::fromUTF8(
-            "NAVALHA Arcade · Glerm Soares, 2009 / v0.28.1 · "
-            "upgrades 2026 · Lúcio Araújo · GPL-3.0-or-later"),
+        setLookAndFeel(&lookAndFeel);
+        heading.setText(
+            "TAKES / MASTER",
             juce::dontSendNotification);
-        footer.setJustificationType(juce::Justification::centredLeft);
-        footer.setColour(
-            juce::Label::textColourId, juce::Colour(Arcade::muted));
-        footer.setColour(
-            juce::Label::backgroundColourId, juce::Colour(Arcade::background));
-        addAndMakeVisible(footer);
+        heading.setFont(juce::Font(
+            juce::FontOptions("DejaVu Sans Mono", 18.0F, juce::Font::bold)));
+        heading.getProperties().set("arcadeFontSize", 18.0);
+        heading.getProperties().set("arcadeFontBold", true);
+        heading.setJustificationType(juce::Justification::centredLeft);
+        heading.setColour(
+            juce::Label::textColourId, juce::Colour(Arcade::yellowHigh));
+        heading.getProperties().set("arcadeTitle", true);
+        addAndMakeVisible(heading);
 
-        configureJump(edit, "EDIT / PREPARE", 0);
-        configureJump(play, "PLAY / PERFORM", 576);
-        configureJump(compose, "COMPOSE / FORM", 676);
-        configureJump(mix, "MIX / VOICES", 960);
-        configureAction(performWindow, "PERFORM WINDOW", [this]
-        {
-            if (mainContent != nullptr && openPerform)
-                openPerform(*mainContent, true);
-        });
-        configureAction(masterWindow, "MASTER WINDOW", [this]
-        {
-            if (openMaster)
-                openMaster();
-        });
-        edit.setToggleState(true, juce::dontSendNotification);
-
-        const juce::Component::SafePointer<NavigationContainer> safeThis(this);
-        juce::MessageManager::callAsync([safeThis]
-        {
-            if (safeThis != nullptr
-                && safeThis->mainContent != nullptr
-                && safeThis->openPerform)
-            {
-                safeThis->openPerform(*safeThis->mainContent, false);
-            }
-        });
+        configurePageButton(takesPage, "TAKE TIMELINE", 0, "takes");
+        configurePageButton(masterPage, "MASTERING", 1, "masterwindow");
+        addAndMakeVisible(takes);
+        addAndMakeVisible(mastering);
+        getProperties().set("learnKey", "production");
+        setSize(1800, 920);
+        updatePageVisibility();
     }
 
-    ~NavigationContainer() override
+    ~ProductionWorkspaceComponent() override
     {
         setLookAndFeel(nullptr);
     }
@@ -6329,29 +8422,675 @@ public:
     {
         graphics.fillAll(juce::Colour(Arcade::background));
         graphics.setColour(juce::Colour(Arcade::yellow));
-        graphics.fillRect(0, 45, getWidth(), 1);
+        graphics.fillRect(0, 0, getWidth(), 4);
+        graphics.setColour(juce::Colour(Arcade::line));
+        graphics.drawRect(getLocalBounds().toFloat().reduced(0.5F));
+        if (wideLayout)
+        {
+            const auto dividerX = takes.getRight() + 4;
+            graphics.setColour(juce::Colour(Arcade::steel).withAlpha(0.82F));
+            graphics.fillRect(dividerX, 50, 2, getHeight() - 58);
+        }
+    }
+
+    void resized() override
+    {
+        auto area = getLocalBounds().reduced(10);
+        auto header = area.removeFromTop(42);
+        area.removeFromTop(6);
+        wideLayout = getWidth() >= 1680;
+
+        heading.setBounds(header.removeFromLeft(
+            wideLayout ? header.getWidth() : juce::jmin(330, header.getWidth() / 2)));
+        takesPage.setVisible(!wideLayout);
+        masterPage.setVisible(!wideLayout);
+        if (!wideLayout)
+        {
+            const auto pageWidth = header.getWidth() / 2;
+            takesPage.setBounds(
+                header.removeFromLeft(pageWidth).reduced(2));
+            masterPage.setBounds(header.reduced(2));
+            takes.setBounds(area);
+            mastering.setBounds(area);
+        }
+        else
+        {
+            const auto takeWidth = area.getWidth() / 2;
+            takes.setBounds(area.removeFromLeft(takeWidth));
+            area.removeFromLeft(10);
+            mastering.setBounds(area);
+        }
+        updatePageVisibility();
+        repaint();
+    }
+
+private:
+    void configurePageButton(juce::TextButton& button,
+                             const juce::String& text,
+                             int page,
+                             const char* learnKey)
+    {
+        button.setButtonText(text);
+        button.getProperties().set("learnKey", learnKey);
+        button.onClick = [this, page]
+        {
+            selectedPage = page;
+            updatePageVisibility();
+        };
+        addAndMakeVisible(button);
+    }
+
+    void updatePageVisibility()
+    {
+        takes.setVisible(wideLayout || selectedPage == 0);
+        mastering.setVisible(wideLayout || selectedPage == 1);
+        takesPage.setToggleState(
+            selectedPage == 0, juce::dontSendNotification);
+        masterPage.setToggleState(
+            selectedPage == 1, juce::dontSendNotification);
+    }
+
+    ArcadeLookAndFeel lookAndFeel;
+    juce::Label heading;
+    juce::TextButton takesPage;
+    juce::TextButton masterPage;
+    MasteringComponent mastering;
+    TakeTimelineComponent takes;
+    int selectedPage = 0;
+    bool wideLayout = true;
+};
+
+class TutorialComponent final : public juce::Component
+{
+public:
+    explicit TutorialComponent(navalha::ui::Language initialLanguage)
+        : language(initialLanguage)
+    {
+        heading.setJustificationType(juce::Justification::centredLeft);
+        heading.setFont(juce::Font(juce::FontOptions(
+            "DejaVu Sans Mono", 20.0F, juce::Font::bold)));
+        heading.getProperties().set("arcadeFontSize", 20.0);
+        heading.getProperties().set("arcadeFontBold", true);
+        heading.setColour(
+            juce::Label::textColourId, juce::Colour(Arcade::yellowHigh));
+        addAndMakeVisible(heading);
+
+        contentsHeading.setJustificationType(juce::Justification::centredLeft);
+        contentsHeading.setFont(juce::Font(juce::FontOptions(
+            "DejaVu Sans Mono", 12.0F, juce::Font::bold)));
+        contentsHeading.getProperties().set("arcadeFontSize", 12.0);
+        contentsHeading.getProperties().set("arcadeFontBold", true);
+        contentsHeading.setColour(
+            juce::Label::textColourId, juce::Colour(Arcade::yellowHigh));
+        addAndMakeVisible(contentsHeading);
+        for (std::size_t index = 0; index < contentsButtons.size(); ++index)
+        {
+            auto& button = contentsButtons[index];
+            button.setClickingTogglesState(false);
+            button.onClick = [this, index]
+            {
+                selectChapter(static_cast<int>(index));
+            };
+            addAndMakeVisible(button);
+        }
+
+        body.setMultiLine(true);
+        body.setReadOnly(true);
+        body.setCaretVisible(false);
+        body.setScrollbarsShown(true);
+        body.setFont(juce::Font(juce::FontOptions(
+            "DejaVu Sans Mono", 14.0F, juce::Font::plain)));
+        body.setColour(
+            juce::TextEditor::backgroundColourId, juce::Colour(Arcade::surface));
+        body.setColour(
+            juce::TextEditor::outlineColourId, juce::Colour(Arcade::line));
+        body.setColour(
+            juce::TextEditor::textColourId, juce::Colour(Arcade::ink));
+        addAndMakeVisible(body);
+
+        previous.setButtonText(juce::String::fromUTF8("← PREVIOUS"));
+        previous.onClick = [this] { selectChapter(currentChapter - 1); };
+        addAndMakeVisible(previous);
+        next.setButtonText(juce::String::fromUTF8("NEXT →"));
+        next.onClick = [this] { selectChapter(currentChapter + 1); };
+        addAndMakeVisible(next);
+        getProperties().set("learnKey", "tutorial");
+        refresh();
+        setSize(960, 600);
+    }
+
+    void setLanguage(navalha::ui::Language newLanguage)
+    {
+        language = newLanguage;
+        refresh();
+    }
+
+    void paint(juce::Graphics& graphics) override
+    {
+        graphics.fillAll(juce::Colour(Arcade::background));
+        graphics.setColour(juce::Colour(Arcade::yellow));
+        graphics.fillRect(0, 0, 6, getHeight());
+        graphics.setColour(juce::Colour(Arcade::line));
+        graphics.drawRect(getLocalBounds().reduced(10), 1);
+    }
+
+    void resized() override
+    {
+        auto area = getLocalBounds().reduced(24);
+        auto navigation = area.removeFromBottom(46);
+        auto contents = area.removeFromLeft(246);
+        area.removeFromLeft(12);
+        contentsHeading.setBounds(contents.removeFromTop(34).reduced(4, 0));
+        const auto contentsButtonHeight = contents.getHeight()
+            / static_cast<int>(contentsButtons.size());
+        for (auto& button : contentsButtons)
+            button.setBounds(
+                contents.removeFromTop(contentsButtonHeight).reduced(2));
+
+        heading.setBounds(area.removeFromTop(48));
+        area.removeFromTop(10);
+        navigation.removeFromLeft(258);
+        previous.setBounds(navigation.removeFromLeft(160).reduced(2));
+        next.setBounds(navigation.removeFromRight(160).reduced(2));
+        body.setBounds(area.reduced(2));
+    }
+
+private:
+    void selectChapter(int index)
+    {
+        currentChapter = juce::jlimit(
+            0, static_cast<int>(navalha::ui::tutorialChapters.size()) - 1,
+            index);
+        refresh();
+    }
+
+    void refresh()
+    {
+        const auto& value = navalha::ui::tutorialChapters[
+            static_cast<std::size_t>(currentChapter)];
+        heading.setText(
+            navalha::ui::text(value.title, language),
+            juce::dontSendNotification);
+        const navalha::ui::LocalizedText contentsText {
+            "CONTENTS", "SUMÁRIO", "SOMMAIRE", "SUMARIO"};
+        contentsHeading.setText(
+            navalha::ui::text(contentsText, language),
+            juce::dontSendNotification);
+        for (std::size_t index = 0; index < contentsButtons.size(); ++index)
+        {
+            contentsButtons[index].setButtonText(navalha::ui::text(
+                navalha::ui::tutorialChapters[index].title, language));
+            contentsButtons[index].setToggleState(
+                static_cast<int>(index) == currentChapter,
+                juce::dontSendNotification);
+        }
+        body.setText(navalha::ui::text(value.body, language), false);
+        previous.setEnabled(currentChapter > 0);
+        next.setEnabled(
+            currentChapter + 1
+            < static_cast<int>(navalha::ui::tutorialChapters.size()));
+        const std::array<navalha::ui::LocalizedText, 2> buttonText {{
+            {"← PREVIOUS", "← ANTERIOR", "← PRÉCÉDENT", "← ANTERIOR"},
+            {"NEXT →", "PRÓXIMO →", "SUIVANT →", "SIGUIENTE →"}}};
+        previous.setButtonText(navalha::ui::text(buttonText[0], language));
+        next.setButtonText(navalha::ui::text(buttonText[1], language));
+    }
+
+    navalha::ui::Language language;
+    int currentChapter = 0;
+    juce::Label heading;
+    juce::Label contentsHeading;
+    std::array<juce::TextButton,
+               navalha::ui::tutorialChapters.size()> contentsButtons;
+    juce::TextEditor body;
+    juce::TextButton previous;
+    juce::TextButton next;
+};
+
+class TutorialWindow final : public juce::DocumentWindow
+{
+public:
+    explicit TutorialWindow(navalha::ui::Language language)
+        : DocumentWindow("Navalha 2 - TUTORIAL",
+                         juce::Colours::black,
+                         DocumentWindow::allButtons)
+    {
+        tutorial = new TutorialComponent(language);
+        tutorial->setLookAndFeel(&lookAndFeel);
+        setUsingNativeTitleBar(true);
+        setIcon(navalhaAppIcon());
+        setContentOwned(tutorial, true);
+        setResizable(true, true);
+        setResizeLimits(680, 440, 1300, 900);
+        centreWithSize(960, 600);
+    }
+
+    ~TutorialWindow() override
+    {
+        if (tutorial != nullptr)
+            tutorial->setLookAndFeel(nullptr);
+    }
+
+    void setLanguage(navalha::ui::Language language)
+    {
+        if (tutorial != nullptr)
+            tutorial->setLanguage(language);
+    }
+
+    void closeButtonPressed() override
+    {
+        setVisible(false);
+    }
+
+private:
+    ArcadeLookAndFeel lookAndFeel;
+    TutorialComponent* tutorial = nullptr;
+};
+
+class AppInfoComponent final : public juce::Component
+{
+public:
+    explicit AppInfoComponent(navalha::ui::Language initialLanguage)
+        : language(initialLanguage)
+    {
+        title.setText("NAVALHA 2", juce::dontSendNotification);
+        title.setJustificationType(juce::Justification::centredLeft);
+        title.setFont(juce::Font(juce::FontOptions(
+            "DejaVu Sans Mono", 26.0F, juce::Font::bold)));
+        title.getProperties().set("arcadeFontSize", 26.0);
+        title.getProperties().set("arcadeFontBold", true);
+        title.setColour(
+            juce::Label::textColourId, juce::Colour(Arcade::yellowHigh));
+        addAndMakeVisible(title);
+
+        subtitle.setJustificationType(juce::Justification::centredLeft);
+        subtitle.setFont(juce::Font(juce::FontOptions(
+            "DejaVu Sans Mono", 11.0F, juce::Font::bold)));
+        subtitle.getProperties().set("arcadeFontSize", 11.0);
+        subtitle.getProperties().set("arcadeFontBold", true);
+        subtitle.setColour(
+            juce::Label::textColourId, juce::Colour(Arcade::muted));
+        addAndMakeVisible(subtitle);
+
+        information.setMultiLine(true);
+        information.setReadOnly(true);
+        information.setCaretVisible(false);
+        information.setScrollbarsShown(false);
+        information.setFont(juce::Font(juce::FontOptions(
+            "DejaVu Sans Mono", 13.0F, juce::Font::plain)));
+        information.setColour(
+            juce::TextEditor::backgroundColourId, juce::Colour(Arcade::surface));
+        information.setColour(
+            juce::TextEditor::outlineColourId, juce::Colour(Arcade::line));
+        information.setColour(
+            juce::TextEditor::textColourId, juce::Colour(Arcade::ink));
+        addAndMakeVisible(information);
+
+        status.setJustificationType(juce::Justification::centredLeft);
+        status.setFont(juce::Font(juce::FontOptions(
+            "DejaVu Sans Mono", 10.5F, juce::Font::bold)));
+        status.getProperties().set("arcadeFontSize", 10.5);
+        status.getProperties().set("arcadeFontBold", true);
+        status.setColour(
+            juce::Label::textColourId, juce::Colour(Arcade::yellow));
+        status.setColour(
+            juce::Label::backgroundColourId, juce::Colour(Arcade::surfaceHigh));
+        status.setColour(
+            juce::Label::outlineColourId, juce::Colour(Arcade::line));
+        addAndMakeVisible(status);
+        getProperties().set("learnKey", "app");
+        refresh();
+        setSize(720, 480);
+    }
+
+    void setLanguage(navalha::ui::Language newLanguage)
+    {
+        language = newLanguage;
+        refresh();
+    }
+
+    void paint(juce::Graphics& graphics) override
+    {
+        graphics.fillAll(juce::Colour(Arcade::background));
+        graphics.setColour(juce::Colour(Arcade::yellow));
+        graphics.fillRect(0, 0, 7, getHeight());
+        graphics.setColour(juce::Colour(Arcade::line));
+        graphics.drawRect(getLocalBounds().reduced(12), 1);
+        graphics.setColour(juce::Colour(Arcade::yellow).withAlpha(0.08F));
+        graphics.fillRect(13, 13, getWidth() - 26, 84);
+    }
+
+    void resized() override
+    {
+        auto area = getLocalBounds().reduced(30);
+        title.setBounds(area.removeFromTop(42));
+        subtitle.setBounds(area.removeFromTop(28));
+        area.removeFromTop(16);
+        status.setBounds(area.removeFromBottom(38));
+        area.removeFromBottom(12);
+        information.setBounds(area);
+    }
+
+private:
+    void refresh()
+    {
+        subtitle.setText(
+            navalha::ui::text(
+                {"ABOUT / APP INFORMATION", "SOBRE / INFORMAÇÕES DO APP",
+                 "À PROPOS / INFORMATIONS APP", "ACERCA DE / INFORMACIÓN APP"},
+                language),
+            juce::dontSendNotification);
+        const std::array<navalha::ui::LocalizedText, 4> labels {{
+            {"VERSION", "VERSÃO", "VERSION", "VERSIÓN"},
+            {"REFERENCE", "REFERÊNCIA", "RÉFÉRENCE", "REFERENCIA"},
+            {"AUTHORSHIP", "AUTORIA", "AUTEURS", "AUTORÍA"},
+            {"LICENSES", "LICENÇAS", "LICENCES", "LICENCIAS"}}};
+        juce::String value;
+        value << navalha::ui::text(labels[0], language)
+              << "\nJUCE v" JUCE_APPLICATION_VERSION_STRING "\n\n"
+              << navalha::ui::text(labels[1], language)
+              << "\nPure Data v0.28.1\n\n"
+              << navalha::ui::text(labels[2], language)
+              << juce::String::fromUTF8(
+                     "\nNAVALHA — Glerm Soares, 2009\n"
+                     "NAVALHA 2 — upgrade: Lúcio Araújo, 2026\n\n")
+              << navalha::ui::text(labels[3], language)
+              << "\nNavalha 2 source: GPL-3.0-or-later\n"
+                 "JUCE framework: AGPL-3.0-only\n"
+                 "Details: docs/LICENSE_STATUS.md";
+        information.setText(value, false);
+        status.setText(
+            navalha::ui::text(
+                {"DEVELOPMENT BUILD · parity with PD v0.28.1 is still partial",
+                 "BUILD EM DESENVOLVIMENTO · a paridade com PD v0.28.1 ainda é parcial",
+                 "BUILD EN DÉVELOPPEMENT · la parité avec PD v0.28.1 reste partielle",
+                 "BUILD EN DESARROLLO · la paridad con PD v0.28.1 aún es parcial"},
+                language),
+            juce::dontSendNotification);
+    }
+
+    navalha::ui::Language language;
+    juce::Label title;
+    juce::Label subtitle;
+    juce::TextEditor information;
+    juce::Label status;
+};
+
+class AppInfoWindow final : public juce::DocumentWindow
+{
+public:
+    explicit AppInfoWindow(navalha::ui::Language language)
+        : DocumentWindow("Navalha 2 - ABOUT",
+                         juce::Colours::black,
+                         DocumentWindow::allButtons)
+    {
+        content = new AppInfoComponent(language);
+        content->setLookAndFeel(&lookAndFeel);
+        setUsingNativeTitleBar(true);
+        setIcon(navalhaAppIcon());
+        setContentOwned(content, true);
+        setResizable(true, true);
+        setResizeLimits(620, 410, 1100, 780);
+        centreWithSize(720, 480);
+    }
+
+    ~AppInfoWindow() override
+    {
+        if (content != nullptr)
+            content->setLookAndFeel(nullptr);
+    }
+
+    void setLanguage(navalha::ui::Language language)
+    {
+        if (content != nullptr)
+            content->setLanguage(language);
+    }
+
+    void closeButtonPressed() override
+    {
+        setVisible(false);
+    }
+
+private:
+    ArcadeLookAndFeel lookAndFeel;
+    AppInfoComponent* content = nullptr;
+};
+
+class NavigationContainer final : public juce::Component,
+                                  public juce::DragAndDropContainer
+{
+public:
+    NavigationContainer(std::function<void(MainComponent&, bool)> showPerform,
+                        std::function<void(MainComponent&)> showProduction)
+        : openPerform(std::move(showPerform)),
+          openProduction(std::move(showProduction))
+    {
+        setLookAndFeel(&arcadeLookAndFeel);
+        viewport.setScrollBarsShown(true, false);
+        viewport.setScrollBarThickness(10);
+        viewport.getVerticalScrollBar().setColour(
+            juce::ScrollBar::backgroundColourId,
+            juce::Colour(Arcade::background));
+        viewport.getVerticalScrollBar().setColour(
+            juce::ScrollBar::thumbColourId,
+            juce::Colour(Arcade::steel).withAlpha(0.72F));
+        mainContent = new MainComponent();
+        dualMonitorAvailable = hasDualMonitorSpace();
+        dualMonitorRequested = dualMonitorAvailable
+            && mainContent->prefersDualMonitor();
+        viewport.setViewedComponent(mainContent, true);
+        viewport.onVisibleAreaChanged = [this] (juce::Rectangle<int> visible)
+        {
+            if (mainContent != nullptr)
+                mainContent->setVisibleViewportArea(visible);
+        };
+        addAndMakeVisible(viewport);
+
+        footer.setText(juce::String::fromUTF8(
+            "NAVALHA · Glerm Soares, 2009 · NAVALHA 2 · upgrade por "
+            "Lúcio Araújo, 2026 · PD reference v0.28.1 · JUCE v"
+            JUCE_APPLICATION_VERSION_STRING " · GPL-3.0-or-later"),
+            juce::dontSendNotification);
+        footer.setJustificationType(juce::Justification::centredLeft);
+        footer.setFont(juce::Font(juce::FontOptions(
+            "DejaVu Sans Mono", 9.5F, juce::Font::plain)));
+        footer.getProperties().set("arcadeFontSize", 9.5);
+        footer.setColour(
+            juce::Label::textColourId, juce::Colour(Arcade::muted));
+        footer.setColour(
+            juce::Label::backgroundColourId, juce::Colour(Arcade::background));
+        addAndMakeVisible(footer);
+
+        configureJump(edit, "EDIT / PREPARE", 0);
+        configureAction(play, "PLAY / PERFORM", [this]
+        {
+            if (mainContent != nullptr && openPerform)
+                openPerform(*mainContent, true);
+        });
+        configureJump(compose, "COMPOSE / FORM", 610);
+        configureJump(mix, "MIX / VOICES", 896);
+        configureAction(productionWindow, "TAKES / MASTER", [this]
+        {
+            if (mainContent != nullptr && openProduction)
+                openProduction(*mainContent);
+        });
+        configureAction(performWindow, "DUAL MONITOR", [this]
+        {
+            if (mainContent == nullptr || !openPerform)
+                return;
+            if (!dualMonitorAvailable)
+            {
+                openPerform(*mainContent, true);
+                return;
+            }
+            dualMonitorRequested = !dualMonitorRequested;
+            mainContent->setPrefersDualMonitor(dualMonitorRequested);
+            performWindow.setToggleState(
+                dualMonitorRequested, juce::dontSendNotification);
+            resized();
+            openPerform(*mainContent, dualMonitorRequested);
+        });
+        languagePicker.addItemList(
+            {juce::String::fromUTF8("LANG · EN"),
+             juce::String::fromUTF8("LANG · PT"),
+             juce::String::fromUTF8("LANG · FR"),
+             juce::String::fromUTF8("LANG · ES")}, 1);
+        languagePicker.setSelectedItemIndex(
+            navalha::ui::languageIndex(mainContent->getUiLanguage()),
+            juce::dontSendNotification);
+        languagePicker.onChange = [this]
+        {
+            const auto language = static_cast<navalha::ui::Language>(
+                juce::jlimit(0, 3, languagePicker.getSelectedItemIndex()));
+            mainContent->setUiLanguage(language);
+            if (tutorialWindow != nullptr)
+                tutorialWindow->setLanguage(language);
+            if (appInfoWindow != nullptr)
+                appInfoWindow->setLanguage(language);
+        };
+        languagePicker.getProperties().set("learnKey", "language");
+        addAndMakeVisible(languagePicker);
+
+        configureAction(tutorialButton, "TUTORIAL", [this]
+        {
+            if (tutorialWindow == nullptr)
+                tutorialWindow = std::make_unique<TutorialWindow>(
+                    mainContent->getUiLanguage());
+            tutorialWindow->setLanguage(mainContent->getUiLanguage());
+            tutorialWindow->setVisible(true);
+            tutorialWindow->toFront(true);
+        });
+        tutorialButton.setTooltip(
+            "Ten-chapter embedded guide based on the PD v0.28.1 tutorial.");
+
+        configureAction(appInfoButton, "ABOUT", [this]
+        {
+            if (appInfoWindow == nullptr)
+                appInfoWindow = std::make_unique<AppInfoWindow>(
+                    mainContent->getUiLanguage());
+            appInfoWindow->setLanguage(mainContent->getUiLanguage());
+            appInfoWindow->setVisible(true);
+            appInfoWindow->toFront(true);
+        });
+
+        configureAction(learnButton, "LEARN", [this]
+        {
+            mainContent->setLearningMode(!mainContent->isLearningMode());
+            learnButton.setToggleState(
+                mainContent->isLearningMode(), juce::dontSendNotification);
+        });
+        learnButton.setClickingTogglesState(false);
+        learnButton.setToggleState(
+            mainContent->isLearningMode(), juce::dontSendNotification);
+
+        edit.getProperties().set("learnKey", "waveform");
+        play.getProperties().set("learnKey", "play");
+        compose.getProperties().set("learnKey", "form");
+        mix.getProperties().set("learnKey", "mixer");
+        productionWindow.getProperties().set("learnKey", "production");
+        performWindow.getProperties().set("learnKey", "dual");
+        tutorialButton.getProperties().set("learnKey", "tutorial");
+        appInfoButton.getProperties().set("learnKey", "app");
+        learnButton.getProperties().set("learnKey", "learn");
+        // A Desktop listener receives hover events from every JUCE window,
+        // including detached PERFORM, TAKE, MASTER, TUTORIAL and ABOUT views.
+        juce::Desktop::getInstance().addGlobalMouseListener(this);
+        edit.setToggleState(true, juce::dontSendNotification);
+        performWindow.setToggleState(
+            dualMonitorRequested, juce::dontSendNotification);
+
+        const juce::Component::SafePointer<NavigationContainer> safeThis(this);
+        juce::MessageManager::callAsync([safeThis]
+        {
+            if (safeThis != nullptr
+                && safeThis->mainContent != nullptr
+                && safeThis->openPerform)
+            {
+                safeThis->openPerform(
+                    *safeThis->mainContent,
+                    safeThis->dualMonitorRequested);
+            }
+        });
+    }
+
+    ~NavigationContainer() override
+    {
+        viewport.onVisibleAreaChanged = {};
+        juce::Desktop::getInstance().removeGlobalMouseListener(this);
+        setLookAndFeel(nullptr);
+    }
+
+    void paint(juce::Graphics& graphics) override
+    {
+        graphics.fillAll(juce::Colour(Arcade::background));
+        graphics.setColour(juce::Colour(Arcade::yellow));
+        graphics.fillRect(0, 41, getWidth(), 1);
     }
 
     void resized() override
     {
         auto area = getLocalBounds();
-        auto navigation = area.removeFromTop(46).reduced(5, 4);
-        footer.setBounds(area.removeFromBottom(22).reduced(8, 0));
-        const auto buttonWidth = navigation.getWidth() / 6;
-        edit.setBounds(navigation.removeFromLeft(buttonWidth).reduced(2, 0));
-        play.setBounds(navigation.removeFromLeft(buttonWidth).reduced(2, 0));
-        compose.setBounds(navigation.removeFromLeft(buttonWidth).reduced(2, 0));
-        mix.setBounds(navigation.removeFromLeft(buttonWidth).reduced(2, 0));
-        performWindow.setBounds(
-            navigation.removeFromLeft(buttonWidth).reduced(2, 0));
-        masterWindow.setBounds(navigation.reduced(2, 0));
+        auto navigation = area.removeFromTop(42).reduced(5, 4);
+        footer.setBounds(area.removeFromBottom(14).reduced(8, 0));
+        auto utility = navigation.removeFromRight(
+            juce::jmin(350, navigation.getWidth() / 2));
+        navigation.removeFromRight(6);
         viewport.setBounds(area);
+        const auto visibleWidth = viewport.getMaximumVisibleWidth();
+        const auto visibleHeight = viewport.getMaximumVisibleHeight();
+        const auto dualFits = dualMonitorRequested
+            && visibleWidth >= 1400 && visibleHeight >= 850;
+        const auto buttonCount = dualFits ? 5 : 6;
+        const auto buttonWidth = navigation.getWidth() / buttonCount;
+        edit.setBounds(navigation.removeFromLeft(buttonWidth).reduced(2, 0));
+        compose.setBounds(navigation.removeFromLeft(buttonWidth).reduced(2, 0));
+        play.setBounds(navigation.removeFromLeft(buttonWidth).reduced(2, 0));
+        mix.setVisible(!dualFits);
+        if (dualFits)
+            mix.setBounds({});
+        else
+            mix.setBounds(navigation.removeFromLeft(buttonWidth).reduced(2, 0));
+        productionWindow.setBounds(
+            navigation.removeFromLeft(buttonWidth).reduced(2, 0));
+        performWindow.setBounds(navigation.reduced(2, 0));
+        const auto utilityButtonWidth = utility.getWidth() / 4;
+        languagePicker.setBounds(
+            utility.removeFromLeft(utilityButtonWidth).reduced(2, 0));
+        tutorialButton.setBounds(
+            utility.removeFromLeft(utilityButtonWidth).reduced(2, 0));
+        learnButton.setBounds(
+            utility.removeFromLeft(utilityButtonWidth).reduced(2, 0));
+        appInfoButton.setBounds(
+            utility.reduced(2, 0));
+        mainContent->setTransform(juce::AffineTransform());
+        mainContent->setDualMonitorLayout(dualFits);
+        viewport.setScrollBarsShown(!dualFits, false);
         if (auto* content = viewport.getViewedComponent())
             content->setSize(
-                juce::jmax(1480, viewport.getMaximumVisibleWidth()), 1620);
+                juce::jmax(
+                    1480, visibleWidth),
+                dualFits ? visibleHeight : 1366);
+        mainContent->setVisibleViewportArea(viewport.getViewArea());
     }
 
 private:
+    void mouseEnter(const juce::MouseEvent& event) override
+    {
+        if (mainContent == nullptr || !mainContent->isLearningMode())
+            return;
+        auto* component = event.originalComponent;
+        while (component != nullptr && component != this)
+        {
+            if (component->getProperties().contains("learnKey"))
+            {
+                mainContent->explainLearnKey(
+                    component->getProperties()["learnKey"].toString());
+                return;
+            }
+            component = component->getParentComponent();
+        }
+    }
+
     void configureJump(juce::TextButton& button,
                        const juce::String& text,
                        int targetY)
@@ -6379,18 +9118,50 @@ private:
         addAndMakeVisible(button);
     }
 
+    static bool hasDualMonitorSpace()
+    {
+        const auto& displayManager =
+            juce::Desktop::getInstance().getDisplays();
+        if (displayManager.displays.size() < 2)
+            return false;
+        const auto* primary = displayManager.getPrimaryDisplay();
+        if (primary == nullptr)
+            return false;
+        const auto primaryBounds = primary->userBounds.toNearestInt();
+        if (primaryBounds.getWidth() < 1400
+            || primaryBounds.getHeight() < 850)
+            return false;
+        for (const auto& display : displayManager.displays)
+        {
+            if (&display == primary)
+                continue;
+            const auto bounds = display.userBounds.toNearestInt();
+            if (bounds.getWidth() >= 1100 && bounds.getHeight() >= 650)
+                return true;
+        }
+        return false;
+    }
+
     ArcadeLookAndFeel arcadeLookAndFeel;
     PagedViewport viewport;
     MainComponent* mainContent = nullptr;
     std::function<void(MainComponent&, bool)> openPerform;
-    std::function<void()> openMaster;
+    std::function<void(MainComponent&)> openProduction;
     juce::Label footer;
     juce::TextButton edit;
     juce::TextButton play;
     juce::TextButton compose;
     juce::TextButton mix;
+    juce::TextButton productionWindow;
     juce::TextButton performWindow;
-    juce::TextButton masterWindow;
+    juce::ComboBox languagePicker;
+    juce::TextButton tutorialButton;
+    juce::TextButton appInfoButton;
+    juce::TextButton learnButton;
+    std::unique_ptr<TutorialWindow> tutorialWindow;
+    std::unique_ptr<AppInfoWindow> appInfoWindow;
+    bool dualMonitorAvailable = false;
+    bool dualMonitorRequested = false;
 };
 
 class PerformanceWindow final : public juce::DocumentWindow
@@ -6403,6 +9174,7 @@ public:
                          DocumentWindow::allButtons)
     {
         setUsingNativeTitleBar(true);
+        setIcon(navalhaAppIcon());
         setContentOwned(
             preparedContent != nullptr
                 ? preparedContent : new PerformanceRemoteComponent(main),
@@ -6418,18 +9190,24 @@ public:
     }
 };
 
-class MasterWindow final : public juce::DocumentWindow
+class ProductionWindow final : public juce::DocumentWindow
 {
 public:
-    MasterWindow()
-        : DocumentWindow("Navalha 2 - MASTER",
+    explicit ProductionWindow(MainComponent& main)
+        : DocumentWindow("Navalha 2 - TAKES / MASTER",
                          juce::Colours::black,
                          DocumentWindow::allButtons)
     {
         setUsingNativeTitleBar(true);
-        setContentOwned(new MasteringComponent(), true);
+        setIcon(navalhaAppIcon());
+        setContentOwned(new ProductionWorkspaceComponent(main), true);
         setResizable(true, true);
-        centreWithSize(1300, 850);
+        setResizeLimits(980, 660, 2560, 1440);
+        if (const auto* display =
+                juce::Desktop::getInstance().getDisplays().getPrimaryDisplay())
+            setBounds(display->userBounds.toNearestInt().reduced(18));
+        else
+            centreWithSize(1800, 920);
     }
 
     void closeButtonPressed() override
@@ -6442,18 +9220,23 @@ class MainWindow final : public juce::DocumentWindow
 {
 public:
     MainWindow(std::function<void(MainComponent&, bool)> showPerform,
-               std::function<void()> showMaster)
-        : DocumentWindow("Navalha 2 - Arcade - JUCE/C++",
+               std::function<void(MainComponent&)> showProduction)
+        : DocumentWindow("Navalha 2 - JUCE/C++",
                          juce::Colours::black,
                          DocumentWindow::allButtons)
     {
         setUsingNativeTitleBar(true);
+        setIcon(navalhaAppIcon());
         setContentOwned(
             new NavigationContainer(
-                std::move(showPerform), std::move(showMaster)),
+                std::move(showPerform), std::move(showProduction)),
             true);
         setResizable(true, true);
-        centreWithSize(1600, 1000);
+        if (const auto* display =
+                juce::Desktop::getInstance().getDisplays().getPrimaryDisplay())
+            setBounds(display->userBounds.toNearestInt());
+        else
+            centreWithSize(1600, 1000);
         setVisible(true);
     }
 
@@ -6473,7 +9256,7 @@ public:
 
     const juce::String getApplicationVersion() override
     {
-        return "0.28.1-juce";
+        return JUCE_APPLICATION_VERSION_STRING;
     }
 
     void initialise(const juce::String&) override
@@ -6483,14 +9266,14 @@ public:
             {
                 showPerform(main, makeVisible);
             },
-            [this] { showMaster(); });
+            [this] (MainComponent& main) { showProduction(main); });
     }
 
     void shutdown() override
     {
         performWindow.reset();
         preparedPerformance.reset();
-        masterWindow.reset();
+        productionWindow.reset();
         mainWindow.reset();
     }
 
@@ -6499,6 +9282,11 @@ private:
     {
         if (!makeVisible)
         {
+            if (performWindow != nullptr)
+            {
+                performWindow->setVisible(false);
+                return;
+            }
             if (performWindow == nullptr && preparedPerformance == nullptr)
             {
                 preparedPerformance =
@@ -6512,32 +9300,46 @@ private:
         {
             performWindow = std::make_unique<PerformanceWindow>(
                 main, preparedPerformance.release());
-            const auto& displays =
-                juce::Desktop::getInstance().getDisplays().displays;
-            if (displays.size() > 1)
+        }
+        const auto& displayManager =
+            juce::Desktop::getInstance().getDisplays();
+        const auto* primary = displayManager.getPrimaryDisplay();
+        for (const auto& display : displayManager.displays)
+        {
+            if (&display != primary)
             {
-                auto bounds =
-                    displays.getReference(1).userBounds.toNearestInt()
-                        .reduced(30);
-                performWindow->setBounds(bounds);
+                performWindow->setBounds(display.userBounds.toNearestInt());
+                break;
             }
         }
         performWindow->setVisible(true);
         performWindow->toFront(true);
     }
 
-    void showMaster()
+    void showProduction(MainComponent& main)
     {
-        if (masterWindow == nullptr)
-            masterWindow = std::make_unique<MasterWindow>();
-        masterWindow->setVisible(true);
-        masterWindow->toFront(true);
+        if (productionWindow == nullptr)
+            productionWindow = std::make_unique<ProductionWindow>(main);
+        const juce::Displays::Display* widestDisplay = nullptr;
+        for (const auto& display :
+             juce::Desktop::getInstance().getDisplays().displays)
+        {
+            if (widestDisplay == nullptr
+                || display.userBounds.getWidth()
+                    > widestDisplay->userBounds.getWidth())
+                widestDisplay = &display;
+        }
+        if (widestDisplay != nullptr)
+            productionWindow->setBounds(
+                widestDisplay->userBounds.toNearestInt().reduced(18));
+        productionWindow->setVisible(true);
+        productionWindow->toFront(true);
     }
 
     std::unique_ptr<MainWindow> mainWindow;
     std::unique_ptr<PerformanceWindow> performWindow;
     std::unique_ptr<PerformanceRemoteComponent> preparedPerformance;
-    std::unique_ptr<MasterWindow> masterWindow;
+    std::unique_ptr<ProductionWindow> productionWindow;
 };
 }
 

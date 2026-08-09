@@ -21,12 +21,14 @@ add_library(navalha_core STATIC
     src/core/FormDirector.cpp
     src/core/HeritagePitch.cpp
     src/core/Json.cpp
+    src/core/LookaheadLimiter.cpp
     src/core/MasteringAnalysis.cpp
     src/core/MasteringAlbum.cpp
     src/core/MasteringAlbumManifest.cpp
     src/core/MasteringProcessor.cpp
     src/core/MasteringRecipe.cpp
     src/core/OfflineRenderer.cpp
+    src/core/OutputStage.cpp
     src/core/PatternTransform.cpp
     src/core/PortablePath.cpp
     src/core/PortableArchive.cpp
@@ -38,6 +40,8 @@ add_library(navalha_core STATIC
     src/core/SessionModel.cpp
     src/core/SlicePlayer.cpp
     src/core/StereoMixer.cpp
+    src/core/TakeCatalog.cpp
+    src/core/TruePeakDetector.cpp
     src/core/WavStreamWriter.cpp
     src/core/WavMemoryReader.cpp
     src/core/WaveformPeaks.cpp
@@ -46,6 +50,21 @@ add_library(navalha_core STATIC
 target_include_directories(navalha_core PUBLIC src)
 target_compile_features(navalha_core PUBLIC cxx_std_20)
 target_link_libraries(navalha_core PUBLIC Threads::Threads)
+target_compile_definitions(
+    navalha_core PRIVATE NAVALHA_JUCE_VERSION="${PROJECT_VERSION}")
+
+if (NAVALHA_BUILD_TESTS OR NAVALHA_BUILD_TOOLS)
+    add_library(navalha_validation STATIC
+        src/validation/TruePeakFixtures.cpp)
+    target_include_directories(navalha_validation PUBLIC src)
+    target_compile_features(navalha_validation PUBLIC cxx_std_20)
+    if (MSVC)
+        target_compile_options(navalha_validation PRIVATE /W4 /permissive-)
+    else()
+        target_compile_options(
+            navalha_validation PRIVATE -Wall -Wextra -Wpedantic -Werror)
+    endif()
+endif()
 
 if (MSVC)
     target_compile_options(navalha_core PRIVATE /W4 /permissive-)
@@ -56,7 +75,8 @@ endif()
 if (NAVALHA_BUILD_TESTS)
     enable_testing()
     add_executable(navalha_core_tests tests/SessionModelTests.cpp)
-    target_link_libraries(navalha_core_tests PRIVATE navalha_core)
+    target_link_libraries(
+        navalha_core_tests PRIVATE navalha_core navalha_validation)
     add_test(NAME navalha_core_tests COMMAND navalha_core_tests)
     add_executable(navalha_golden_render_tests tests/GoldenRenderTests.cpp)
     target_link_libraries(navalha_golden_render_tests PRIVATE navalha_core)
@@ -86,7 +106,23 @@ if (NAVALHA_BUILD_TOOLS)
     target_link_libraries(navalha_render_album PRIVATE navalha_core)
     add_executable(navalha_inspect_project src/tools/InspectProject.cpp)
     target_link_libraries(navalha_inspect_project PRIVATE navalha_core)
+    add_executable(
+        navalha_render_true_peak_fixtures
+        src/tools/RenderTruePeakFixtures.cpp)
+    target_link_libraries(
+        navalha_render_true_peak_fixtures
+        PRIVATE navalha_core navalha_validation)
     if (NAVALHA_BUILD_TESTS)
+        find_program(NAVALHA_FFMPEG_EXECUTABLE ffmpeg)
+        if (NAVALHA_FFMPEG_EXECUTABLE)
+            add_test(
+                NAME navalha_true_peak_ffmpeg
+                COMMAND ${CMAKE_COMMAND}
+                    -DNAVALHA_TRUE_PEAK_TOOL=$<TARGET_FILE:navalha_render_true_peak_fixtures>
+                    -DNAVALHA_FFMPEG=${NAVALHA_FFMPEG_EXECUTABLE}
+                    -DNAVALHA_TRUE_PEAK_OUTPUT_DIR=${CMAKE_CURRENT_BINARY_DIR}/true-peak-validation
+                    -P ${CMAKE_CURRENT_SOURCE_DIR}/validation/ValidateTruePeakFfmpeg.cmake)
+        endif()
         add_test(
             NAME navalha_inspect_project_v1
             COMMAND navalha_inspect_project

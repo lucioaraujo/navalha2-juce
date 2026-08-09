@@ -155,6 +155,14 @@ bool SlicePlayer::isPlaying() const noexcept
     return playing;
 }
 
+double SlicePlayer::normalizedPosition() const noexcept
+{
+    if (!playing || buffer == nullptr || buffer->size() == 0)
+        return -1.0;
+    return std::clamp(
+        position / static_cast<double>(buffer->size()), 0.0, 1.0);
+}
+
 float SlicePlayer::envelope() const noexcept
 {
     if (totalSamples <= 1)

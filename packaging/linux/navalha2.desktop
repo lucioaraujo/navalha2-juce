@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Navalha 2
+GenericName=Audio Sampler and Performance Instrument
+Comment=Navalha 2 musical sampler and performance instrument
+Exec=navalha2
+Icon=navalha2
+Terminal=false
+Categories=AudioVideo;Audio;Music;
+StartupNotify=true
+StartupWMClass=Navalha 2

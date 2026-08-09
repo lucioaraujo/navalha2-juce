@@ -39,6 +39,13 @@ void AudioEngine::prepare(double sampleRate)
     masterLevel.prepare(sampleRate, 0.015);
     session.masterLevel = std::clamp(session.masterLevel, 0.0, 1.0);
     masterLevel.reset(static_cast<float>(session.masterLevel));
+    appliedOutputTrimDb = requestedOutputTrimDb.load(std::memory_order_acquire);
+    appliedOutputMuted = requestedOutputMuted.load(std::memory_order_acquire)
+        || requestedOutputSuspended.load(std::memory_order_acquire);
+    OutputStageParameters outputParameters;
+    outputParameters.outputTrimDb = appliedOutputTrimDb;
+    outputStage.prepare(sampleRate, outputParameters);
+    outputStage.setMuted(appliedOutputMuted);
 
     for (auto& sourcePlayers : players)
         for (auto& player : sourcePlayers)
@@ -50,6 +57,34 @@ void AudioEngine::prepare(double sampleRate)
         voiceMixer.prepare(sampleRate);
 
     syncMixerParameters();
+}
+
+void AudioEngine::setOutputProfile(OutputProfile profile) noexcept
+{
+    outputProfile = profile;
+}
+
+bool AudioEngine::setOutputTrimDb(float trimDb) noexcept
+{
+    if (!std::isfinite(trimDb) || trimDb < -24.0F || trimDb > 0.0F)
+        return false;
+    requestedOutputTrimDb.store(trimDb, std::memory_order_release);
+    return true;
+}
+
+void AudioEngine::setOutputMuted(bool shouldMute) noexcept
+{
+    requestedOutputMuted.store(shouldMute, std::memory_order_release);
+}
+
+void AudioEngine::suspendOutput() noexcept
+{
+    requestedOutputSuspended.store(true, std::memory_order_release);
+}
+
+void AudioEngine::resumeOutput() noexcept
+{
+    requestedOutputSuspended.store(false, std::memory_order_release);
 }
 
 void AudioEngine::setSourceBuffer(std::size_t sourceIndex, const StereoAudioBuffer* buffer)
@@ -382,33 +417,56 @@ void AudioEngine::synchronizePendingCommands() noexcept
 StereoSample AudioEngine::processSample() noexcept
 {
     applyPendingCommands();
-    const auto output = renderSample();
+    applyOutputControlTargets();
+    const auto output = finalizeOutput(renderSample(), {});
     publishPeak(outputPeakLeft, std::abs(output.left));
     publishPeak(outputPeakRight, std::abs(output.right));
+    publishOutputSafetyTelemetry(
+        outputProfile == OutputProfile::liveSafe
+            ? outputStage.consumeTelemetry() : OutputStageTelemetry {},
+        std::abs(output.left), std::abs(output.right));
     publishTransportTelemetry();
     return output;
 }
 
 void AudioEngine::processBlock(float* leftOutput,
                                float* rightOutput,
-                               std::size_t sampleCount) noexcept
+                               std::size_t sampleCount,
+                               const float* externalLeft,
+                               const float* externalRight) noexcept
 {
     if (leftOutput == nullptr || rightOutput == nullptr)
         return;
 
     applyPendingCommands();
+    applyOutputControlTargets();
     float blockPeakLeft = 0.0F;
     float blockPeakRight = 0.0F;
+    double blockSquareLeft = 0.0;
+    double blockSquareRight = 0.0;
     for (std::size_t sampleIndex = 0; sampleIndex < sampleCount; ++sampleIndex)
     {
-        const auto output = renderSample();
+        const StereoSample external {
+            externalLeft != nullptr ? externalLeft[sampleIndex] : 0.0F,
+            externalRight != nullptr ? externalRight[sampleIndex] : 0.0F
+        };
+        const auto output = finalizeOutput(renderSample(), external);
         leftOutput[sampleIndex] = output.left;
         rightOutput[sampleIndex] = output.right;
         blockPeakLeft = std::max(blockPeakLeft, std::abs(output.left));
         blockPeakRight = std::max(blockPeakRight, std::abs(output.right));
+        blockSquareLeft += static_cast<double>(output.left) * output.left;
+        blockSquareRight += static_cast<double>(output.right) * output.right;
     }
     publishPeak(outputPeakLeft, blockPeakLeft);
     publishPeak(outputPeakRight, blockPeakRight);
+    const auto denominator = sampleCount > 0
+        ? static_cast<double>(sampleCount) : 1.0;
+    publishOutputSafetyTelemetry(
+        outputProfile == OutputProfile::liveSafe
+            ? outputStage.consumeTelemetry() : OutputStageTelemetry {},
+        static_cast<float>(std::sqrt(blockSquareLeft / denominator)),
+        static_cast<float>(std::sqrt(blockSquareRight / denominator)));
     publishTransportTelemetry();
 }
 
@@ -435,6 +493,65 @@ StereoSample AudioEngine::consumeOutputPeak() noexcept
     };
 }
 
+OutputSafetyTelemetry AudioEngine::consumeOutputSafetyTelemetry() noexcept
+{
+    return {
+        {outputRmsLeft.exchange(0.0F, std::memory_order_acq_rel),
+         outputRmsRight.exchange(0.0F, std::memory_order_acq_rel)},
+        outputInputSamplePeak.exchange(0.0F, std::memory_order_acq_rel),
+        outputInputTruePeak.exchange(0.0F, std::memory_order_acq_rel),
+        outputTruePeak.exchange(0.0F, std::memory_order_acq_rel),
+        outputGainReductionDb.exchange(0.0F, std::memory_order_acq_rel),
+        outputNonFiniteSamples.exchange(0, std::memory_order_acq_rel),
+        outputCeilingEngaged.exchange(false, std::memory_order_acq_rel),
+        outputProfile == OutputProfile::liveSafe,
+        requestedOutputTrimDb.load(std::memory_order_acquire),
+        requestedOutputMuted.load(std::memory_order_acquire)
+            || requestedOutputSuspended.load(std::memory_order_acquire),
+        requestedOutputSuspended.load(std::memory_order_acquire)
+    };
+}
+
+std::size_t AudioEngine::outputLatencySamples() const noexcept
+{
+    return outputProfile == OutputProfile::liveSafe
+        ? outputStage.latencySamples() : 0;
+}
+
+void AudioEngine::publishOutputSafetyTelemetry(OutputStageTelemetry telemetry,
+                                               float rmsLeft,
+                                               float rmsRight) noexcept
+{
+    publishPeak(outputRmsLeft, rmsLeft);
+    publishPeak(outputRmsRight, rmsRight);
+    publishPeak(outputInputSamplePeak, telemetry.inputSamplePeak);
+    publishPeak(outputInputTruePeak, telemetry.inputTruePeak);
+    publishPeak(outputTruePeak, telemetry.outputTruePeak);
+    publishPeak(outputGainReductionDb, telemetry.gainReductionDb);
+    if (telemetry.nonFiniteSamples != 0)
+        outputNonFiniteSamples.fetch_add(
+            telemetry.nonFiniteSamples, std::memory_order_relaxed);
+    if (telemetry.sampleCeilingLatched)
+        outputCeilingEngaged.store(true, std::memory_order_release);
+}
+
+void AudioEngine::applyOutputControlTargets() noexcept
+{
+    const auto trimDb = requestedOutputTrimDb.load(std::memory_order_acquire);
+    if (trimDb != appliedOutputTrimDb)
+    {
+        appliedOutputTrimDb = trimDb;
+        outputStage.setOutputTrimDb(trimDb);
+    }
+    const auto shouldMute = requestedOutputMuted.load(std::memory_order_acquire)
+        || requestedOutputSuspended.load(std::memory_order_acquire);
+    if (shouldMute != appliedOutputMuted)
+    {
+        appliedOutputMuted = shouldMute;
+        outputStage.setMuted(shouldMute);
+    }
+}
+
 TransportTelemetry AudioEngine::transportTelemetry() const noexcept
 {
     return {
@@ -455,6 +572,8 @@ TransportTelemetry AudioEngine::transportTelemetry() const noexcept
          telemetryMixerPan[1].load(std::memory_order_relaxed)},
         {telemetryMixerWidth[0].load(std::memory_order_relaxed),
          telemetryMixerWidth[1].load(std::memory_order_relaxed)},
+        {telemetrySourcePlayhead[0].load(std::memory_order_relaxed),
+         telemetrySourcePlayhead[1].load(std::memory_order_relaxed)},
         {telemetryPatternRow[0].load(std::memory_order_relaxed),
          telemetryPatternRow[1].load(std::memory_order_relaxed),
          telemetryPatternRow[2].load(std::memory_order_relaxed),
@@ -499,6 +618,22 @@ void AudioEngine::publishTransportTelemetry() noexcept
         session.mixer.sourceA.width, std::memory_order_relaxed);
     telemetryMixerWidth[1].store(
         session.mixer.sourceB.width, std::memory_order_relaxed);
+    for (std::size_t source = 0; source < players.size(); ++source)
+    {
+        auto playhead = -1.0;
+        for (std::size_t offset = 0; offset < voicesPerSource; ++offset)
+        {
+            const auto voice = (nextVoice[source] + voicesPerSource - 1 - offset)
+                % voicesPerSource;
+            if (players[source][voice].isPlaying())
+            {
+                playhead = players[source][voice].normalizedPosition();
+                break;
+            }
+        }
+        telemetrySourcePlayhead[source].store(
+            playhead, std::memory_order_relaxed);
+    }
     const auto& currentPattern = session.patterns.pattern(
         session.sequencer.currentPattern());
     for (std::size_t step = 0; step < stepsPerPattern; ++step)
@@ -546,6 +681,18 @@ StereoSample AudioEngine::renderSample() noexcept
     const auto gain = masterLevel.next();
     output.left *= gain;
     output.right *= gain;
+    return output;
+}
+
+StereoSample AudioEngine::finalizeOutput(StereoSample program,
+                                         StereoSample external) noexcept
+{
+    StereoSample output {
+        program.left + external.left,
+        program.right + external.right
+    };
+    if (outputProfile == OutputProfile::liveSafe)
+        output = outputStage.process(output);
     if (recording)
         static_cast<void>(recordingFifo.push(output));
     return output;

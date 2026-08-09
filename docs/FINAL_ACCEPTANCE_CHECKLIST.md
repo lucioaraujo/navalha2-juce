@@ -13,6 +13,34 @@ comparação objetiva do MASTER já são executados separadamente.
 - confirmar pelo menos 1 GiB livre antes de gravar;
 - manter a v0.28.1 e o candidato JUCE na mesma sample rate.
 
+## Bloqueio: engenharia da saída
+
+Antes de classificar a saída como adequada a palco ou master final, resolver e
+reexecutar `AUDITORIA_ENGENHARIA_SAIDA_AUDIO.md`. A paridade v0.28.1 não substitui
+este bloqueio.
+
+1. Testar Sources A/B idênticas em fase, todos os players/virtual voices e
+   Preview simultâneos no máximo permitido.
+2. Confirmar que Preview, medidor, dispositivo e gravação `post-safety` recebem
+   exatamente a mesma soma.
+3. Verificar ceiling por true peak, não apenas sample peak.
+4. Confirmar clip latch, peak hold, RMS e gain reduction na interface.
+5. Testar impulso, DC, subgrave, picos intersample, `NaN`/`Inf`, mudança de
+   sample rate e reconnect de dispositivo.
+6. Validar BS.1770 e dither com fixtures apropriadas e analisar novamente o WAV
+   final depois da codificação.
+
+Estado automatizado em 2026-08-09: itens 1–3 possuem cobertura de core e
+validação externa FFmpeg; `NaN`/`Inf`, DC, impulso em 44,1–192 kHz e reinício do
+DSP em nova taxa do item 5 também possuem contratos. Output trim, mute rampado,
+suspensão e fade-in de reconnect foram automatizados no P0.4. A checagem física,
+desconexão/reconnect real, subgrave ampliado, BS.1770 completo e dither continuam
+pendentes e não devem ser aprovados por inferência.
+
+Aprovar somente se nenhum cenário válido ultrapassar o ceiling configurado e
+se não houver clipping oculto, clique de automação/reconexão ou divergência
+entre medição, gravação e saída física.
+
 ## Heritage Pitch contra Pure Data
 
 1. Usar o mesmo WAV mono ou estéreo nas duas versões.
@@ -36,6 +64,10 @@ aspereza, perda de centro, clipping ou alteração estéreo indesejada. Diferen�
 estética aceitável deve ser registrada; defeito não deve ser aceito como mera
 diferença.
 
+Esta comparação comprova paridade histórica, não ceiling true peak, BS.1770,
+neutralidade de bypass ou qualidade do novo modo de master proposto na auditoria
+de saída.
+
 ## Shell, áudio real e dois monitores
 
 1. Abrir o standalone, selecionar dispositivo e carregar A/B.
@@ -43,10 +75,12 @@ diferença.
 3. Editar slices, BLADE/undo e conferir overlays da waveform.
 4. Ativar MEMORY, transformações, FORM, TRACE e Assisted.
 5. Abrir PERFORM no segundo monitor e confirmar uma única sessão/motor.
-6. Iniciar REC, operar por pelo menos dez minutos e finalizar normalmente.
-7. Salvar Project v2, fechar, reabrir e comparar controles e áudio.
-8. Abrir um Project v1 disponível, migrar, salvar como v2 e reabrir.
-9. Desconectar/reconectar o dispositivo uma vez e confirmar diagnóstico claro.
+6. Iniciar REC, finalizar normalmente e confirmar que o take entra na timeline.
+7. Fazer um ensaio controlado que ultrapasse cinco minutos e confirmar o
+   `RECORDING AUTO-STOP | 5 MIN LIMIT`, sem arquivo parcial ou gigante.
+8. Salvar Project v2, fechar, reabrir e comparar controles e áudio.
+9. Abrir um Project v1 disponível, migrar, salvar como v2 e reabrir.
+10. Desconectar/reconectar o dispositivo uma vez e confirmar diagnóstico claro.
 
 Aprovar se não houver travamento, xrun perceptível, estado divergente entre
 janelas, gravação truncada, perda de projeto ou arquivo temporário abandonado.
@@ -59,3 +93,20 @@ permanece humano porque o workspace ainda não contém um projeto real do usuár
 Anotar data, sistema, dispositivo, sample rate, buffer, arquivos utilizados e
 resultado de cada seção. Falhas devem incluir a sequência mínima de reprodução;
 não substituir o runtime v0.28.1 enquanto alguma seção permanecer reprovada.
+
+## Traduções e revisão textual
+
+- revisar rótulos, tooltips, mensagens de status e erros em EN/PT/FR/ES;
+- manter o inglês como texto principal e conferir acentos, concordância e
+  terminologia nas demais línguas;
+- revisar Tutorial, LEARN, ABOUT, diálogos e documentação;
+- uniformizar termos como SOURCE, MASTER, TAKE, PERFORM e COMPOSE;
+- confirmar que nenhum texto fica cortado nos modos single e dual monitor.
+
+## Pré-empacotamento e publicação
+
+- resolver o teste de Portable Project com um ZIP v2 produzido pelo JUCE;
+- repetir a validação com áudio efetivamente audível no MASTER;
+- gerar um `.deb` para validação interna;
+- somente após a aceitação humana, preparar builds Windows/macOS/Linux e
+  documentação de instalação.

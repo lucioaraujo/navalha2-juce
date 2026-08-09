@@ -21,12 +21,14 @@ c++ -std=c++20 -Wall -Wextra -Wpedantic -Werror -pthread \
   "$SCRIPT_DIR/src/core/FormDirector.cpp" \
   "$SCRIPT_DIR/src/core/HeritagePitch.cpp" \
   "$SCRIPT_DIR/src/core/Json.cpp" \
+  "$SCRIPT_DIR/src/core/LookaheadLimiter.cpp" \
   "$SCRIPT_DIR/src/core/MasteringAnalysis.cpp" \
   "$SCRIPT_DIR/src/core/MasteringAlbum.cpp" \
   "$SCRIPT_DIR/src/core/MasteringAlbumManifest.cpp" \
   "$SCRIPT_DIR/src/core/MasteringProcessor.cpp" \
   "$SCRIPT_DIR/src/core/MasteringRecipe.cpp" \
   "$SCRIPT_DIR/src/core/OfflineRenderer.cpp" \
+  "$SCRIPT_DIR/src/core/OutputStage.cpp" \
   "$SCRIPT_DIR/src/core/PatternTransform.cpp" \
   "$SCRIPT_DIR/src/core/PortablePath.cpp" \
   "$SCRIPT_DIR/src/core/PortableArchive.cpp" \
@@ -38,9 +40,12 @@ c++ -std=c++20 -Wall -Wextra -Wpedantic -Werror -pthread \
   "$SCRIPT_DIR/src/core/SessionModel.cpp" \
   "$SCRIPT_DIR/src/core/SlicePlayer.cpp" \
   "$SCRIPT_DIR/src/core/StereoMixer.cpp" \
+  "$SCRIPT_DIR/src/core/TakeCatalog.cpp" \
+  "$SCRIPT_DIR/src/core/TruePeakDetector.cpp" \
   "$SCRIPT_DIR/src/core/WavStreamWriter.cpp" \
   "$SCRIPT_DIR/src/core/WavMemoryReader.cpp" \
   "$SCRIPT_DIR/src/core/WaveformPeaks.cpp" \
+  "$SCRIPT_DIR/src/validation/TruePeakFixtures.cpp" \
   "$SCRIPT_DIR/tests/SessionModelTests.cpp" \
   -o "$BUILD_DIR/navalha_core_tests"
 

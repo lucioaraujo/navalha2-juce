@@ -44,6 +44,7 @@ public:
 
     [[nodiscard]] StereoSample process() noexcept;
     [[nodiscard]] bool isPlaying() const noexcept;
+    [[nodiscard]] double normalizedPosition() const noexcept;
 
 private:
     [[nodiscard]] float envelope() const noexcept;

@@ -1,7 +1,7 @@
 # Auditoria de paridade PD/Web v0.28.1 → JUCE/C++
 
-Data: 31 de julho de 2026  
-Referência: `navalha_app_project_v2_v0.28.1.zip`  
+Data: 3 de agosto de 2026<br>
+Referência: `navalha_app_project_v2_v0.28.1.zip`<br>
 Escopo: código PD, interface Web v0.28.1, documentação funcional e candidato
 JUCE/C++ atual.
 
@@ -21,9 +21,17 @@ gravação, Motif Memory e MASTER já foi majoritariamente transposto. As lacuna
 maiores não estão no callback de áudio; estão na gestão do trabalho produzido
 e em algumas conveniências de operação.
 
-Bloqueadores reais para declarar paridade funcional completa:
+A interface JUCE agora também contém o conjunto utilitário fixo `LANG`,
+`? TUTORIAL`, `ABOUT` e `LEARN`, a distribuição adaptativa real em dois
+monitores e o fallback rolável para telas menores. Isso reduz lacunas de
+operação, mas não transforma esta auditoria em declaração de paridade total:
+o tutorial nativo é uma síntese dos dez capítulos e a tradução integral de
+todos os rótulos do instrumento ainda não foi feita.
 
-1. TAKE Timeline, metadados, classificação, rating, tags e recipe por take;
+Bloqueadores reais para declarar paridade funcional completa, após a primeira
+etapa da TAKE Timeline em JUCE v0.1.0:
+
+1. descoberta/importação de takes anteriores e preset/escrita RIFF de metadados;
 2. construtor de ALBUM PROJECT a partir dos takes;
 3. importação/exportação histórica `.nvl`/`.ptn`;
 4. pré-escuta independente da Audio Library;
@@ -38,7 +46,7 @@ Bloqueadores reais para declarar paridade funcional completa:
 | SOURCE A/B independentes | Completo | buffers, bancos, arquivos e ondas independentes |
 | WAV/AIFF | Completo | WAV nativo; AIFF convertido sem alterar o original |
 | Audio Library: pasta, busca e drag | Completo | seletor gráfico, filtro, LOAD A/B e drag para cada onda |
-| Audio Library: preview e STOP PREVIEW | Ausente | seleção informa o arquivo, mas não há pré-escuta independente |
+| Audio Library: preview e STOP PREVIEW | Completo técnico | PREVIEW/STOP e duplo clique reproduzem WAV/AIFF de forma independente a 70%, sem carregar SOURCE A/B; requer aceitação auditiva humana |
 | Região por arraste na waveform | Completo | restaurado conforme os handlers da v0.28.1 |
 | EDIT SLICE por arraste + SET | Completo | faixa selecionada visualmente e commit explícito |
 | BLADE por clique e UNDO | Completo | corte direto na onda, não destrutivo |
@@ -62,30 +70,31 @@ Bloqueadores reais para declarar paridade funcional completa:
 | Assisted Performer | Completo | vocabulário, BPM, variation, seed, rewind, next/keep/restore |
 | Motif locks | Completo | oito categorias persistidas e respeitadas pelo Assisted |
 | Oito slots de Motif Memory | Completo | snapshot nomeado, CAPTURE/RECALL/VARY/DELETE e Project/Portable v2 |
-| REC pós-MASTER 16/24/float | Completo | writer assíncrono, limites, publicação atômica e telemetria |
+| REC pós-MASTER 16/24/float | Completo técnico | writer assíncrono, publicação atômica, telemetria e auto-stop de 5 minutos; falta validação humana com sinal audível |
 | Pasta padrão de gravação persistente | Parcial | usuário escolhe o WAV ao iniciar cada REC |
-| Metadados de gravação/preset | Ausente | writer suporta tags, mas não há editor/preset no shell |
-| TAKE Timeline | Ausente | sem histórico visual ou seleção de takes |
-| Review/status/rating/tags | Ausente | estados EXPERIMENT…MASTER não foram modelados na UI JUCE |
-| Recipe JSON por TAKE | Ausente | receitas MASTER existem; receita reproduzível de performance não |
-| TAKE → SOURCE A/B | Ausente | é possível carregar WAV manualmente, sem fluxo/cópia de trabalho de TAKE |
+| Metadados de gravação/preset | Parcial | catálogo edita título/artista/projeto/ano/comentário; falta preset e escrita RIFF posterior |
+| TAKE Timeline | Parcial | novos WAVs finalizados entram no catálogo persistente e janela nativa; falta descobrir/importar gravações anteriores |
+| Review/status/rating/tags | Completo | estados EXPERIMENT…MASTER, rating 0–5, tags e notas persistem no catálogo privado |
+| Recipe JSON por TAKE | Parcial | snapshot pré-REC exportável; cursor interno Assisted é declarado indisponível |
+| TAKE → SOURCE A/B | Completo | recarrega o WAV pelo decoder seguro sem alterar o take original |
 | ALBUM PROJECT builder | Ausente | não há ordenação de takes e export de manifesto a partir da main |
 | ALBUM MASTER por manifesto | Completo | load, preflight, gaps, fades, trims e batch PCM24 |
 | TRACK MASTER | Completo técnico | análise, receita e render; aprovação auditiva ainda pendente |
 | MASTER preview/audition | Ausente | processamento é analyze/render, sem reprodução A/B no painel |
 | Matching relativo de álbum | Parcial | manifesto aceita trim/análise; falta o fluxo interativo da v0.28 |
 | Project v2 leve | Completo | referências seguras, estado e recarga |
-| Portable Project v2 | Completo | ZIP validado com cópia de SOURCE A/B |
+| Portable Project v2 | Parcial | serialização e cópia de SOURCE A/B existem; falta validar a abertura de um ZIP produzido pelo próprio JUCE em condições reais |
 | Migração Project JSON v1 | Completo | fixtures e CTest |
 | Import/export `.nvl`/`.ptn` | Ausente | Project v1 JSON não substitui os formatos históricos |
 | STORE/EXPORT legado | Ausente | edição atual é imediata, mas não há compatibilidade documental |
 | Janela PERFORM com um motor | Completo | transporte, source, REC, macros, gestos, FORM, XY e estado compartilhado |
 | Pop-out de qualquer módulo | Parcial | PERFORM e MASTER têm janelas; módulos arbitrários não |
 | Workspaces PLAY/EDIT/COMPOSE | Parcial | navegação posiciona módulos; não isola completamente cada contexto |
-| Segundo monitor adaptativo | Parcial | janela única, redimensionável e auto-posicionada; falta escala explícita 100–145% |
-| Tutorial, LEARN e ajuda contextual | Ausente | documentação externa existe; não há ajuda embutida |
-| Idiomas PT/EN/FR/ES | Específico Web, ausente | shell nativo usa inglês |
-| APP info/paths/diagnóstico | Parcial | Audio Setup e status existem; falta painel consolidado |
+| Segundo monitor adaptativo | Parcial validado visualmente | distribuição automática sem rolagem em duas telas adequadas, janela PERFORM no monitor secundário, preferência persistente e fallback rolável; falta ensaio humano prolongado |
+| VIEW 100/115/130/145 do Web | Específico Web, não adotado | removido por decisão de UX: redimensionamento JUCE, DPI do sistema, layout dual e scrollbar substituem o zoom interno sem criar combinações ambíguas |
+| Tutorial, LEARN e ajuda contextual | Parcial | tutorial nativo com 10 capítulos e LEARN persistente por mouse/foco no painel fixo; cobertura JUCE é ampla, mas ainda não replica os 106 tópicos do Web |
+| Idiomas PT/EN/FR/ES | Parcial | seletor persistente; tutorial e LEARN têm quatro idiomas; tradução global de controles, mensagens, tooltips e revisão textual ainda pendentes |
+| ABOUT | Completo de interface | janela Arcade nativa contém versão, referência, autoria, licenças e aviso de paridade parcial; diagnóstico permanece corretamente separado |
 
 ## Auditoria de layout e usabilidade
 
@@ -93,13 +102,36 @@ Bloqueadores reais para declarar paridade funcional completa:
 
 - Biblioteca, arquivo selecionado e log formam uma coluna contextual à direita;
   o SOURCE MIXER continua essa coluna imediatamente abaixo do log.
+- O relógio e `STOP / PLAY / REC / RESET` iniciam essa coluna logo abaixo da
+  navegação principal; os quatro comandos têm a mesma largura e permanecem
+  visíveis independentemente da rolagem.
+- Toda essa coluna contextual usa fundo preto uniforme; o vermelho fica
+  restrito ao módulo `PERFORM / CREATE` e à sua aba lateral.
+- O último módulo termina a 4 px do rodapé; foi removida a faixa preta vazia
+  que antes separava excessivamente o conteúdo da linha de créditos.
+- A busca da biblioteca foi renomeada de `FILTER FILES` para `SEARCH FILES`
+  (`BUSCAR ARQUIVOS` em português), e o LOG recebeu mais altura, inclusive
+  quando o painel LEARN está ativo.
+- A coluna foi ampliada para 340 px. Os nomes da Audio Library mantêm tamanho
+  legível com reticências, e a faixa estreita à direita indica que toda a linha
+  pode ser arrastada sem ocupar o espaço antes consumido pelo botão `DRAG`.
+- O SOURCE MIXER usa exatamente a altura de seus controles e permanece colado
+  à base, liberando 24 px adicionais para biblioteca e LOG.
 - As barras coloridas à esquerda agora identificam os módulos.
 - `AUDIO CONNECTED/DISCONNECTED` voltou como indicador clicável para Audio Setup.
 - O botão `AUDIO SETUP` duplicado foi removido; o próprio indicador abre a
   configuração.
 - `BYPASS/LEGACY` tornou-se um único `HERITAGE ON/OFF`; o slider permanece para
   misturas intermediárias.
-- MASTER OUT e REC FORMAT ficam acima da waveform.
+- Em layout dual amplo, `AUDIO CONNECTED`, estado do motor, `MASTER OUT`,
+  medidores, `REC FORMAT` e telemetria ocupam o centro livre do cabeçalho.
+- Nesse layout, JITTER e TIMING SEED compartilham a linha de tempo; no fallback
+  estreito continuam em uma segunda linha para evitar cortes.
+- Em single monitor, `HERITAGE ON/OFF` e `AUDITION` aproveitam a linha superior.
+  Em dual monitor, permanecem junto ao bloco de pitch porque o cabeçalho abriga
+  estado de áudio, medidores e gravação. `PITCH 0` fica junto ao valor nos dois.
+- No fallback de tela menor, essas duas linhas continuam imediatamente acima
+  da waveform para não comprimir os botões de projeto e transporte.
 - Sob a waveform ficam apenas seleção, BLADE, WHOLE, UNDO e divisões.
 - SOURCE A/B são simultâneas e o operador pode ampliar uma delas.
 - Falta adicionar playhead/tempo e pré-escuta da biblioteca.
@@ -151,16 +183,47 @@ Mantidos separados por segurança ou por não representarem um estado binário:
   - COMPOSE: FORM, Assisted avançado, motif, voices e takes;
   - MASTER: janela separada.
 
+### Cabeçalho, ajuda e tipografia
+
+- O ZIP oficial da v0.28.1 foi inspecionado diretamente. Seu `index.html`
+  contém 129 botões com `id`, 106 chaves `data-learn`, quatro idiomas e dez
+  capítulos de tutorial; a captura de tela não foi usada como único contrato.
+- O cabeçalho fixo JUCE contém os sete acessos de workspace/janelas e, no mesmo
+  nível, o grupo utilitário `LANG`, `? TUTORIAL`, `ABOUT` e `LEARN`.
+- LEARN não usa um tooltip flutuante: a explicação aparece dentro do painel
+  fixo `ACTIVITY LOG`, como no desenho PD, e responde a ponteiro e foco.
+- O módulo vermelho usa fundo vermelho translúcido de 11% até encostar
+  exatamente na borda esquerda da coluna contextual. `ACTIVITY LOG / LEARN`,
+  `SOURCE MIXER` e Audio Library permanecem neutros; a antiga aba cinza
+  vertical do mixer foi removida.
+- `A/B BALANCE` e `MASTER OUTPUT` usam alinhamento central na coluna de saída
+  global; os canais SOURCE A/B permanecem laterais.
+- A família tipográfica foi unificada em `DejaVu Sans Mono`, incluindo botões,
+  labels, ComboBox e menus. Pesos/tamanhos variam apenas por hierarquia; textos
+  auxiliares compactos permanecem menores para caber no layout dual.
+- O rodapé foi reduzido a 16 px e explicita a autoria sem usar “Arcade” como
+  nome do projeto: NAVALHA por Glerm Soares (2009), NAVALHA 2 como upgrade por
+  Lúcio Araújo (2026).
+- Toda janela interna usa o mesmo LookAndFeel: main, PERFORM, TAKE, MASTER,
+  TUTORIAL, ABOUT e AUDIO SETUP. Avisos operacionais aparecem no painel de
+  status/log em vez de alertas genéricos. Seletores de arquivo e pasta são a
+  única exceção deliberada: continuam nativos do sistema por segurança,
+  acessibilidade e integração com permissões.
+
 ## Ordem recomendada para concluir
 
-1. TAKE Timeline + metadados + recipe + TAKE → SOURCE.
+1. Importação/descoberta de takes anteriores, preset e escrita RIFF opcional.
 2. ALBUM PROJECT builder integrado aos takes.
 3. Workspaces reais e mixer BASIC/ADVANCED.
 4. Compatibilidade `.nvl`/`.ptn`.
-5. Preview da Library, playhead temporal e preview MASTER.
+5. Playhead temporal e preview MASTER; a pré-escuta da Library já foi transposta.
 6. FORM undo/redo/nome/capture bank.
-7. Ajuda embutida e idiomas.
-8. Aceitação auditiva, dois monitores e soak real.
+7. Completar tradução global e ampliar LEARN dos grupos nativos até a
+   granularidade dos 106 tópicos Web quando houver controle equivalente.
+8. Aceitação auditiva com sinal real, incluindo o auto-stop de 5 minutos,
+   dois monitores e soak prolongado.
+9. Gerar `.deb` para validação interna; somente depois preparar publicação
+   multiplataforma.
 
 Nenhum item marcado como ausente deve ser descrito como implementado em
 `PARIDADE_V0281.md` até existir no núcleo e estar acessível na interface.

@@ -1,5 +1,9 @@
 # Navalha 2 — migração JUCE/C++
 
+Versão atual da migração JUCE: **v0.1.0**. A versão **v0.28.1** mencionada
+nesta documentação é a referência funcional Pure Data/web usada para medir
+paridade; não é o número de versão do aplicativo JUCE.
+
 Esta árvore é paralela e não substitui a aplicação v0.28.1. Desde a
 separação em dois diretórios irmãos dentro de `RASGO/`, o runtime Pure
 Data/web app vive em `../NAVALHA2_PD/` (antes era `../` a partir daqui,
@@ -46,6 +50,17 @@ O runtime atual continua em:
 - editor FORM nativo completo com transição, perfis A/B e seis dimensões;
 - nomes e operações de cenas em armazenamento fixo, sem alocação realtime;
 - estágio MASTER 0–1 após o mixer, com smoothing de 15 ms compartilhado por realtime/offline;
+- perfil `liveSafe` no app: saneamento de não-finitos, bloqueio DC e limiter
+  estéreo ligado com lookahead de 5 ms e teto de -1 dBTP depois da soma do
+  instrumento com Library Preview;
+- perfil `legacy` preservado no core para comparação de paridade; o limiter
+  liveSafe já contém os casos EBU 19–23 sintetizados da especificação, mas os
+  WAV oficiais ainda são necessários antes da declaração geral de conformidade
+  true peak; a medição independente FFmpeg já passou;
+- `MASTER CREATIVE` permanece no domínio do instrumento; `OUTPUT TRIM` técnico
+  atenua de -24 a 0 dB antes do limiter e é persistido como preferência local;
+- MUTE técnico com rampa de 10 ms e lifecycle de reconnect com suspensão
+  atômica, retomada em silêncio e fade-in, sem tocar no estado do Project;
 - duas virtual voices com source, divisão, pattern, foco, pitch, envelope, level e pan;
 - headroom automático das vozes compatível com a referência de uma/duas vozes;
 - Heritage Pitch com duas cabeças, interpolação `vd~` de quatro pontos,
@@ -57,6 +72,9 @@ O runtime atual continua em:
 - validação de caminhos de portable packs contra traversal e caminhos absolutos;
 - writer WAV em thread separada, com handshake de parada e drenagem da FIFO;
 - publicação atômica de REC: WAV temporário só vira final após RIFF válido;
+- catálogo TAKE v1 persistente para novos WAVs finalizados;
+- janela TAKE Timeline com metadados privados, review e recipe pré-REC;
+- retorno não destrutivo de TAKE para SOURCE A/B;
 - limite preventivo de REC por espaço livre, uma hora e teto RIFF de 4 GiB;
 - reserva mínima de 1 GiB no volume de destino durante a gravação;
 - decoder WAV em memória para PCM 16/24 e float 32, mono ou estéreo;
@@ -102,7 +120,23 @@ O runtime atual continua em:
 - referências v2 de áudio com filename, relativePath, tamanho, data e MIME;
 - recarga segura de WAVs relativos ao abrir projetos leves `.navalha`;
 - guarda Linux para encerrar claramente quando nenhum display X11 está acessível;
-- medidores estéreo pós-MASTER e telemetria de frames/drops da gravação;
+- medidores estéreo, dispositivo e gravação recebem o mesmo sinal pós-safety,
+  inclusive quando Library Preview está ativa, além da telemetria de
+  frames/drops da gravação;
+- medidores mostram sample peak em dBFS; a telemetria adicional publica RMS por
+  bloco, pico de entrada, redução de ganho, não-finitos e atuação do ceiling,
+  com retenção visual de segurança por dois segundos;
+- detector true peak FIR polifásico 4× no fluxo ao vivo, validado inicialmente
+  pelos casos 15–23 da EBU Tech 3341, sendo 20–23 fixtures derivadas; ele
+  orienta um limiter lookahead de 5 ms, sem alocação no callback, com latência
+  explicitamente publicada pelo motor;
+- teste de pior soma ao vivo com Sources A/B no máximo, duas virtual voices,
+  master em 100% e Library Preview simultânea, exigindo saída finita e teto
+  true peak pós-limiter;
+- validação cruzada opcional no CTest com FFmpeg `ebur128`: casos de entrada
+  15–23 e WAVs pós-limiter verificados por implementação externa;
+- contratos de impulso e latência do limiter em 44,1, 48, 96 e 192 kHz, além
+  de reinicialização limpa do estágio após mudança de sample rate;
 - telemetria atômica PLAY/STOP, passo e geração para a interface;
 - destaque realtime do próximo passo sem leitura concorrente do SessionModel;
 - gravação selecionável em PCM16, PCM24 ou float32 com diagnóstico de drops;
@@ -191,6 +225,11 @@ Offset positivo ignora frames iniciais do candidato; negativo ignora frames
 iniciais da referência.
 
 ## Análise MASTER
+
+> A análise e o TRACK MASTER abaixo preservam o fluxo histórico de migração.
+> Eles ainda não constituem a camada comum de saída segura definida para os
+> instrumentos RASGO. Ver `docs/AUDITORIA_ENGENHARIA_SAIDA_AUDIO.md` antes de
+> classificar o resultado como ceiling de palco ou master final.
 
 O analisador C++ lê um WAV sem alterar o original e informa peak, RMS, LUFS
 estimado, crest, correlação e headroom:
@@ -304,8 +343,16 @@ aprovação de ausência de vazamentos. Os ensaios humanos restantes estão em
 - O primeiro produto é standalone.
 - A interface web será incorporada por WebView apenas na fase de transição.
 - Um único `SessionModel` servirá main, PERFORM e MASTER.
-- PERFORM pode ocupar o segundo monitor.
-- MASTER permanece suplementar e não participa da distribuição dos módulos.
+- Em duas telas adequadas, PERFORM ocupa o segundo monitor e a main distribui
+  edição/produção sem scrollbar; telas menores mantêm rolagem e roda do mouse.
+- O workspace `TAKES / MASTER` permanece suplementar ao motor realtime; em
+  telas largas reúne revisão de takes e masterização lado a lado.
+- O cabeçalho nativo oferece LANG (EN/PT/FR/ES), tutorial em dez capítulos,
+  LEARN contextual no painel fixo do log e ABOUT no canto direito.
+- O zoom VIEW do shell Web não foi mantido: DPI do sistema, redimensionamento,
+  layout dual e scrollbar compõem o comportamento nativo.
+- Idiomas e ajuda são uma transposição parcial: tutorial/LEARN estão em quatro
+  línguas, mas todos os rótulos do instrumento ainda não foram traduzidos.
 - A v0.28.1 continuará sendo a referência até a aprovação de paridade.
 - **Resolvido**: a Seção 13 da GPLv3 permite combinar a parte Navalha 2 sob
   GPL-3.0-or-later com o JUCE 8 sob AGPL-3.0-only, sem licença comercial.

@@ -9,6 +9,17 @@ O protótipo JUCE não substitui o runtime atual até cumprir estes contratos.
 > partes do FORM Advanced. Portanto, “implementado” abaixo
 > não deve ser interpretado como paridade integral do produto.
 
+> Atualização JUCE v0.1.0: a primeira etapa da TAKE Timeline agora registra
+> novos WAVs finalizados, preserva review/metadados/recipe em catálogo privado
+> e oferece TAKE → SOURCE A/B. Descoberta de gravações anteriores, preset RIFF
+> e cursor exato do Assisted continuam pendentes.
+
+> Atualização de interface de 03/08/2026: `LANG`, `TUTORIAL`, `LEARN` e `ABOUT`
+> foram incorporados ao cabeçalho nativo; LEARN usa o painel fixo do
+> log e o tutorial preserva os dez capítulos em EN/PT/FR/ES. A tradução global
+> de todos os rótulos e a granularidade completa das 106 notas LEARN do Web
+> continuam parciais.
+
 ## Estado do núcleo C++ (ainda sem aprovação auditiva)
 
 - implementado: bancos A/B fixos, divisão, edição de limites, BLADE e undo;
@@ -48,6 +59,12 @@ O protótipo JUCE não substitui o runtime atual até cumprir estes contratos.
   PREPARE e waveform antes dos controles avançados;
 - implementado: navegação fixa TOP/PREPARE, WAVEFORM/METERS, PERFORM/CREATE e
   MIX/VOICES, disponível mesmo durante a rolagem;
+- implementado: layout dual adaptativo sem scrollbar quando as duas telas têm
+  espaço suficiente, com PERFORM no monitor secundário e fallback rolável;
+- decisão nativa: VIEW 100/115/130/145 não foi mantido; DPI do sistema,
+  redimensionamento responsivo, layout dual e scrollbar substituem esse zoom;
+- implementado parcialmente: seletor EN/PT/FR/ES, tutorial nativo de dez
+  capítulos e LEARN contextual por ponteiro/foco no painel ACTIVITY LOG;
 - implementado: intensidade/seed do JITTER e balance global A/B no shell;
 - implementado: mixer A/B e editor de slices/BLADE ligados à fila realtime;
 - implementado: overlay dos limites de slices sobre a waveform nativa;
@@ -78,6 +95,9 @@ O protótipo JUCE não substitui o runtime atual até cumprir estes contratos.
 - validado: comparação objetiva da cadeia MASTER com WebAudio em 353.708
   frames, com diferenças de 0,176 dB peak, 0,136 LUFS e 0,0009 de correlação;
 - pendente: aprovação auditiva humana da cadeia MASTER contra WebAudio;
+- registrado separadamente: `AUDITORIA_ENGENHARIA_SAIDA_AUDIO.md`; a paridade
+  acima não comprova lookahead/true peak ceiling, BS.1770, dither nem proteção
+  do barramento ao vivo;
 - validado: portable ZIP → render PCM24 estéreo de 12.000 frames;
 - validado: stress DSP determinístico combinado de trinta segundos em blocos
   64/511, incluindo Assisted, FORM, TRACE, pitch, mixer e virtual voices;
@@ -122,6 +142,11 @@ O protótipo JUCE não substitui o runtime atual até cumprir estes contratos.
 - implementado: vocabulário completo do Assisted na interface e Project v2;
 - implementado: oito slots nomeados de Motif Memory com CAPTURE, RECALL, VARY,
   DELETE, locks dimensionais e persistência interoperável Project/Portable v2;
+- implementado: catálogo TAKE v1 persistente, limitado e validado;
+- implementado: janela TAKE Timeline com status, rating, tags, notas e recipe;
+- implementado: retorno não destrutivo de TAKE para SOURCE A/B;
+- pendente: descoberta de gravações anteriores, preset/escrita RIFF e cursor
+  Assisted exato na recipe;
 - implementado: telemetria Assisted de source/pattern/mixer de volta à UI;
 - validado parcialmente: ensaio visual/interativo do shell em sessão gráfica,
   incluindo waveform A/B, edição por arraste, TRACE XY, SOURCE MIXER lateral,
