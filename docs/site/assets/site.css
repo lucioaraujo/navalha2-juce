@@ -53,7 +53,9 @@ button, a { -webkit-tap-highlight-color: transparent; }
 }
 .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; white-space: nowrap; }
 .brand img { object-fit: contain; image-rendering: pixelated; }
-.brand-name { color: var(--white); font-family: var(--display); font-size: 1.1rem; letter-spacing: .08em; }
+.brand-copy { display: grid; line-height: 1.08; }
+.brand-copy strong { color: var(--white); font-family: var(--display); font-size: 1.12rem; letter-spacing: .08em; }
+.brand-copy span { color: var(--steel); font-size: .5rem; letter-spacing: .035em; }
 .main-nav { justify-self: center; display: flex; gap: clamp(16px, 2.6vw, 40px); }
 .main-nav a, .repo-link { color: var(--steel); font-size: .69rem; font-weight: 700; letter-spacing: .11em; text-decoration: none; text-transform: uppercase; }
 .main-nav a:hover, .main-nav a[aria-current="true"], .repo-link:hover { color: var(--yellow); }
@@ -223,7 +225,7 @@ h3 { font-size: .9rem; letter-spacing: .04em; text-transform: uppercase; }
 
 @media (max-width: 780px) {
   .site-header { gap: 10px; }
-  .brand-name { display: none; }
+  .brand-copy { display: none; }
   .repo-link { font-size: .58rem; }
   .main-nav.open { grid-template-columns: 1fr 1fr; gap: 16px; text-align: left; }
   .section, .hero { width: min(100% - 24px, var(--max)); }
