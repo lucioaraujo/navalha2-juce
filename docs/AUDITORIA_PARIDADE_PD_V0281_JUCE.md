@@ -84,7 +84,7 @@ indicado e não autorizam declarar substituição integral do produto.
 | MASTER preview/audition | Completo técnico | PREPARE A/B produz ORIGINAL/MASTER float32 alinhados; MATCH LOUDNESS somente atenua o lado mais alto, STOP é explícito, performance é interrompida e REC bloqueia a audição; falta aceitação auditiva humana |
 | Matching relativo de álbum | Completo técnico | alvo −24…−6 LUFS estimado; análise sequencial, associação protegida pela ordem, trim ±6 dB e evidência persistente no ALBUM PROJECT; falta validação externa/humana |
 | Project v2 leve | Completo | referências seguras, estado e recarga |
-| Portable Project v2 | Parcial | serialização e cópia de SOURCE A/B existem; falta validar a abertura de um ZIP produzido pelo próprio JUCE em condições reais |
+| Portable Project v2 | Completo técnico | `SAVE PORTABLE` cria o ZIP v2 pelo mesmo núcleo que `OPEN PROJECT` reabre; contratos cobrem estado, áudio SOURCE A/B, CRC, allowlist e caminhos seguros. Falta apenas a aceitação humana em outro computador/sistema de arquivos. |
 | Migração Project JSON v1 | Completo | fixtures e CTest |
 | Import/export `.nvl`/`.ptn` | Ausente | Project v1 JSON não substitui os formatos históricos |
 | STORE/EXPORT legado | Ausente | edição atual é imediata, mas não há compatibilidade documental |

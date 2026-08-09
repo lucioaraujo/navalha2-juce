@@ -141,7 +141,9 @@ não substituir o runtime v0.28.1 enquanto alguma seção permanecer reprovada.
 
 ## Pré-empacotamento e publicação
 
-- resolver o teste de Portable Project com um ZIP v2 produzido pelo JUCE;
+- criar um ZIP Portable Project v2 e abri-lo em outro computador ou sistema de
+  arquivos como confirmação operacional; o round-trip automatizado do núcleo,
+  incluindo fontes A/B, CRC e rejeição de caminhos inseguros, já está aprovado;
 - repetir a validação com áudio efetivamente audível no MASTER;
 - gerar um `.deb` para validação interna;
 - somente após a aceitação humana, preparar builds Windows/macOS/Linux e
