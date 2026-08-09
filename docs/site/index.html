@@ -8,7 +8,7 @@
   <title>Navalha 2 — slice, recombine, perform</title>
   <link rel="icon" type="image/png" href="assets/favicon.png">
   <link rel="stylesheet" href="assets/site.css?v=20260810-1">
-  <script src="assets/site.js?v=20260810-3" defer></script>
+  <script src="assets/site.js?v=20260810-4" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
@@ -308,9 +308,19 @@
     <nav aria-label="Repository links">
       <a href="https://github.com/lucioaraujo/navalha2-juce">JUCE/C++</a>
       <a href="https://github.com/lucioaraujo/navalha2-pd">PD/web</a>
-      <span class="contact-email">lucio.matema@gmail.com</span>
+      <a href="#contact" data-contact-trigger>CONTACT</a>
     </nav>
     <small>Project documentation · 2026</small>
   </footer>
+
+  <dialog class="contact-dialog" data-contact-dialog aria-labelledby="contact-title">
+    <button class="dialog-close" type="button" data-contact-close aria-label="Close contact window">×</button>
+    <p class="eyebrow">CONTACT</p>
+    <h2 id="contact-title">Send a message.</h2>
+    <p>Copy the address below and use the email service you prefer.</p>
+    <code data-contact-address></code>
+    <button class="button button-primary" type="button" data-contact-copy>Copy email</button>
+    <p class="contact-feedback" data-contact-feedback aria-live="polite"></p>
+  </dialog>
 </body>
 </html>
