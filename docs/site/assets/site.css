@@ -107,10 +107,7 @@ h3 { font-size: .9rem; letter-spacing: .04em; text-transform: uppercase; }
 .source i::after { content: ""; position: absolute; top: -27px; left: 22%; width: 1px; height: 38px; background: currentColor; box-shadow: 78px 9px 0 currentColor, 163px -5px 0 currentColor, 250px 5px 0 currentColor; opacity: .92; }
 .source-a { color: var(--yellow); background: rgba(255,216,47,.035); }
 .source-b { color: #e84952; background: rgba(213,31,44,.045); }
-.blade { position: relative; width: min(184px, 64%); height: 46px; margin: -4px auto 5px; background: linear-gradient(180deg, #f4f5ef 0 12%, #9ca6a6 13% 47%, #e5e8e4 48% 53%, #596365 54% 100%); clip-path: polygon(0 23%, 9% 0, 91% 0, 100% 23%, 100% 77%, 91% 100%, 9% 100%, 0 77%); box-shadow: 0 4px 11px rgba(0,0,0,.45); transform-origin: 50% 88%; animation: blade-cut 7s cubic-bezier(.45, .03, .2, 1) infinite; }
-.blade::before { content: ""; position: absolute; inset: 12px 31px; background: #151a19; clip-path: polygon(0 30%, 13% 0, 87% 0, 100% 30%, 100% 70%, 87% 100%, 13% 100%, 0 70%); }
-.blade span { position: absolute; z-index: 1; left: 50%; top: 50%; transform: translate(-50%, -50%); color: #111; font-size: .53rem; font-weight: 900; letter-spacing: .12em; }
-.fragments { display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px; }
+.fragments { display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px; margin-top: 14px; }
 .fragments span { --fragment-border: var(--line); padding: 11px 3px; border: 1px solid var(--fragment-border); color: var(--steel); text-align: center; font-size: .58rem; animation: fragment-response 7s ease-out infinite; }
 .fragments span:nth-child(2), .fragments span:nth-child(5) { --fragment-border: var(--yellow-dim); color: var(--yellow); }
 .fragments span:nth-child(2n) { animation-delay: .08s; }
@@ -125,13 +122,6 @@ h3 { font-size: .9rem; letter-spacing: .04em; text-transform: uppercase; }
 @keyframes engine-pulse {
   0%, 100% { opacity: .55; transform: scale(.82); }
   50% { opacity: 1; transform: scale(1); }
-}
-
-@keyframes blade-cut {
-  0%, 72%, 100% { transform: translateY(0) rotate(0); }
-  78% { transform: translateY(-10px) rotate(-9deg); }
-  86% { transform: translateY(9px) rotate(6deg); }
-  92% { transform: translateY(0) rotate(0); }
 }
 
 @keyframes fragment-response {
