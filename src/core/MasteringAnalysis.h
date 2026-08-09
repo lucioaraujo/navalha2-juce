@@ -29,4 +29,10 @@ struct MasteringMetrics
     const MasteringMetrics& metrics,
     double targetLufs,
     double maximumAbsoluteTrimDb = 6.0);
+
+// Matches the v0.28.1 A/B rule: attenuate only the louder side so comparison
+// never gains level merely to reach the other side.
+[[nodiscard]] double matchedPreviewAttenuationDb(
+    const MasteringMetrics& selected,
+    const MasteringMetrics& other);
 }

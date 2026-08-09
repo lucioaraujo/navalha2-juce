@@ -135,7 +135,8 @@ gravação de 240.000 frames passaram. A fixture de stress chegou somente a pico
 - oversampling em saturação/clipper e detecção true peak;
 - medição BS.1770 validada por fixtures externas;
 - dither TPDF em PCM16/24 e análise posterior do arquivo publicado;
-- preview A/B com compensação de loudness e latência.
+- validar em escuta o preview A/B já implementado, sua compensação de loudness
+  e o alinhamento sem latência diferencial da cadeia atual.
 
 ### P2 — palco e multiplataforma
 
@@ -280,5 +281,6 @@ do hardware continuam exigindo o roteiro humano.
   [`DITHER_TPDF.md`](DITHER_TPDF.md).
 
 Este marco resolve a ausência de dither do encoder, mas não encerra P1:
-BS.1770, análise pós-codificação, modo de master de qualidade, oversampling da
-saturação e preview A/B com compensação ainda permanecem abertos.
+BS.1770, análise pós-codificação, modo de master de qualidade e oversampling da
+saturação permanecem abertos. O preview A/B compensado está implementado
+tecnicamente, mas continua dependendo de aceitação auditiva humana.

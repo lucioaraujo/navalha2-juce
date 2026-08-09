@@ -12,7 +12,9 @@ o projeto registra a curadoria; o master executa o processamento offline.
 2. usar `ADD TO ALBUM`;
 3. editar título, artista e notas no modo `ALBUM MASTER`;
 4. selecionar faixas e usar `MOVE UP`, `MOVE DOWN` ou `REMOVE`;
-5. usar `EXPORT PROJECT` para publicar o manifesto editorial ou
+5. escolher `TARGET LUFS EST.` e usar `MATCH RELATIVE LEVELS` para analisar os
+   takes e sugerir trims limitados a ±6 dB;
+6. usar `EXPORT PROJECT` para publicar o manifesto editorial ou
    `RENDER PROJECT` para masterizar diretamente os WAVs ainda registrados no
    catálogo.
 
@@ -30,7 +32,8 @@ preserva:
 - título, nome de arquivo, duração e status;
 - review, rating, tags e notas;
 - recipe JSON quando disponível;
-- parâmetros de trim, gap e fades preparados para o fluxo de master.
+- parâmetros de trim, gap e fades preparados para o fluxo de master;
+- análise interna opcional e trim resultante do matching relativo.
 
 O manifesto é limitado a 99 faixas e 8 MiB. Textos e recipes passam pelos
 mesmos limites defensivos do catálogo. Versões desconhecidas, números não
@@ -53,5 +56,6 @@ não exige relocalizar gravações já existentes.
 - o rascunho privado ainda não integra o arquivo artístico Project v2;
 - não há importação de um `navalha-album-project` exportado pela interface;
 - trims, gaps e fades usam os valores preservados pelo modelo, mas ainda não
-  possuem edição por faixa no builder JUCE;
+  possuem edição manual por faixa no builder JUCE; o trim pode ser calculado
+  coletivamente pelo matching relativo;
 - a aprovação auditiva de um álbum real permanece obrigatoriamente humana.

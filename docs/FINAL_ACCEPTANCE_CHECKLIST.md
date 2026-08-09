@@ -56,10 +56,21 @@ inesperada de altura ou degradação claramente maior no candidato JUCE.
 ## TRACK MASTER contra WebAudio
 
 1. Usar o WAV de referência do relatório `MASTER_OBJECTIVE_COMPARISON.md`.
-2. Renderizar a receita padrão nas duas versões.
-3. Alinhar os arquivos por amostra e igualar o ganho para a comparação cega.
-4. Ouvir em monitor e fone: transientes, centro, graves, imagem e caudas.
-5. Repetir sem igualar ganho para avaliar o resultado de entrega.
+2. No JUCE, carregar a faixa, ajustar a receita e usar `PREPARE A/B`.
+3. Com `MATCH LOUDNESS` ativo, alternar `PLAY ORIGINAL` e `PLAY MASTER`; conferir
+   no status que somente o lado mais alto recebe atenuação.
+4. Desativar MATCH e repetir sem compensação para avaliar o ganho de entrega.
+5. Confirmar que iniciar A/B interrompe a performance e que A/B é recusado
+   enquanto REC estiver ativo.
+6. Renderizar a receita padrão nas duas versões.
+7. Alinhar os arquivos por amostra e igualar o ganho para a comparação cega.
+8. Ouvir em monitor e fone: transientes, centro, graves, imagem e caudas.
+
+No ALBUM PROJECT, escolher um alvo conhecido, usar `MATCH RELATIVE LEVELS` e
+confirmar que a lista mostra LUFS estimado/trim por faixa, nenhum trim excede
+±6 dB e a ordem/análises sobrevivem ao fechamento e à reabertura. Reordenar uma
+cópia do projeto durante uma análise longa deve impedir a aplicação a faixas
+erradas.
 
 Aprovar se a intenção tonal/dinâmica for equivalente e não surgirem pumping,
 aspereza, perda de centro, clipping ou alteração estéreo indesejada. Diferença

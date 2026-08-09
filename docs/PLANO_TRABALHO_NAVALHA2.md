@@ -18,15 +18,17 @@ Atualizado em 9 de agosto de 2026.
 - ALBUM PROJECT integrado ao catálogo, persistente, ordenável e renderizável;
 - escrita RIFF posterior integrada à TAKE Timeline com confirmação, parcial
   validado e backup recuperável;
+- TRACK MASTER A/B e matching relativo do ALBUM PROJECT implementados com
+  estimativa interna explicitamente não certificada;
 - 10/10 testes automatizados passando.
 
 ## Prioridade de hoje
 
-1. Adicionar preview A/B no MASTER e fluxo de matching relativo.
-2. Executar o roteiro humano com áudio real, acervo de takes e dois monitores,
-   incluindo escrita/recuperação RIFF.
-3. Integrar o rascunho ALBUM PROJECT ao Project v2 artístico.
-4. Projetar workspaces reais e mixer BASIC/ADVANCED.
+1. Executar o roteiro humano com áudio real, acervo de takes e dois monitores,
+   incluindo MASTER A/B/matching e escrita/recuperação RIFF.
+2. Integrar o rascunho ALBUM PROJECT ao Project v2 artístico.
+3. Projetar workspaces reais e mixer BASIC/ADVANCED.
+4. Corrigir e validar Portable Project v2 com um ZIP real produzido pelo JUCE.
 
 ## Próximas etapas técnicas
 
@@ -40,6 +42,5 @@ Atualizado em 9 de agosto de 2026.
 ## Lacunas de paridade ainda conhecidas
 
 - mixer BASIC/ADVANCED recolhível;
-- preview A/B no painel MASTER;
 - compatibilidade histórica `.nvl`/`.ptn`;
 - tradução global de controles, mensagens e tooltips.

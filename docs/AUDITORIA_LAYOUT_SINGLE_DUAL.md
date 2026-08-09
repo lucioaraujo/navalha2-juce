@@ -82,8 +82,9 @@ herdem a posição do modo dual.
 
 Continuam fora do escopo desta auditoria visual: BASIC/ADVANCED recolhível do
 mixer, construtor de álbum a partir dos takes, importação histórica
-`.nvl`/`.ptn` e preview A/B no painel MASTER. Essas lacunas estão registradas na auditoria de
-paridade PD → JUCE e não correspondem a objetos simplesmente ocultos.
+`.nvl`/`.ptn`. O preview A/B e o matching de álbum foram incorporados depois
+desta inspeção; compilam no layout atual, mas sua revisão visual e auditiva
+continua no próximo ensaio humano.
 
 ## Validação
 

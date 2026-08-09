@@ -68,4 +68,15 @@ double recommendedLoudnessTrimDb(const MasteringMetrics& metrics,
                       -maximumAbsoluteTrimDb,
                       maximumAbsoluteTrimDb);
 }
+
+double matchedPreviewAttenuationDb(
+    const MasteringMetrics& selected,
+    const MasteringMetrics& other)
+{
+    if (!std::isfinite(selected.estimatedLufs)
+        || !std::isfinite(other.estimatedLufs))
+        throw std::invalid_argument("Invalid A/B loudness estimates");
+    return std::min(
+        0.0, other.estimatedLufs - selected.estimatedLufs);
+}
 }

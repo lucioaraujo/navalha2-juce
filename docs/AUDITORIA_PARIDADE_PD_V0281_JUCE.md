@@ -32,11 +32,10 @@ todos os rótulos do instrumento ainda não foi feita.
 Bloqueadores reais para declarar paridade funcional completa:
 
 1. importação/exportação histórica `.nvl`/`.ptn`;
-2. preview/audição dentro de MASTER e matching relativo do fluxo v0.28;
-3. validações humanas de áudio real, dois monitores e sessão prolongada.
+2. validações humanas de áudio real, dois monitores e sessão prolongada.
 
-Contagem não ponderada da matriz nesta atualização: 38 áreas completas,
-completas técnicas ou implementadas no fluxo equivalente; 9 parciais; 4
+Contagem não ponderada da matriz nesta atualização: 40 áreas completas,
+completas técnicas ou implementadas no fluxo equivalente; 8 parciais; 3
 ausentes; e uma conveniência Web substituída deliberadamente por comportamento
 nativo. Os estados “completo técnico” continuam exigindo aceitação humana onde
 indicado e não autorizam declarar substituição integral do produto.
@@ -79,11 +78,11 @@ indicado e não autorizam declarar substituição integral do produto.
 | Review/status/rating/tags | Completo | estados EXPERIMENT…MASTER, rating 0–5, tags e notas persistem no catálogo privado |
 | Recipe JSON por TAKE | Parcial | snapshot pré-REC exportável; cursor interno Assisted é declarado indisponível |
 | TAKE → SOURCE A/B | Completo | recarrega o WAV pelo decoder seguro sem alterar o take original |
-| ALBUM PROJECT builder | Completo técnico | TAKE Timeline adiciona sem duplicar; título/artista/notas, ordem, remoção, duração, persistência privada, receipt/review, export `navalha-album-project` v1 e render direto pelo catálogo; falta ensaio auditivo e edição JUCE de trim/gap/fades por faixa |
+| ALBUM PROJECT builder | Completo técnico | TAKE Timeline adiciona sem duplicar; título/artista/notas, ordem, remoção, duração, receipt/review, export/render e matching relativo persistente; falta ensaio auditivo e edição manual JUCE de trim/gap/fades por faixa |
 | ALBUM MASTER por manifesto | Completo | load, preflight, gaps, fades, trims e batch PCM24 |
 | TRACK MASTER | Completo técnico | análise, receita e render; aprovação auditiva ainda pendente |
-| MASTER preview/audition | Ausente | processamento é analyze/render, sem reprodução A/B no painel |
-| Matching relativo de álbum | Parcial | manifesto aceita trim/análise; falta o fluxo interativo da v0.28 |
+| MASTER preview/audition | Completo técnico | PREPARE A/B produz ORIGINAL/MASTER float32 alinhados; MATCH LOUDNESS somente atenua o lado mais alto, STOP é explícito, performance é interrompida e REC bloqueia a audição; falta aceitação auditiva humana |
+| Matching relativo de álbum | Completo técnico | alvo −24…−6 LUFS estimado; análise sequencial, associação protegida pela ordem, trim ±6 dB e evidência persistente no ALBUM PROJECT; falta validação externa/humana |
 | Project v2 leve | Completo | referências seguras, estado e recarga |
 | Portable Project v2 | Parcial | serialização e cópia de SOURCE A/B existem; falta validar a abertura de um ZIP produzido pelo próprio JUCE em condições reais |
 | Migração Project JSON v1 | Completo | fixtures e CTest |
@@ -219,12 +218,12 @@ Mantidos separados por segurança ou por não representarem um estado binário:
 
 1. Workspaces reais e mixer BASIC/ADVANCED.
 2. Compatibilidade `.nvl`/`.ptn`.
-3. Preview MASTER; playhead temporal e pré-escuta da Library já foram transpostos.
-4. Completar tradução global e ampliar LEARN dos grupos nativos até a
+3. Completar tradução global e ampliar LEARN dos grupos nativos até a
    granularidade dos 106 tópicos Web quando houver controle equivalente.
-5. Aceitação auditiva com sinal real, incluindo escrita/recuperação RIFF,
+4. Aceitação auditiva com sinal real, incluindo MASTER A/B/matching,
+   escrita/recuperação RIFF,
    auto-stop de 5 minutos, dois monitores e soak prolongado.
-6. Gerar `.deb` para validação interna; somente depois preparar publicação
+5. Gerar `.deb` para validação interna; somente depois preparar publicação
    multiplataforma.
 
 Nenhum item marcado como ausente deve ser descrito como implementado em

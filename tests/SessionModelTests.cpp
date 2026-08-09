@@ -2126,6 +2126,19 @@ int main()
     require(approximately(
                 recommendedLoudnessTrimDb(masteringMetrics, -14.0), -6.0),
             "Album loudness matching must retain the historical +/-6 dB limit");
+    auto louderPreviewMetrics = masteringMetrics;
+    louderPreviewMetrics.estimatedLufs = -8.0;
+    auto quieterPreviewMetrics = masteringMetrics;
+    quieterPreviewMetrics.estimatedLufs = -14.0;
+    require(approximately(
+                matchedPreviewAttenuationDb(
+                    louderPreviewMetrics, quieterPreviewMetrics),
+                -6.0)
+                && approximately(
+                    matchedPreviewAttenuationDb(
+                        quieterPreviewMetrics, louderPreviewMetrics),
+                    0.0),
+            "MASTER A/B matching must attenuate only the louder side");
 
     const StereoAudioBuffer antiPhaseFixture(
         48000.0, {0.25F, -0.25F}, {-0.25F, 0.25F});
@@ -2386,6 +2399,18 @@ int main()
                 && albumProject.tracks.front().takeId == projectTakeB.id
                 && !moveAlbumProjectTrack(albumProject, 0, -1),
             "ALBUM PROJECT must preserve explicit bounded track order");
+    auto quietAlbumMetrics = masteringMetrics;
+    quietAlbumMetrics.estimatedLufs = -22.0;
+    const std::array albumProjectAnalysis {
+        quietAlbumMetrics, masteringMetrics};
+    matchAlbumProjectRelativeLevels(
+        albumProject, albumProjectAnalysis, -14.0);
+    require(albumProject.tracks[0].hasAnalysis
+                && approximately(
+                    albumProject.tracks[0].analysis.estimatedLufs, -22.0)
+                && approximately(albumProject.tracks[0].settings.trimDb, 6.0)
+                && approximately(albumProject.tracks[1].settings.trimDb, -6.0),
+            "ALBUM PROJECT relative matching must persist analysis and +/-6 dB trims");
     const auto albumProjectJson = encodeAlbumProject(
         albumProject, "2026-08-09T20:00:00Z");
     const auto decodedAlbumProject = decodeAlbumProject(albumProjectJson);
@@ -2394,6 +2419,13 @@ int main()
             "ALBUM PROJECT v1 must preserve album metadata and track count");
     require(decodedAlbumProject.tracks.front().takeId == projectTakeB.id,
             "ALBUM PROJECT v1 must preserve explicit track order");
+    require(decodedAlbumProject.tracks.front().hasAnalysis
+                && approximately(
+                    decodedAlbumProject.tracks.front().analysis.estimatedLufs,
+                    -22.0)
+                && approximately(
+                    decodedAlbumProject.tracks.front().settings.trimDb, 6.0),
+            "ALBUM PROJECT v1 must preserve relative matching evidence");
     require(decodedAlbumProject.tracks.front().recipeJson.find(
                 "navalha-take-recipe") != std::string::npos
                 && decodedAlbumProject.tracks.front().recipeJson.find(
@@ -2403,6 +2435,20 @@ int main()
                 && decodedAlbumProject.tracks.front().review.status
                     == "EXPERIMENT",
             "ALBUM PROJECT v1 must preserve the normalized TAKE review");
+    rejected = false;
+    try
+    {
+        const std::array<MasteringMetrics, 1> incompleteAnalysis {
+            masteringMetrics};
+        matchAlbumProjectRelativeLevels(
+            albumProject, incompleteAnalysis, -14.0);
+    }
+    catch (const std::invalid_argument&)
+    {
+        rejected = true;
+    }
+    require(rejected,
+            "ALBUM PROJECT matching must require one analysis per track");
     require(removeAlbumProjectTrack(albumProject, 0)
                 && albumProject.tracks.size() == 1
                 && !removeAlbumProjectTrack(albumProject, 5),

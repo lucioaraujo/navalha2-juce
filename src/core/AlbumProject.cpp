@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <limits>
 #include <stdexcept>
 
 #include "core/Json.h"
@@ -44,6 +45,60 @@ bool validStatus(std::string_view value) noexcept
         != std::end(statuses);
 }
 
+double finite(const Json* value, double fallback)
+{
+    const auto number = value == nullptr ? fallback : value->number(fallback);
+    if (!std::isfinite(number))
+        throw std::invalid_argument(
+            "ALBUM PROJECT contains a non-finite number");
+    return number;
+}
+
+bool finiteMetrics(const MasteringMetrics& metrics) noexcept
+{
+    return std::isfinite(metrics.peak)
+        && std::isfinite(metrics.peakDb)
+        && std::isfinite(metrics.rms)
+        && std::isfinite(metrics.rmsDb)
+        && std::isfinite(metrics.estimatedLufs)
+        && std::isfinite(metrics.crestDb)
+        && std::isfinite(metrics.correlation)
+        && std::isfinite(metrics.headroomDb);
+}
+
+Json encodeAnalysis(const MasteringMetrics& metrics)
+{
+    return Json::Object {
+        {"inspectedFrames", static_cast<double>(metrics.inspectedFrames)},
+        {"peak", metrics.peak}, {"peakDb", metrics.peakDb},
+        {"rms", metrics.rms}, {"rmsDb", metrics.rmsDb},
+        {"lufs", metrics.estimatedLufs}, {"crest", metrics.crestDb},
+        {"corr", metrics.correlation}, {"headroom", metrics.headroomDb}
+    };
+}
+
+MasteringMetrics decodeAnalysis(const Json& value)
+{
+    MasteringMetrics metrics;
+    const auto inspectedFrames = finite(
+        child(&value, "inspectedFrames"), 0.0);
+    if (inspectedFrames < 0.0
+        || inspectedFrames
+            > static_cast<double>(std::numeric_limits<std::size_t>::max()))
+        throw std::invalid_argument(
+            "ALBUM PROJECT contains an invalid analysis frame count");
+    metrics.inspectedFrames = static_cast<std::size_t>(inspectedFrames);
+    metrics.peak = finite(child(&value, "peak"), 0.0);
+    metrics.peakDb = finite(child(&value, "peakDb"), -240.0);
+    metrics.rms = finite(child(&value, "rms"), 0.0);
+    metrics.rmsDb = finite(child(&value, "rmsDb"), -240.0);
+    metrics.estimatedLufs = finite(child(&value, "lufs"), -120.691);
+    metrics.crestDb = finite(child(&value, "crest"), 0.0);
+    metrics.correlation = finite(child(&value, "corr"), 0.0);
+    metrics.headroomDb = finite(child(&value, "headroom"), 240.0);
+    return metrics;
+}
+
 void normalizeTrack(AlbumProjectTrack& track)
 {
     limit(track.id, 160);
@@ -71,6 +126,9 @@ void normalizeTrack(AlbumProjectTrack& track)
     track.settings.durationSeconds = track.durationSeconds;
     const std::array<AlbumTrackSettings, 1> settings {track.settings};
     static_cast<void>(planAlbumLayout(settings, 48000.0));
+    if (track.hasAnalysis && !finiteMetrics(track.analysis))
+        throw std::invalid_argument(
+            "ALBUM PROJECT contains invalid analysis metrics");
     if (track.recipeJson.size() > maximumRecipeBytes)
         throw std::length_error("ALBUM PROJECT recipe is too large");
     if (!track.recipeJson.empty())
@@ -105,14 +163,6 @@ TakeReview decodeReview(const Json* value, std::string_view fallbackStatus)
     return review;
 }
 
-double finite(const Json* value, double fallback)
-{
-    const auto number = value == nullptr ? fallback : value->number(fallback);
-    if (!std::isfinite(number))
-        throw std::invalid_argument(
-            "ALBUM PROJECT contains a non-finite number");
-    return number;
-}
 }
 
 void normalizeAlbumProject(AlbumProject& project)
@@ -189,6 +239,40 @@ bool removeAlbumProjectTrack(
     return true;
 }
 
+void matchAlbumProjectRelativeLevels(
+    AlbumProject& project,
+    std::span<const MasteringMetrics> analysis,
+    double targetLufs,
+    double maximumAbsoluteTrimDb)
+{
+    if (analysis.size() != project.tracks.size())
+        throw std::invalid_argument(
+            "ALBUM PROJECT analysis count does not match its tracks");
+    if (!std::isfinite(maximumAbsoluteTrimDb)
+        || maximumAbsoluteTrimDb < 0.0
+        || maximumAbsoluteTrimDb > 12.0)
+        throw std::invalid_argument(
+            "ALBUM PROJECT matching trim limit is invalid");
+    std::vector<double> trims;
+    trims.reserve(analysis.size());
+    for (const auto& metrics : analysis)
+    {
+        if (!finiteMetrics(metrics))
+            throw std::invalid_argument(
+                "ALBUM PROJECT contains invalid analysis metrics");
+        trims.push_back(recommendedLoudnessTrimDb(
+            metrics, targetLufs, maximumAbsoluteTrimDb));
+    }
+    for (std::size_t index = 0; index < project.tracks.size(); ++index)
+    {
+        auto& track = project.tracks[index];
+        track.analysis = analysis[index];
+        track.hasAnalysis = true;
+        track.settings.trimDb = trims[index];
+    }
+    normalizeAlbumProject(project);
+}
+
 std::string encodeAlbumProject(
     const AlbumProject& source, std::string_view exportedAt)
 {
@@ -212,6 +296,8 @@ std::string encodeAlbumProject(
             {"gapAfter", track.settings.gapAfterSeconds},
             {"fadeIn", track.settings.fadeInSeconds},
             {"fadeOut", track.settings.fadeOutSeconds},
+            {"analysis", track.hasAnalysis
+                ? encodeAnalysis(track.analysis) : Json(nullptr)},
             {"recipe", std::move(recipe)},
             {"review", encodeReview(track.review)}
         });
@@ -270,6 +356,12 @@ AlbumProject decodeAlbumProject(std::string_view json)
             finite(child(&value, "gapAfter"), 2.0),
             finite(child(&value, "fadeIn"), 0.0),
             finite(child(&value, "fadeOut"), 0.0)};
+        if (const auto* analysis = child(&value, "analysis");
+            analysis != nullptr && analysis->isObject())
+        {
+            track.analysis = decodeAnalysis(*analysis);
+            track.hasAnalysis = true;
+        }
         track.review = decodeReview(child(&value, "review"), track.status);
         if (const auto* recipe = child(&value, "recipe");
             recipe != nullptr && recipe->isObject())

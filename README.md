@@ -156,6 +156,10 @@ O runtime atual continua em:
   gravações futuras;
 - ALBUM PROJECT persistente com seleção de takes, deduplicação, ordem editorial,
   exportação v1 e render direto pelo ALBUM MASTER;
+- comparação TRACK MASTER ORIGINAL/MASTER por temporários float32 alinhados,
+  com compensação que somente atenua o lado mais alto e bloqueio durante REC;
+- matching relativo do ALBUM PROJECT para alvo estimado, limitado a ±6 dB,
+  com análise/trim persistentes por faixa;
 - painel JUCE de dispositivo, saída estéreo, buffer e sample rate;
 - configuração do dispositivo persistida nas preferências locais do aplicativo;
 - invariantes compatíveis com Project v2;

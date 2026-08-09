@@ -111,6 +111,13 @@ struct DecodedSourceFile
     std::string mediaType = "audio/wav";
 };
 
+enum class AudioPreviewOwner
+{
+    none,
+    library,
+    master
+};
+
 DecodedSourceFile decodeSourceFile(const juce::File& file)
 {
     constexpr juce::int64 maximumInputBytes = 512LL * 1024LL * 1024LL;
@@ -183,7 +190,9 @@ DecodedSourceFile decodeSourceFile(const juce::File& file)
 void publishMasterWav(const juce::File& outputFile,
                       double sampleRate,
                       const navalha::MasteringRender& rendered,
-                      navalha::WavMetadata metadata)
+                      navalha::WavMetadata metadata,
+                      navalha::WavSampleFormat format =
+                          navalha::WavSampleFormat::pcm24)
 {
     const std::filesystem::path finalPath(
         outputFile.getFullPathName().toStdString());
@@ -204,7 +213,7 @@ void publishMasterWav(const juce::File& outputFile,
         navalha::WavStreamWriter writer(
             output,
             static_cast<std::uint32_t>(std::lround(sampleRate)),
-            navalha::WavSampleFormat::pcm24,
+            format,
             std::move(metadata));
         for (std::size_t frame = 0; frame < rendered.left.size(); ++frame)
             writer.writeFrame({rendered.left[frame], rendered.right[frame]});
@@ -212,6 +221,52 @@ void publishMasterWav(const juce::File& outputFile,
         output.close();
         if (!output)
             throw std::runtime_error("Unable to finalize MASTER WAV");
+        std::filesystem::rename(partialPath, finalPath);
+        partialCreated = false;
+    }
+    catch (...)
+    {
+        if (partialCreated)
+        {
+            std::error_code ignored;
+            std::filesystem::remove(partialPath, ignored);
+        }
+        throw;
+    }
+}
+
+void publishPreviewSourceWav(
+    const juce::File& outputFile,
+    const navalha::StereoAudioBuffer& audio,
+    navalha::WavMetadata metadata)
+{
+    const std::filesystem::path finalPath(
+        outputFile.getFullPathName().toStdString());
+    const auto partialPath =
+        std::filesystem::path(finalPath.string() + ".partial");
+    if (std::filesystem::exists(finalPath)
+        || std::filesystem::exists(partialPath))
+        throw std::runtime_error("Preview output already exists");
+
+    bool partialCreated = false;
+    try
+    {
+        std::ofstream output(
+            partialPath, std::ios::binary | std::ios::trunc);
+        if (!output)
+            throw std::runtime_error("Unable to create preview partial WAV");
+        partialCreated = true;
+        navalha::WavStreamWriter writer(
+            output,
+            static_cast<std::uint32_t>(std::lround(audio.sampleRate())),
+            navalha::WavSampleFormat::float32,
+            std::move(metadata));
+        for (std::size_t frame = 0; frame < audio.size(); ++frame)
+            writer.writeFrame(audio.interpolated(static_cast<double>(frame)));
+        writer.finalize();
+        output.close();
+        if (!output)
+            throw std::runtime_error("Unable to finalize preview WAV");
         std::filesystem::rename(partialPath, finalPath);
         partialCreated = false;
     }
@@ -4099,6 +4154,66 @@ public:
         }
     }
 
+    bool updateAlbumRelativeLevels(
+        const std::vector<std::string>& takeIds,
+        const std::vector<navalha::MasteringMetrics>& analysis,
+        double targetLufs)
+    {
+        try
+        {
+            auto candidate = albumProjectDraft;
+            if (takeIds.size() != candidate.tracks.size()
+                || !std::equal(
+                    takeIds.begin(), takeIds.end(), candidate.tracks.begin(),
+                    [] (const auto& id, const auto& track)
+                    {
+                        return id == track.takeId;
+                    }))
+                throw std::runtime_error(
+                    "Album order changed during relative analysis");
+            navalha::matchAlbumProjectRelativeLevels(
+                candidate, analysis, targetLufs);
+            persistAlbumProject(std::move(candidate));
+            showStatus(
+                "ALBUM MATCH | " + juce::String(targetLufs, 1)
+                + " LUFS EST. | TRIM LIMITED TO +/-6 dB");
+            return true;
+        }
+        catch (const std::exception& exception)
+        {
+            showStatus("ALBUM MATCH FAILED | "
+                       + juce::String(exception.what()));
+            return false;
+        }
+    }
+
+    bool startMasterAudition(
+        const juce::File& file, float gain, const juce::String& label)
+    {
+        if (recorder.isRunning())
+        {
+            showStatus("STOP RECORDING BEFORE MASTER A/B");
+            return false;
+        }
+        if (!engine.submitCommand({navalha::EngineCommandType::stop}))
+        {
+            showStatus("MASTER A/B | COMMAND QUEUE FULL");
+            return false;
+        }
+        return startAudioPreview(
+            file, std::clamp(gain, 0.0F, 1.0F), "MASTER A/B | " + label,
+            AudioPreviewOwner::master);
+    }
+
+    void stopMasterAudition(bool announce = true)
+    {
+        if (previewOwner != AudioPreviewOwner::master)
+            return;
+        stopAudioPreview(false);
+        if (announce)
+            showStatus("MASTER A/B | STOPPED");
+    }
+
     void setRecordingPreset(navalha::WavMetadata metadata)
     {
         navalha::normalizeWavMetadata(metadata);
@@ -4633,23 +4748,29 @@ private:
             juce::dontSendNotification);
     }
 
-    void startAudioPreview(const juce::File& file)
+    bool startAudioPreview(
+        const juce::File& file,
+        float gain = 0.70F,
+        const juce::String& label = "PREVIEW",
+        AudioPreviewOwner owner = AudioPreviewOwner::library)
     {
         stopAudioPreview(false);
         auto* reader = previewFormatManager.createReaderFor(file);
         if (reader == nullptr)
         {
             showStatus("PREVIEW FAILED | " + file.getFileName());
-            return;
+            return false;
         }
         const auto sourceRate = reader->sampleRate;
         previewReader = std::make_unique<juce::AudioFormatReaderSource>(
             reader, true);
         previewTransport.setSource(
             previewReader.get(), 0, nullptr, sourceRate);
-        previewTransport.setGain(0.70F);
+        previewTransport.setGain(std::clamp(gain, 0.0F, 1.0F));
+        previewOwner = owner;
         previewTransport.start();
-        showStatus("PREVIEW | " + file.getFileName());
+        showStatus(label + " | " + file.getFileName());
+        return true;
     }
 
     void stopAudioPreview(bool announce = true)
@@ -4659,6 +4780,7 @@ private:
         previewTransport.stop();
         previewTransport.setSource(nullptr);
         previewReader.reset();
+        previewOwner = AudioPreviewOwner::none;
         if (announce && wasActive)
             showStatus("PREVIEW STOPPED");
     }
@@ -7378,6 +7500,7 @@ private:
     juce::AudioFormatManager previewFormatManager;
     std::unique_ptr<juce::AudioFormatReaderSource> previewReader;
     juce::AudioTransportSource previewTransport;
+    AudioPreviewOwner previewOwner = AudioPreviewOwner::none;
     juce::AudioBuffer<float> previewScratch {2, 8192};
 };
 
@@ -8537,6 +8660,32 @@ public:
         configure(renderTrack, "RENDER PCM24", [this] { chooseTrackOutput(); });
         configure(loadRecipe, "LOAD RECIPE", [this] { chooseRecipe(); });
         configure(saveRecipe, "SAVE RECIPE", [this] { chooseRecipeOutput(); });
+        configure(prepareCompare, "PREPARE A/B", [this]
+        {
+            prepareTrackComparison();
+        });
+        configure(playOriginal, "PLAY ORIGINAL", [this]
+        {
+            playTrackComparison(true);
+        });
+        configure(playMaster, "PLAY MASTER", [this]
+        {
+            playTrackComparison(false);
+        });
+        configure(stopCompare, "STOP A/B", [this]
+        {
+            stopTrackComparison();
+        });
+        matchLoudness.setButtonText("MATCH LOUDNESS");
+        matchLoudness.setToggleState(true, juce::dontSendNotification);
+        addAndMakeVisible(matchLoudness);
+        compareInfo.setColour(
+            juce::Label::textColourId, juce::Colour(Arcade::muted));
+        compareInfo.setJustificationType(juce::Justification::centredLeft);
+        compareInfo.setText(
+            "Prepare the chain before MASTER audition",
+            juce::dontSendNotification);
+        addAndMakeVisible(compareInfo);
         configure(loadAlbum, "LOAD MANIFEST", [this] { chooseAlbum(); });
         configure(renderAlbum, "RENDER MANIFEST", [this] { chooseAlbumOutput(); });
         configure(exportProject, "EXPORT PROJECT", [this]
@@ -8546,6 +8695,10 @@ public:
         configure(renderProject, "RENDER PROJECT", [this]
         {
             chooseAlbumProjectOutputDirectory();
+        });
+        configure(matchAlbum, "MATCH RELATIVE LEVELS", [this]
+        {
+            startAlbumRelativeMatching();
         });
 
         sourceInfo.setText(
@@ -8567,6 +8720,18 @@ public:
         configureParameter(saturation, 0.0, 1.0, 0.01, "SATURATION");
         configureParameter(ceiling, -6.0, 0.0, 0.1, "CEILING dB");
         setParameters({});
+        for (auto* slider : {
+                 &trim, &highPass, &lowShelf, &presence, &highShelf,
+                 &threshold, &ratio, &width, &saturation, &ceiling})
+            slider->onValueChange = [this] { invalidateTrackComparison(); };
+
+        configureParameter(
+            albumTargetLufs, -24.0, -6.0, 0.5, "TARGET LUFS EST.");
+        albumTargetLufs.setValue(-14.0, juce::dontSendNotification);
+        albumTargetLufs.setTextValueSuffix(" LUFS EST.");
+        playOriginal.setEnabled(false);
+        playMaster.setEnabled(false);
+        prepareCompare.setEnabled(false);
 
         albumInfo.setMultiLine(true);
         albumInfo.setReadOnly(true);
@@ -8625,6 +8790,7 @@ public:
 
     ~MasteringComponent() override
     {
+        invalidateTrackComparison();
         albumTracks.setModel(nullptr);
         setLookAndFeel(nullptr);
     }
@@ -8650,8 +8816,11 @@ public:
         try
         {
             auto decoded = decodeSourceFile(file);
+            invalidateTrackComparison();
             source = std::move(decoded.audio);
             sourceFile = file;
+            prepareCompare.setEnabled(true);
+            playOriginal.setEnabled(true);
             mode.setSelectedItemIndex(0, juce::dontSendNotification);
             updateMode();
             sourceInfo.setText(
@@ -8691,6 +8860,8 @@ public:
         renderTrack.setBounds(trackActions.removeFromLeft(150).reduced(3));
         loadRecipe.setBounds(trackActions.removeFromLeft(135).reduced(3));
         saveRecipe.setBounds(trackActions.removeFromLeft(135).reduced(3));
+        prepareCompare.setBounds(
+            trackActions.removeFromLeft(130).reduced(3));
         auto albumTopActions = actions;
         const auto albumTopActionWidth = albumTopActions.getWidth() / 4;
         loadAlbum.setBounds(
@@ -8700,6 +8871,23 @@ public:
         exportProject.setBounds(
             albumTopActions.removeFromLeft(albumTopActionWidth).reduced(3));
         renderProject.setBounds(albumTopActions.reduced(3));
+
+        auto secondaryActions = area.removeFromTop(46);
+        auto comparisonActions = secondaryActions;
+        playOriginal.setBounds(
+            comparisonActions.removeFromLeft(125).reduced(3));
+        playMaster.setBounds(
+            comparisonActions.removeFromLeft(115).reduced(3));
+        stopCompare.setBounds(
+            comparisonActions.removeFromLeft(90).reduced(3));
+        matchLoudness.setBounds(
+            comparisonActions.removeFromLeft(150).reduced(3));
+        compareInfo.setBounds(comparisonActions.reduced(3));
+        auto albumMatchActions = secondaryActions;
+        albumTargetLufs.setBounds(
+            albumMatchActions.removeFromLeft(280).reduced(3));
+        matchAlbum.setBounds(
+            albumMatchActions.removeFromLeft(210).reduced(3));
 
         status.setBounds(area.removeFromBottom(38).reduced(3));
         auto albumArea = area;
@@ -8799,7 +8987,12 @@ private:
         graphics.drawFittedText(
             utf8(track.filename) + " | "
                 + juce::String(track.durationSeconds, 2) + " s | "
-                + utf8(track.status)
+                + utf8(track.status) + " | TRIM "
+                + juce::String(track.settings.trimDb, 1) + " dB"
+                + (track.hasAnalysis
+                    ? " | " + juce::String(
+                        track.analysis.estimatedLufs, 1) + " LUFS EST."
+                    : juce::String())
                 + (available ? juce::String() : " | AUDIO MISSING"),
             bounds, juce::Justification::centredLeft, 1);
     }
@@ -8939,6 +9132,8 @@ private:
             track.filename = sourcePath.getFileName().toStdString();
             track.status = projectTrack.status;
             track.settings = projectTrack.settings;
+            track.hasAnalysis = projectTrack.hasAnalysis;
+            track.analysis = projectTrack.analysis;
             prepared.tracks.push_back(std::move(track));
             sources.push_back(sourcePath);
         }
@@ -9024,6 +9219,7 @@ private:
         width.setValue(value.width, juce::dontSendNotification);
         saturation.setValue(value.saturation, juce::dontSendNotification);
         ceiling.setValue(value.ceilingDb, juce::dontSendNotification);
+        invalidateTrackComparison();
     }
 
     void updateMode()
@@ -9035,6 +9231,12 @@ private:
                  static_cast<juce::Component*>(&renderTrack),
                  static_cast<juce::Component*>(&loadRecipe),
                  static_cast<juce::Component*>(&saveRecipe),
+                 static_cast<juce::Component*>(&prepareCompare),
+                 static_cast<juce::Component*>(&playOriginal),
+                 static_cast<juce::Component*>(&playMaster),
+                 static_cast<juce::Component*>(&stopCompare),
+                 static_cast<juce::Component*>(&matchLoudness),
+                 static_cast<juce::Component*>(&compareInfo),
                  static_cast<juce::Component*>(&sourceInfo),
                  static_cast<juce::Component*>(&metrics),
                  static_cast<juce::Component*>(&trim),
@@ -9052,6 +9254,10 @@ private:
         renderAlbum.setVisible(!trackMode);
         exportProject.setVisible(!trackMode);
         renderProject.setVisible(!trackMode);
+        matchAlbum.setVisible(!trackMode);
+        albumTargetLufs.setVisible(!trackMode);
+        if (!trackMode)
+            stopTrackComparison(false);
         albumInfo.setVisible(false);
         for (auto* component : {
                  static_cast<juce::Component*>(&albumTitleLabel),
@@ -9068,6 +9274,288 @@ private:
             component->setVisible(!trackMode);
         if (!trackMode)
             refreshAlbumProjectEditor();
+    }
+
+    void stopTrackComparison(bool announce = true)
+    {
+        if (comparisonAuditionActive)
+            main.stopMasterAudition(announce);
+        comparisonAuditionActive = false;
+        if (announce)
+            setStatus("MASTER A/B STOPPED");
+    }
+
+    void invalidateTrackComparison()
+    {
+        ++comparisonRevision;
+        stopTrackComparison(false);
+        if (processedPreviewFile.existsAsFile())
+            static_cast<void>(processedPreviewFile.deleteFile());
+        if (originalPreviewFile.existsAsFile())
+            static_cast<void>(originalPreviewFile.deleteFile());
+        originalPreviewFile = juce::File {};
+        processedPreviewFile = juce::File {};
+        comparisonReady = false;
+        playMaster.setEnabled(false);
+        compareInfo.setText(
+            source == nullptr
+                ? "Load a track to prepare A/B"
+                : "Chain changed | prepare A/B again",
+            juce::dontSendNotification);
+    }
+
+    void showTrackMetrics(const navalha::MasteringMetrics& value)
+    {
+        metrics.setValues({
+            juce::String(value.peakDb, 3),
+            juce::String(value.rmsDb, 3),
+            juce::String(value.estimatedLufs, 3),
+            juce::String(value.crestDb, 3),
+            juce::String(value.correlation, 4),
+            juce::String(value.headroomDb, 3)});
+    }
+
+    void prepareTrackComparison()
+    {
+        if (busy.load() || source == nullptr)
+        {
+            if (source == nullptr)
+                setStatus("LOAD A TRACK BEFORE PREPARING A/B");
+            return;
+        }
+        invalidateTrackComparison();
+        const auto revision = comparisonRevision;
+        auto audio = *source;
+        const auto settings = parameters();
+        const auto inputName = sourceFile.getFileName().toStdString();
+        const auto tempDirectory = juce::File::getSpecialLocation(
+            juce::File::tempDirectory);
+        const auto originalOutput = tempDirectory.getNonexistentChildFile(
+            "Navalha2_TRACK_MASTER_AB_ORIGINAL_", ".wav", false);
+        const auto masterOutput = tempDirectory.getNonexistentChildFile(
+            "Navalha2_TRACK_MASTER_AB_MASTER_", ".wav", false);
+        busy.store(true);
+        setStatus("MASTER A/B PREPARING...");
+        juce::Component::SafePointer<MasteringComponent> safe(this);
+        if (!juce::Thread::launch(
+                [safe, audio = std::move(audio), settings, inputName,
+                 originalOutput, masterOutput, revision] () mutable
+                {
+                    navalha::MasteringMetrics originalAnalysis;
+                    navalha::MasteringMetrics masterAnalysis;
+                    juce::String error;
+                    bool succeeded = false;
+                    try
+                    {
+                        originalAnalysis = navalha::analyzeForMastering(audio);
+                        publishPreviewSourceWav(
+                            originalOutput, audio,
+                            {"Navalha 2 TRACK MASTER A/B ORIGINAL", "",
+                             inputName, "",
+                             "Temporary float32 original audition"});
+                        auto rendered = navalha::renderMastering(
+                            audio, settings);
+                        publishMasterWav(
+                            masterOutput, audio.sampleRate(), rendered,
+                            {"Navalha 2 TRACK MASTER A/B", "", inputName, "",
+                             "Temporary float32 audition; internal estimate"},
+                            navalha::WavSampleFormat::float32);
+                        navalha::StereoAudioBuffer mastered(
+                            audio.sampleRate(), std::move(rendered.left),
+                            std::move(rendered.right));
+                        masterAnalysis = navalha::analyzeForMastering(mastered);
+                        succeeded = true;
+                    }
+                    catch (const std::exception& exception)
+                    {
+                        error = exception.what();
+                        static_cast<void>(originalOutput.deleteFile());
+                        static_cast<void>(masterOutput.deleteFile());
+                    }
+                    juce::MessageManager::callAsync(
+                        [safe, originalOutput, masterOutput, revision,
+                         originalAnalysis, masterAnalysis, error, succeeded]
+                        {
+                            if (safe == nullptr)
+                            {
+                                static_cast<void>(originalOutput.deleteFile());
+                                static_cast<void>(masterOutput.deleteFile());
+                                return;
+                            }
+                            safe->busy.store(false);
+                            if (!succeeded)
+                            {
+                                static_cast<void>(originalOutput.deleteFile());
+                                static_cast<void>(masterOutput.deleteFile());
+                                safe->setStatus(
+                                    "MASTER A/B FAILED | " + error);
+                                return;
+                            }
+                            if (safe->comparisonRevision != revision)
+                            {
+                                static_cast<void>(originalOutput.deleteFile());
+                                static_cast<void>(masterOutput.deleteFile());
+                                safe->setStatus(
+                                    "MASTER A/B DISCARDED | CHAIN CHANGED");
+                                return;
+                            }
+                            safe->originalPreviewFile = originalOutput;
+                            safe->processedPreviewFile = masterOutput;
+                            safe->originalPreviewMetrics = originalAnalysis;
+                            safe->masterPreviewMetrics = masterAnalysis;
+                            safe->comparisonReady = true;
+                            safe->playMaster.setEnabled(true);
+                            safe->showTrackMetrics(masterAnalysis);
+                            safe->compareInfo.setText(
+                                "ORIG "
+                                    + juce::String(
+                                        originalAnalysis.estimatedLufs, 1)
+                                    + " | MASTER "
+                                    + juce::String(
+                                        masterAnalysis.estimatedLufs, 1)
+                                    + " LUFS EST.",
+                                juce::dontSendNotification);
+                            safe->setStatus(
+                                "MASTER A/B READY | FLOAT32 TEMP | "
+                                "MATCH ONLY ATTENUATES");
+                        });
+                }))
+        {
+            busy.store(false);
+            setStatus("UNABLE TO START MASTER A/B WORKER");
+        }
+    }
+
+    void playTrackComparison(bool original)
+    {
+        if (source == nullptr
+            || (original && !(comparisonReady
+                    && originalPreviewFile.existsAsFile())
+                && !sourceFile.existsAsFile()))
+        {
+            setStatus("MASTER A/B SOURCE IS NOT AVAILABLE");
+            return;
+        }
+        if (!original
+            && (!comparisonReady || !processedPreviewFile.existsAsFile()))
+        {
+            setStatus("PREPARE A/B BEFORE PLAYING MASTER");
+            return;
+        }
+        auto attenuationDb = 0.0;
+        if (matchLoudness.getToggleState() && comparisonReady)
+        {
+            attenuationDb = original
+                ? navalha::matchedPreviewAttenuationDb(
+                    originalPreviewMetrics, masterPreviewMetrics)
+                : navalha::matchedPreviewAttenuationDb(
+                    masterPreviewMetrics, originalPreviewMetrics);
+        }
+        const auto gain = static_cast<float>(
+            0.70 * std::pow(10.0, attenuationDb / 20.0));
+        const auto label = juce::String(original ? "ORIGINAL" : "MASTER")
+            + (matchLoudness.getToggleState() && comparisonReady
+                ? " | MATCH " + juce::String(attenuationDb, 1) + " dB"
+                : " | UNMATCHED");
+        const auto file = original
+            ? (comparisonReady && originalPreviewFile.existsAsFile()
+                ? originalPreviewFile : sourceFile)
+            : processedPreviewFile;
+        comparisonAuditionActive = main.startMasterAudition(file, gain, label);
+        if (comparisonAuditionActive)
+            setStatus("PLAY " + label + " | PERFORMANCE STOPPED");
+        else
+            setStatus("MASTER A/B BLOCKED | CHECK MAIN ACTIVITY LOG");
+    }
+
+    void startAlbumRelativeMatching()
+    {
+        if (busy.load())
+            return;
+        const auto& project = main.albumProject();
+        if (project.tracks.empty())
+        {
+            setStatus("ADD TAKES BEFORE RELATIVE MATCHING");
+            return;
+        }
+        std::vector<std::string> takeIds;
+        std::vector<juce::File> files;
+        takeIds.reserve(project.tracks.size());
+        files.reserve(project.tracks.size());
+        for (const auto& track : project.tracks)
+        {
+            const auto* take = main.take(track.takeId);
+            if (take == nullptr)
+            {
+                setStatus("ALBUM MATCH BLOCKED | TAKE NOT FOUND");
+                return;
+            }
+            const juce::File file(utf8(take->audioPath));
+            if (!file.existsAsFile())
+            {
+                setStatus("ALBUM MATCH BLOCKED | "
+                          + file.getFileName() + " MISSING");
+                return;
+            }
+            takeIds.push_back(track.takeId);
+            files.push_back(file);
+        }
+
+        const auto targetLufs = albumTargetLufs.getValue();
+        busy.store(true);
+        setStatus("ALBUM MATCH | ANALYZING "
+                  + juce::String(files.size()) + " TRACKS...");
+        juce::Component::SafePointer<MasteringComponent> safe(this);
+        if (!juce::Thread::launch(
+                [safe, takeIds, files, targetLufs]
+                {
+                    std::vector<navalha::MasteringMetrics> analysis;
+                    juce::String error;
+                    try
+                    {
+                        analysis.reserve(files.size());
+                        for (const auto& file : files)
+                        {
+                            auto decoded = decodeSourceFile(file);
+                            analysis.push_back(
+                                navalha::analyzeForMastering(*decoded.audio));
+                        }
+                    }
+                    catch (const std::exception& exception)
+                    {
+                        error = exception.what();
+                    }
+                    juce::MessageManager::callAsync(
+                        [safe, takeIds, analysis = std::move(analysis),
+                         targetLufs, error] () mutable
+                        {
+                            if (safe == nullptr)
+                                return;
+                            safe->busy.store(false);
+                            if (error.isNotEmpty())
+                            {
+                                safe->setStatus(
+                                    "ALBUM MATCH FAILED | " + error);
+                                return;
+                            }
+                            if (!safe->main.updateAlbumRelativeLevels(
+                                    takeIds, analysis, targetLufs))
+                            {
+                                safe->setStatus(
+                                    "ALBUM MATCH FAILED | SEE ACTIVITY LOG");
+                                return;
+                            }
+                            safe->refreshAlbumProjectEditor();
+                            safe->setStatus(
+                                "ALBUM MATCH READY | "
+                                + juce::String(targetLufs, 1)
+                                + " LUFS EST. | +/-6 dB MAX");
+                        });
+                }))
+        {
+            busy.store(false);
+            setStatus("UNABLE TO START ALBUM MATCH WORKER");
+        }
     }
 
     void chooseTrack()
@@ -9099,13 +9587,7 @@ private:
         try
         {
             const auto value = navalha::analyzeForMastering(*source);
-            metrics.setValues({
-                juce::String(value.peakDb, 3),
-                juce::String(value.rmsDb, 3),
-                juce::String(value.estimatedLufs, 3),
-                juce::String(value.crestDb, 3),
-                juce::String(value.correlation, 4),
-                juce::String(value.headroomDb, 3)});
+            showTrackMetrics(value);
             setStatus("TRACK ANALYZED | INTERNAL ESTIMATE, NOT EBU CERTIFIED");
         }
         catch (const std::exception& exception)
@@ -9423,10 +9905,17 @@ private:
     juce::TextButton renderTrack;
     juce::TextButton loadRecipe;
     juce::TextButton saveRecipe;
+    juce::TextButton prepareCompare;
+    juce::TextButton playOriginal;
+    juce::TextButton playMaster;
+    juce::TextButton stopCompare;
+    juce::ToggleButton matchLoudness;
+    juce::Label compareInfo;
     juce::TextButton loadAlbum;
     juce::TextButton renderAlbum;
     juce::TextButton exportProject;
     juce::TextButton renderProject;
+    juce::TextButton matchAlbum;
     MasterMetricsList metrics;
     juce::TextEditor albumInfo;
     juce::Label albumTitleLabel;
@@ -9450,13 +9939,21 @@ private:
     juce::Slider width;
     juce::Slider saturation;
     juce::Slider ceiling;
+    juce::Slider albumTargetLufs;
     std::unique_ptr<juce::FileChooser> chooser;
     std::unique_ptr<navalha::StereoAudioBuffer> source;
     juce::File sourceFile;
+    juce::File originalPreviewFile;
+    juce::File processedPreviewFile;
+    navalha::MasteringMetrics originalPreviewMetrics;
+    navalha::MasteringMetrics masterPreviewMetrics;
     navalha::AlbumMasterManifest album;
     juce::File albumFile;
     std::vector<juce::File> albumSourceFiles;
     bool syncingAlbumProject = false;
+    bool comparisonReady = false;
+    bool comparisonAuditionActive = false;
+    std::uint64_t comparisonRevision = 0;
     std::atomic<bool> busy {false};
 };
 
