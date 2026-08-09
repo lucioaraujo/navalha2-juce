@@ -7106,7 +7106,7 @@ private:
     {
         fileChooser = std::make_unique<juce::FileChooser>(
             sourceIndex == 0 ? "Load SOURCE A" : "Load SOURCE B",
-            juce::File {}, "*.wav;*.wave;*.aif;*.aiff");
+            juce::File {}, "*.wav;*.wave;*.aif;*.aiff", false, false, this);
         fileChooser->launchAsync(
             juce::FileBrowserComponent::openMode
                 | juce::FileBrowserComponent::canSelectFiles,
@@ -7259,7 +7259,7 @@ private:
     void chooseProjectToSave()
     {
         fileChooser = std::make_unique<juce::FileChooser>(
-            "Save Navalha Project", juce::File {}, "*.navalha");
+            "Save Navalha Project", juce::File {}, "*.navalha", false, false, this);
         fileChooser->launchAsync(
             juce::FileBrowserComponent::saveMode
                 | juce::FileBrowserComponent::canSelectFiles
@@ -7295,7 +7295,7 @@ private:
     void choosePortableToSave()
     {
         fileChooser = std::make_unique<juce::FileChooser>(
-            "Save Portable Navalha Project", juce::File {}, "*.zip");
+            "Save Portable Navalha Project", juce::File {}, "*.zip", false, false, this);
         fileChooser->launchAsync(
             juce::FileBrowserComponent::saveMode
                 | juce::FileBrowserComponent::canSelectFiles
@@ -7334,7 +7334,7 @@ private:
     void chooseProjectToOpen()
     {
         fileChooser = std::make_unique<juce::FileChooser>(
-            "Open Navalha Project", juce::File {}, "*.navalha;*.zip");
+            "Open Navalha Project", juce::File {}, "*.navalha;*.zip", false, false, this);
         fileChooser->launchAsync(
             juce::FileBrowserComponent::openMode
                 | juce::FileBrowserComponent::canSelectFiles,
@@ -7377,7 +7377,7 @@ private:
                 {"Import Legacy Navalha Files", "Importar arquivos legados Navalha",
                  "Importer des fichiers historiques Navalha", "Importar archivos legados Navalha"},
                 uiLanguage),
-            juce::File {}, "*.nvl;*.ptn");
+            juce::File {}, "*.nvl;*.ptn", false, false, this);
         fileChooser->launchAsync(
             juce::FileBrowserComponent::openMode
                 | juce::FileBrowserComponent::canSelectFiles
@@ -7507,7 +7507,7 @@ private:
             navalha::ui::text(
                 {"Export Legacy .nvl", "Exportar .nvl legado",
                  "Exporter .nvl historique", "Exportar .nvl legado"}, uiLanguage),
-            juce::File {}, "*.nvl");
+            juce::File {}, "*.nvl", false, false, this);
         fileChooser->launchAsync(
             juce::FileBrowserComponent::saveMode
                 | juce::FileBrowserComponent::canSelectFiles
@@ -7545,7 +7545,7 @@ private:
             navalha::ui::text(
                 {"Export Legacy .ptn", "Exportar .ptn legado",
                  "Exporter .ptn historique", "Exportar .ptn legado"}, uiLanguage),
-            juce::File {}, "*.ptn");
+            juce::File {}, "*.ptn", false, false, this);
         fileChooser->launchAsync(
             juce::FileBrowserComponent::saveMode
                 | juce::FileBrowserComponent::canSelectFiles
@@ -7765,7 +7765,7 @@ private:
             recordingDirectory.isDirectory()
                 ? recordingDirectory
                 : juce::File::getSpecialLocation(juce::File::userMusicDirectory),
-            "*.wav");
+            "*.wav", false, false, this);
         fileChooser->launchAsync(
             juce::FileBrowserComponent::saveMode
                 | juce::FileBrowserComponent::canSelectFiles
@@ -8612,7 +8612,7 @@ private:
         auto suggested = juce::File(utf8(entry->filename))
             .withFileExtension("recipe.json");
         chooser = std::make_unique<juce::FileChooser>(
-            "Export TAKE recipe", suggested, "*.json");
+            "Export TAKE recipe", suggested, "*.json", false, false, this);
         const auto id = selectedId;
         chooser->launchAsync(
             juce::FileBrowserComponent::saveMode
@@ -8637,7 +8637,7 @@ private:
         chooser = std::make_unique<juce::FileChooser>(
             "Import previous Navalha WAV recordings",
             juce::File::getSpecialLocation(juce::File::userMusicDirectory),
-            "*");
+            "*", false, false, this);
         chooser->launchAsync(
             juce::FileBrowserComponent::openMode
                 | juce::FileBrowserComponent::canSelectDirectories,
@@ -9742,7 +9742,7 @@ private:
             utf8(main.albumProject().title)) + ".navalha-album.json";
         chooser = std::make_unique<juce::FileChooser>(
             "Export ALBUM PROJECT", juce::File {}.getChildFile(suggestedName),
-            "*.json");
+            "*.json", false, false, this);
         chooser->launchAsync(
             juce::FileBrowserComponent::saveMode
                 | juce::FileBrowserComponent::canSelectFiles
@@ -10238,7 +10238,7 @@ private:
             return;
         chooser = std::make_unique<juce::FileChooser>(
             "Load TRACK MASTER source", juce::File {},
-            "*.wav;*.wave;*.aif;*.aiff");
+            "*.wav;*.wave;*.aif;*.aiff", false, false, this);
         chooser->launchAsync(
             juce::FileBrowserComponent::openMode
                 | juce::FileBrowserComponent::canSelectFiles,
@@ -10282,7 +10282,7 @@ private:
             "Render TRACK MASTER",
             sourceFile.getSiblingFile(
                 sourceFile.getFileNameWithoutExtension() + "_MASTER.wav"),
-            "*.wav");
+            "*.wav", false, false, this);
         chooser->launchAsync(
             juce::FileBrowserComponent::saveMode
                 | juce::FileBrowserComponent::canSelectFiles
@@ -10345,7 +10345,7 @@ private:
     void chooseRecipe()
     {
         chooser = std::make_unique<juce::FileChooser>(
-            "Load MASTER recipe", juce::File {}, "*.json");
+            "Load MASTER recipe", juce::File {}, "*.json", false, false, this);
         chooser->launchAsync(
             juce::FileBrowserComponent::openMode
                 | juce::FileBrowserComponent::canSelectFiles,
@@ -10374,7 +10374,7 @@ private:
     void chooseRecipeOutput()
     {
         chooser = std::make_unique<juce::FileChooser>(
-            "Save MASTER recipe", juce::File {}, "*.json");
+            "Save MASTER recipe", juce::File {}, "*.json", false, false, this);
         chooser->launchAsync(
             juce::FileBrowserComponent::saveMode
                 | juce::FileBrowserComponent::canSelectFiles
@@ -10402,7 +10402,7 @@ private:
     void chooseAlbum()
     {
         chooser = std::make_unique<juce::FileChooser>(
-            "Load ALBUM MASTER manifest", juce::File {}, "*.json");
+            "Load ALBUM MASTER manifest", juce::File {}, "*.json", false, false, this);
         chooser->launchAsync(
             juce::FileBrowserComponent::openMode
                 | juce::FileBrowserComponent::canSelectFiles,
@@ -10465,7 +10465,7 @@ private:
                 ? juce::File::getSpecialLocation(
                     juce::File::userMusicDirectory)
                 : albumFile.getParentDirectory(),
-            "*");
+            "*", false, false, this);
         chooser->launchAsync(
             juce::FileBrowserComponent::openMode
                 | juce::FileBrowserComponent::canSelectDirectories,
