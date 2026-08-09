@@ -52,6 +52,11 @@ Atualizado em 9 de agosto de 2026.
 - completar a auditoria de paridade PD→JUCE;
 - testar takes, TRACK MASTER e ALBUM MASTER com áudio real;
 - instalar e usar o `.deb` interno em uma sessão humana, quando conveniente;
+- adicionar suporte FLAC sem perda para importação e exportação, após validar a
+  cadeia de codec e os metadados no Linux;
+- oferecer perfis explícitos de exportação de master: WAV PCM24 como padrão,
+  WAV float32 para arquivo técnico e FLAC sem perda; manter MP3/OGG/AAC como
+  formatos futuros de distribuição, não como master padrão;
 - preparar builds Windows/macOS/Linux somente após aceitação humana.
 
 ## Lacunas de paridade ainda conhecidas
