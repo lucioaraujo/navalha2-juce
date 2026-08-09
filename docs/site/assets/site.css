@@ -51,9 +51,9 @@ button, a { -webkit-tap-highlight-color: transparent; }
   background: rgba(7,9,9,.94);
   backdrop-filter: blur(14px);
 }
-.brand { display: flex; align-items: center; gap: 10px; text-decoration: none; font-family: var(--display); font-size: 1.45rem; letter-spacing: .055em; white-space: nowrap; }
+.brand { display: flex; align-items: center; gap: 10px; text-decoration: none; white-space: nowrap; }
 .brand img { object-fit: contain; image-rendering: pixelated; }
-.brand b { color: var(--yellow); }
+.brand .brand-wordmark { width: 152px; height: auto; image-rendering: auto; }
 .main-nav { justify-self: center; display: flex; gap: clamp(16px, 2.6vw, 40px); }
 .main-nav a, .repo-link { color: var(--steel); font-size: .69rem; font-weight: 700; letter-spacing: .11em; text-decoration: none; text-transform: uppercase; }
 .main-nav a:hover, .main-nav a[aria-current="true"], .repo-link:hover { color: var(--yellow); }
@@ -79,7 +79,6 @@ h3 { font-size: 1rem; letter-spacing: .04em; text-transform: uppercase; }
 .hero-copy { min-width: 0; }
 .hero-branding { display: flex; align-items: end; gap: clamp(12px, 2vw, 26px); margin-bottom: 32px; }
 .hero-wordmark { width: min(500px, 78%); margin: 0; }
-.hero-mascot { width: clamp(94px, 11vw, 168px); aspect-ratio: 1; object-fit: contain; filter: drop-shadow(10px 12px 0 rgba(213,31,44,.23)); }
 .hero-lead { max-width: 720px; color: #cbd0cf; font-size: clamp(1rem, 1.35vw, 1.24rem); }
 .hero-actions { display: flex; flex-wrap: wrap; gap: 12px; margin: 34px 0 46px; }
 .button { display: inline-block; padding: 13px 17px; border: 1px solid var(--line); background: var(--panel); color: var(--white); font-size: .72rem; font-weight: 700; letter-spacing: .08em; text-decoration: none; text-transform: uppercase; }
@@ -224,7 +223,7 @@ h3 { font-size: 1rem; letter-spacing: .04em; text-transform: uppercase; }
 
 @media (max-width: 780px) {
   .site-header { gap: 10px; }
-  .brand span { display: none; }
+  .brand .brand-wordmark { width: 120px; }
   .repo-link { font-size: .58rem; }
   .main-nav.open { grid-template-columns: 1fr 1fr; gap: 16px; text-align: left; }
   .section, .hero { width: min(100% - 24px, var(--max)); }
