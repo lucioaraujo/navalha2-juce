@@ -208,12 +208,13 @@ h3 { font-size: .9rem; letter-spacing: .04em; text-transform: uppercase; }
 .site-footer span, .site-footer small { color: var(--steel); font-size: .65rem; }
 .site-footer nav { display: flex; gap: 18px; }
 .site-footer a { color: var(--yellow); font-size: .68rem; text-decoration: none; }
-.contact-dialog { width: min(100% - 40px, 520px); padding: 32px; border: 1px solid var(--yellow-dim); background: var(--panel-2); color: var(--white); box-shadow: 18px 18px 0 rgba(213,31,44,.22); }
+.contact-dialog { width: min(100% - 40px, 380px); padding: 22px; border: 1px solid var(--line); background: var(--panel-2); color: var(--white); box-shadow: 9px 9px 0 rgba(213,31,44,.14); }
 .contact-dialog::backdrop { background: rgba(0, 0, 0, .72); backdrop-filter: blur(4px); }
-.contact-dialog h2 { margin-bottom: 16px; font-size: clamp(2.1rem, 5vw, 3.2rem); }
-.contact-dialog p { color: #cbd0cf; }
-.contact-dialog code { display: block; margin: 22px 0 16px; padding: 13px; border: 1px solid var(--line); background: var(--ink); color: var(--yellow); overflow-wrap: anywhere; }
-.contact-feedback { min-height: 1.6em; margin: 14px 0 0; font-size: .8rem; }
+.contact-dialog h2 { margin: 0 0 10px; font-size: 1rem; letter-spacing: .12em; }
+.contact-dialog p { margin-bottom: 0; color: #cbd0cf; font-size: .78rem; }
+.contact-dialog code { display: block; margin: 14px 0 12px; padding: 10px; border: 1px solid var(--line); background: var(--ink); color: var(--yellow); font-size: .78rem; overflow-wrap: anywhere; }
+.contact-dialog .button { padding: 10px 13px; font-size: .64rem; }
+.contact-feedback { min-height: 1.4em; margin: 10px 0 0; font-size: .7rem; }
 .dialog-close { position: absolute; top: 10px; right: 12px; border: 0; background: transparent; color: var(--steel); font-size: 2rem; line-height: 1; cursor: pointer; }
 .dialog-close:hover { color: var(--yellow); }
 
