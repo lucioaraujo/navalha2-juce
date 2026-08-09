@@ -7076,7 +7076,8 @@ private:
     {
         fileChooser = std::make_unique<juce::FileChooser>(
             "Choose audio library folder",
-            audioLibrary.rootDirectory(), "*");
+            audioLibrary.rootDirectory(), "*",
+            false, false, this);
         fileChooser->launchAsync(
             juce::FileBrowserComponent::openMode
                 | juce::FileBrowserComponent::canSelectDirectories,
