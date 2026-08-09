@@ -43,6 +43,16 @@ if (header) {
   window.addEventListener('scroll', updateHeader, { passive: true });
 }
 
+const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+const updateSvgMotion = (event) => {
+  document.querySelectorAll('.gesture-map svg').forEach((svg) => {
+    if (event.matches) svg.pauseAnimations();
+    else svg.unpauseAnimations();
+  });
+};
+updateSvgMotion(reducedMotion);
+reducedMotion.addEventListener('change', updateSvgMotion);
+
 const contactTrigger = document.querySelector('[data-contact-trigger]');
 const contactDialog = document.querySelector('[data-contact-dialog]');
 const contactAddress = document.querySelector('[data-contact-address]');

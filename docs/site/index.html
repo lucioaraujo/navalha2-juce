@@ -8,7 +8,7 @@
   <title>Navalha 2 — slice, recombine, perform</title>
   <link rel="icon" type="image/png" href="assets/favicon.png">
   <link rel="stylesheet" href="assets/site.css?v=20260810-3">
-  <script src="assets/site.js?v=20260810-4" defer></script>
+  <script src="assets/site.js?v=20260810-5" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
@@ -67,8 +67,12 @@
           </div>
           <div class="gesture-map" aria-hidden="true">
             <svg viewBox="0 0 500 150" role="img" aria-label="A changing gesture path across the performance field">
-              <path d="M8 119 C78 120, 72 20, 147 60 S243 148, 287 73 S378 16, 492 42" />
-              <circle cx="287" cy="73" r="7" />
+              <path id="gesture-route" d="M8 119 C78 120, 72 20, 147 60 S243 148, 287 73 S378 16, 492 42" />
+              <circle r="7">
+                <animateMotion dur="9s" repeatCount="indefinite" rotate="auto">
+                  <mpath href="#gesture-route" />
+                </animateMotion>
+              </circle>
             </svg>
             <span>GESTURE → FORM → OUTPUT</span>
           </div>
