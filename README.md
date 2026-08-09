@@ -1,5 +1,14 @@
 # Navalha 2 — migração JUCE/C++
 
+<p align="center">
+  <img src="docs/site/assets/navalha2-header.png" alt="Navalha 2" width="560">
+  <img src="docs/site/assets/navalha2-mascot.png" alt="Mascote Navalha 2" width="150">
+</p>
+
+<p align="center">
+  <img src="docs/site/assets/navalha2-juce-interface.jpg" alt="Interface nativa do Navalha 2 JUCE: fontes, padrões, gestos, forma, biblioteca e mixer" width="100%">
+</p>
+
 Versão atual da migração JUCE: **v0.1.0**. A versão **v0.28.1** mencionada
 nesta documentação é a referência funcional Pure Data/web usada para medir
 paridade; não é o número de versão do aplicativo JUCE.
