@@ -262,3 +262,23 @@ O controle software não pode produzir um fade-out depois que um driver falhou
 e deixou de chamar o callback. Portanto a reconexão automática está coberta no
 lado determinístico — suspensão e fade-in —, mas desconexão física, xrun e ruído
 do hardware continuam exigindo o roteiro humano.
+
+### 2026-08-09 — P1.1: dither TPDF na publicação PCM
+
+- `WavStreamWriter` passou a aplicar TPDF de ±1 LSB antes da quantização PCM16
+  e PCM24; float32 permanece sem dither;
+- a política é padrão nos caminhos de REC, TRACK MASTER, ALBUM MASTER e
+  conversão PCM24 para projeto portátil, sem inserir ruído no barramento float;
+- seed configurável e padrão fixo preservam reprodutibilidade; fixtures
+  científicas e WAVs dourados podem pedir `none` explicitamente;
+- canais esquerdo e direito consomem valores sucessivos, sem compartilhar o
+  mesmo ruído de dither;
+- o writer agora também saneia `NaN`/`Inf` antes de codificar qualquer formato;
+- contratos cobrem determinismo, seeds distintas, distribuição TPDF em silêncio,
+  média próxima de zero, PCM24, bypass explícito e neutralidade float32;
+- decisão e evidências estão documentadas em
+  [`DITHER_TPDF.md`](DITHER_TPDF.md).
+
+Este marco resolve a ausência de dither do encoder, mas não encerra P1:
+BS.1770, análise pós-codificação, modo de master de qualidade, oversampling da
+saturação e preview A/B com compensação ainda permanecem abertos.

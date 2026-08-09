@@ -27,15 +27,17 @@ este bloqueio.
 4. Confirmar clip latch, peak hold, RMS e gain reduction na interface.
 5. Testar impulso, DC, subgrave, picos intersample, `NaN`/`Inf`, mudança de
    sample rate e reconnect de dispositivo.
-6. Validar BS.1770 e dither com fixtures apropriadas e analisar novamente o WAV
-   final depois da codificação.
+6. Validar BS.1770 com fixtures apropriadas e analisar novamente o WAV final
+   depois da codificação; manter os contratos de dither TPDF PCM16/24 aprovados.
 
 Estado automatizado em 2026-08-09: itens 1–3 possuem cobertura de core e
 validação externa FFmpeg; `NaN`/`Inf`, DC, impulso em 44,1–192 kHz e reinício do
 DSP em nova taxa do item 5 também possuem contratos. Output trim, mute rampado,
 suspensão e fade-in de reconnect foram automatizados no P0.4. A checagem física,
-desconexão/reconnect real, subgrave ampliado, BS.1770 completo e dither continuam
-pendentes e não devem ser aprovados por inferência.
+desconexão/reconnect real, subgrave ampliado, BS.1770 completo e análise do WAV
+pós-codificação continuam pendentes e não devem ser aprovados por inferência. O
+dither TPDF determinístico em PCM16/24 passou a ter contratos próprios no P1.1;
+float32 permanece corretamente sem dither.
 
 Aprovar somente se nenhum cenário válido ultrapassar o ceiling configurado e
 se não houver clipping oculto, clique de automação/reconexão ou divergência

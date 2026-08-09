@@ -100,7 +100,8 @@ int main()
     navalha::WavStreamWriter writer(
         output, 48000, navalha::WavSampleFormat::pcm24,
         {"Navalha 2 golden render", "Navalha 2", "JUCE migration", "2026",
-         "Deterministic regression fixture"});
+         "Deterministic regression fixture"},
+        {navalha::WavDitherMode::none});
     for (std::size_t frame = 0; frame < render.left.size(); ++frame)
         writer.writeFrame({render.left[frame], render.right[frame]});
     writer.finalize();

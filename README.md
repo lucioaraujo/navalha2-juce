@@ -69,6 +69,8 @@ O runtime atual continua em:
 - snapshots Project v2 e migração Project v1, preservando estado determinístico;
 - FIFO de gravação estéreo pós-MASTER sem locks, com overflow contabilizado;
 - encoder WAV RIFF em stream para PCM 16, PCM 24 e float 32;
+- dither TPDF determinístico por padrão em PCM16/PCM24, nunca em float32, com
+  seed configurável e saneamento final de amostras não finitas;
 - validação de caminhos de portable packs contra traversal e caminhos absolutos;
 - writer WAV em thread separada, com handshake de parada e drenagem da FIFO;
 - publicação atômica de REC: WAV temporário só vira final após RIFF válido;
@@ -242,7 +244,7 @@ A entrada é limitada a 512 MiB. Assim como na v0.28.1, o LUFS é uma estimativa
 interna e não uma medição certificada EBU R128/ITU-R BS.1770.
 
 O renderizador TRACK MASTER aplica os parâmetros padrão da v0.28.1 e publica
-um PCM24 de forma atômica, sem sobrescrever arquivos:
+um PCM24 com dither TPDF de forma atômica, sem sobrescrever arquivos:
 
 ```sh
 .local-build/juce-app-native/navalha_render_master \
@@ -252,6 +254,11 @@ um PCM24 de forma atômica, sem sobrescrever arquivos:
 Esta cadeia já é determinística e testável, mas ainda requer comparação
 objetiva e auditiva com o processamento WebAudio antes de ser considerada
 substituta.
+
+A política completa de quantização está em
+[`docs/DITHER_TPDF.md`](docs/DITHER_TPDF.md). Float32 permanece sem dither;
+fixtures que exigem bytes não ditherizados precisam pedir esse modo
+explicitamente.
 
 Manifestos ALBUM MASTER existentes podem ser verificados e planejados sem
 renderizar áudio:

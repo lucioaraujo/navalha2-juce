@@ -87,6 +87,15 @@ std::uint32_t readU32(const std::string& data, std::size_t offset)
         | (static_cast<std::uint32_t>(static_cast<unsigned char>(data[offset + 2])) << 16U)
         | (static_cast<std::uint32_t>(static_cast<unsigned char>(data[offset + 3])) << 24U);
 }
+
+std::int16_t readI16(const std::string& data, std::size_t offset)
+{
+    const auto bits = static_cast<std::uint16_t>(
+        static_cast<unsigned char>(data[offset]))
+        | static_cast<std::uint16_t>(
+            static_cast<unsigned char>(data[offset + 1])) << 8U;
+    return static_cast<std::int16_t>(bits);
+}
 }
 
 int main()
@@ -1643,6 +1652,80 @@ int main()
     require(decodedWav->interpolated(0.0).left < -0.99F
                 && decodedWav->interpolated(0.0).right > 0.99F,
             "WAV decoder must recover interleaved stereo PCM");
+
+    constexpr std::size_t ditherFrames = 65536;
+    const auto renderSilence = [] (WavSampleFormat format,
+                                   WavEncodingOptions options)
+    {
+        std::ostringstream output(std::ios::binary);
+        WavStreamWriter writer(output, 48000, format, {}, options);
+        for (std::size_t frame = 0; frame < ditherFrames; ++frame)
+            writer.writeFrame({});
+        writer.finalize();
+        return output.str();
+    };
+    const auto dithered16A = renderSilence(
+        WavSampleFormat::pcm16, {WavDitherMode::tpdf, 0x12345678U});
+    const auto dithered16B = renderSilence(
+        WavSampleFormat::pcm16, {WavDitherMode::tpdf, 0x12345678U});
+    const auto dithered16OtherSeed = renderSilence(
+        WavSampleFormat::pcm16, {WavDitherMode::tpdf, 0x87654321U});
+    const auto undithered16 = renderSilence(
+        WavSampleFormat::pcm16, {WavDitherMode::none});
+    require(dithered16A == dithered16B,
+            "TPDF dither must be deterministic for an explicit seed");
+    require(dithered16A != dithered16OtherSeed,
+            "Different TPDF seeds must produce different integer payloads");
+    require(std::all_of(
+                undithered16.begin() + 44, undithered16.end(),
+                [] (char byte) { return byte == 0; }),
+            "Explicitly disabled dither must encode digital silence as zero");
+    std::size_t nonZeroDitherSamples = 0;
+    std::int64_t ditherSum = 0;
+    for (std::size_t offset = 44; offset < dithered16A.size(); offset += 2)
+    {
+        const auto value = readI16(dithered16A, offset);
+        require(value >= -1 && value <= 1,
+                "TPDF silence must stay within one integer LSB");
+        nonZeroDitherSamples += value != 0;
+        ditherSum += value;
+    }
+    const auto ditherSampleCount = ditherFrames * 2;
+    const auto nonZeroRatio = static_cast<double>(nonZeroDitherSamples)
+        / static_cast<double>(ditherSampleCount);
+    const auto ditherMean = static_cast<double>(ditherSum)
+        / static_cast<double>(ditherSampleCount);
+    require(nonZeroRatio > 0.23 && nonZeroRatio < 0.27,
+            "TPDF silence must have the expected triangular one-LSB activity");
+    require(std::abs(ditherMean) < 0.01,
+            "TPDF dither must remain effectively zero-mean");
+
+    const auto dithered24 = renderSilence(
+        WavSampleFormat::pcm24, {WavDitherMode::tpdf, 0x12345678U});
+    require(std::any_of(
+                dithered24.begin() + 44, dithered24.end(),
+                [] (char byte) { return byte != 0; }),
+            "PCM24 must receive TPDF dither before fixed-point quantization");
+    const auto floatSilence = renderSilence(
+        WavSampleFormat::float32, {WavDitherMode::tpdf, 0x12345678U});
+    require(std::all_of(
+                floatSilence.begin() + 44, floatSilence.end(),
+                [] (char byte) { return byte == 0; }),
+            "Float32 export must never receive integer dither");
+    std::ostringstream nonFiniteWav(std::ios::binary);
+    WavStreamWriter nonFiniteWriter(
+        nonFiniteWav, 48000, WavSampleFormat::float32);
+    nonFiniteWriter.writeFrame({
+        std::numeric_limits<float>::quiet_NaN(),
+        std::numeric_limits<float>::infinity()});
+    nonFiniteWriter.finalize();
+    const auto nonFiniteBytes = nonFiniteWav.str();
+    const auto sanitizedWav = decodeWav({
+        reinterpret_cast<const std::uint8_t*>(nonFiniteBytes.data()),
+        nonFiniteBytes.size()});
+    const auto sanitizedFrame = sanitizedWav->interpolated(0.0);
+    require(sanitizedFrame.left == 0.0F && sanitizedFrame.right == 0.0F,
+            "WAV writer must prevent non-finite samples in every output format");
 
     const std::vector<std::uint8_t> extensiblePcm24 {
         'R','I','F','F', 66,0,0,0, 'W','A','V','E',

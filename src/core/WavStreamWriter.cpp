@@ -27,8 +27,11 @@ void writeU32(std::ostream& stream, std::uint32_t value)
 WavStreamWriter::WavStreamWriter(std::ostream& output,
                                  std::uint32_t sampleRate,
                                  WavSampleFormat format,
-                                 WavMetadata metadata)
-    : stream(output), rate(sampleRate), sampleFormat(format), tags(std::move(metadata))
+                                 WavMetadata metadata,
+                                 WavEncodingOptions options)
+    : stream(output), rate(sampleRate), sampleFormat(format),
+      tags(std::move(metadata)), encoding(options),
+      ditherState(options.ditherSeed == 0 ? 0x4e41564cU : options.ditherSeed)
 {
     if (rate == 0)
         throw std::invalid_argument("WAV sample rate must be positive");
@@ -56,6 +59,11 @@ void WavStreamWriter::writeFrame(StereoSample sample)
     const auto bytesPerFrame = static_cast<std::uint64_t>(bitsPerSample / 8U) * 2U;
     if (frameCount >= std::numeric_limits<std::uint32_t>::max() / bytesPerFrame)
         throw std::length_error("WAV reached the RIFF 4 GiB frame limit");
+
+    if (!std::isfinite(sample.left))
+        sample.left = 0.0F;
+    if (!std::isfinite(sample.right))
+        sample.right = 0.0F;
 
     const auto writeSample = [this] (float value)
     {
@@ -163,15 +171,27 @@ void WavStreamWriter::writeInfoList()
 
 void WavStreamWriter::writePcm16(float sample)
 {
+    constexpr auto maximum = std::int32_t {32767};
+    const auto bounded = std::clamp(sample, -1.0F, 1.0F);
+    const auto quantized = encoding.dither == WavDitherMode::none
+        ? std::lround(bounded * 32767.0F)
+        : std::lround(static_cast<double>(bounded) * maximum
+            + tpdfDitherLsb());
     const auto value = static_cast<std::int16_t>(
-        std::lround(std::clamp(sample, -1.0F, 1.0F) * 32767.0F));
+        std::clamp<std::int64_t>(quantized, -maximum, maximum));
     writeU16(stream, static_cast<std::uint16_t>(value));
 }
 
 void WavStreamWriter::writePcm24(float sample)
 {
+    constexpr auto maximum = std::int64_t {8388607};
+    const auto bounded = std::clamp(sample, -1.0F, 1.0F);
+    const auto quantized = encoding.dither == WavDitherMode::none
+        ? std::llround(bounded * 8388607.0F)
+        : std::llround(static_cast<double>(bounded) * maximum
+            + tpdfDitherLsb());
     const auto value = static_cast<std::int32_t>(
-        std::lround(std::clamp(sample, -1.0F, 1.0F) * 8388607.0F));
+        std::clamp<std::int64_t>(quantized, -maximum, maximum));
     const auto bits = static_cast<std::uint32_t>(value);
     stream.put(static_cast<char>(bits & 0xffU));
     stream.put(static_cast<char>((bits >> 8U) & 0xffU));
@@ -181,5 +201,23 @@ void WavStreamWriter::writePcm24(float sample)
 void WavStreamWriter::writeFloat32(float sample)
 {
     writeU32(stream, std::bit_cast<std::uint32_t>(sample));
+}
+
+double WavStreamWriter::tpdfDitherLsb() noexcept
+{
+    constexpr auto inverse24BitRange = 1.0 / 16777216.0;
+    const auto first = static_cast<double>(nextDitherRandom() >> 8U)
+        * inverse24BitRange;
+    const auto second = static_cast<double>(nextDitherRandom() >> 8U)
+        * inverse24BitRange;
+    return first - second;
+}
+
+std::uint32_t WavStreamWriter::nextDitherRandom() noexcept
+{
+    ditherState ^= ditherState << 13U;
+    ditherState ^= ditherState >> 17U;
+    ditherState ^= ditherState << 5U;
+    return ditherState;
 }
 }

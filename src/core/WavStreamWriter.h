@@ -15,6 +15,18 @@ enum class WavSampleFormat
     float32
 };
 
+enum class WavDitherMode
+{
+    none,
+    tpdf
+};
+
+struct WavEncodingOptions
+{
+    WavDitherMode dither = WavDitherMode::tpdf;
+    std::uint32_t ditherSeed = 0x4e41564cU;
+};
+
 struct WavMetadata
 {
     std::string title;
@@ -30,7 +42,8 @@ public:
     WavStreamWriter(std::ostream& output,
                     std::uint32_t sampleRate,
                     WavSampleFormat format,
-                    WavMetadata metadata = {});
+                    WavMetadata metadata = {},
+                    WavEncodingOptions options = {});
     ~WavStreamWriter();
 
     WavStreamWriter(const WavStreamWriter&) = delete;
@@ -48,6 +61,8 @@ private:
     void writePcm16(float sample);
     void writePcm24(float sample);
     void writeFloat32(float sample);
+    [[nodiscard]] double tpdfDitherLsb() noexcept;
+    [[nodiscard]] std::uint32_t nextDitherRandom() noexcept;
 
     std::ostream& stream;
     std::uint32_t rate;
@@ -56,6 +71,8 @@ private:
     std::uint16_t bitsPerSample = 0;
     std::uint16_t formatCode = 0;
     WavMetadata tags;
+    WavEncodingOptions encoding;
+    std::uint32_t ditherState = 0;
     std::streamoff dataSizeOffset = 40;
     std::streamoff dataStartOffset = 44;
     bool finalized = false;
