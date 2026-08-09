@@ -530,6 +530,61 @@ public:
         return layout;
     }
 
+    void drawProgressBar(juce::Graphics& graphics,
+                         juce::ProgressBar& progressBar,
+                         int width, int height, double progress,
+                         const juce::String& textToShow) override
+    {
+        if (!progressBar.getProperties().contains("arcadeMasterMeter"))
+        {
+            juce::LookAndFeel_V4::drawProgressBar(
+                graphics, progressBar, width, height, progress, textToShow);
+            return;
+        }
+
+        const auto bounds = progressBar.getLocalBounds().toFloat().reduced(0.5F);
+        const auto background = progressBar.findColour(
+            juce::ProgressBar::backgroundColourId);
+        const auto foreground = progressBar.findColour(
+            juce::ProgressBar::foregroundColourId);
+        const auto radius = juce::jmin(4.0F, bounds.getHeight() * 0.5F);
+        graphics.setColour(background);
+        graphics.fillRoundedRectangle(bounds, radius);
+        graphics.setColour(juce::Colour(Arcade::line));
+        graphics.drawRoundedRectangle(bounds, radius, 1.0F);
+
+        const auto amount = std::clamp(progress, 0.0, 1.0);
+        auto filled = bounds;
+        filled.setWidth(filled.getWidth() * static_cast<float>(amount));
+        if (filled.getWidth() > 0.0F)
+        {
+            graphics.saveState();
+            juce::Path clip;
+            clip.addRoundedRectangle(bounds, radius);
+            graphics.reduceClipRegion(clip);
+            graphics.setColour(foreground);
+            graphics.fillRect(filled);
+            graphics.restoreState();
+        }
+
+        if (textToShow.isNotEmpty())
+        {
+            // Text is dark over a signal and yellow over the dark remainder;
+            // it therefore stays legible when safety changes the signal to red.
+            const auto centreCovered = amount >= 0.55;
+            graphics.setColour(centreCovered
+                ? juce::Colour(Arcade::background)
+                : juce::Colour(Arcade::yellowHigh));
+            graphics.setFont(juce::Font(juce::FontOptions(
+                "DejaVu Sans Mono",
+                juce::jlimit(9.0F, 11.0F, bounds.getHeight() * 0.66F),
+                juce::Font::bold)));
+            graphics.drawFittedText(
+                textToShow, progressBar.getLocalBounds().reduced(3, 0),
+                juce::Justification::centred, 1, 0.72F);
+        }
+    }
+
     void drawButtonBackground(juce::Graphics& graphics,
                               juce::Button& button,
                               const juce::Colour&,
@@ -673,7 +728,11 @@ public:
             const auto position = std::isfinite(positions[source])
                     && positions[source] >= 0.0
                 ? std::clamp(positions[source], 0.0, 1.0) : -1.0;
-            if (std::abs(playheads[source] - position) > 1.0e-6)
+            const auto positionChanged = playheads[source] < 0.0
+                || position < 0.0
+                || std::abs(playheads[source] - position)
+                    * static_cast<double>(juce::jmax(1, getWidth())) >= 1.0;
+            if (positionChanged)
             {
                 playheads[source] = position;
                 changed = true;
@@ -781,24 +840,41 @@ public:
             }
             else
             {
-                for (std::size_t index = 0;
-                     index < sourcePeaks.size(); ++index)
+                const auto columns = std::min<std::size_t>(
+                    sourcePeaks.size(),
+                    static_cast<std::size_t>(juce::jmax(1, lane.getWidth())));
+                for (std::size_t index = 0; index < columns; ++index)
                 {
+                    const auto first = index * sourcePeaks.size() / columns;
+                    const auto last = std::max(
+                        first + 1,
+                        (index + 1) * sourcePeaks.size() / columns);
+                    auto minimumLeft = 1.0F;
+                    auto maximumLeft = -1.0F;
+                    auto minimumRight = 1.0F;
+                    auto maximumRight = -1.0F;
+                    for (auto peakIndex = first; peakIndex < last; ++peakIndex)
+                    {
+                        const auto& peak = sourcePeaks[peakIndex];
+                        minimumLeft = std::min(minimumLeft, peak.minimumLeft);
+                        maximumLeft = std::max(maximumLeft, peak.maximumLeft);
+                        minimumRight = std::min(minimumRight, peak.minimumRight);
+                        maximumRight = std::max(maximumRight, peak.maximumRight);
+                    }
                     const auto x = static_cast<float>(lane.getX())
                         + static_cast<float>(index) * lane.getWidth()
-                            / static_cast<float>(sourcePeaks.size());
-                    const auto& peak = sourcePeaks[index];
+                            / static_cast<float>(columns);
                     graphics.setColour(juce::Colour(0xffe8ebe8));
                     graphics.drawVerticalLine(
                         static_cast<int>(x),
-                        centre - peak.maximumLeft * amplitude,
-                        centre - peak.minimumLeft * amplitude);
+                        centre - maximumLeft * amplitude,
+                        centre - minimumLeft * amplitude);
                     graphics.setColour(
                         juce::Colour(Arcade::steel).withAlpha(0.72F));
                     graphics.drawVerticalLine(
                         static_cast<int>(x),
-                        centre - peak.maximumRight * amplitude,
-                        centre - peak.minimumRight * amplitude);
+                        centre - maximumRight * amplitude,
+                        centre - minimumRight * amplitude);
                 }
 
                 const auto selection = editRanges[sourceIndex];
@@ -2697,6 +2773,18 @@ public:
         refreshAdvancedVoiceControls();
 
         configureParameterLabel(outputMeterLabel, "MASTER OUT");
+        for (auto* meter : {&outputLeftMeter, &outputRightMeter})
+        {
+            meter->setStyle(juce::ProgressBar::Style::linear);
+            meter->setPercentageDisplay(false);
+            meter->setColour(
+                juce::ProgressBar::backgroundColourId,
+                juce::Colour(0xff101615));
+            meter->setColour(
+                juce::ProgressBar::foregroundColourId,
+                juce::Colour(Arcade::yellow));
+            meter->getProperties().set("arcadeMasterMeter", true);
+        }
         addAndMakeVisible(outputLeftMeter);
         addAndMakeVisible(outputRightMeter);
         configureParameterLabel(recordingFormatLabel, "REC FORMAT");
@@ -3169,16 +3257,22 @@ public:
         const auto placeEngineStatusStrip = [this] (
             juce::Rectangle<int> strip)
         {
+            const auto placeMeter = [] (juce::ProgressBar& meter,
+                                        juce::Rectangle<int> cell)
+            {
+                auto bounds = cell.reduced(2, 0);
+                bounds.setHeight(juce::jmin(16, juce::jmax(12, cell.getHeight() - 4)));
+                bounds.setY(cell.getCentreY() - bounds.getHeight() / 2);
+                meter.setBounds(bounds);
+            };
             audioConnectionStatus.setBounds(
                 strip.removeFromLeft(145).reduced(2, 4));
             status.setBounds(
                 strip.removeFromLeft(90).reduced(2, 4));
             outputMeterLabel.setBounds(
                 strip.removeFromLeft(75).reduced(2, 4));
-            outputLeftMeter.setBounds(
-                strip.removeFromLeft(78).reduced(2, 4));
-            outputRightMeter.setBounds(
-                strip.removeFromLeft(78).reduced(2, 4));
+            placeMeter(outputLeftMeter, strip.removeFromLeft(78));
+            placeMeter(outputRightMeter, strip.removeFromLeft(78));
             recordingFormatLabel.setBounds(
                 strip.removeFromLeft(78).reduced(2, 4));
             recordingFormat.setBounds(
@@ -3235,10 +3329,16 @@ public:
                     48, meterRow.getWidth() / 6);
                 outputMeterLabel.setBounds(
                     meterRow.removeFromLeft(cellWidth).reduced(2, 1));
-                outputLeftMeter.setBounds(
-                    meterRow.removeFromLeft(cellWidth).reduced(2, 1));
-                outputRightMeter.setBounds(
-                    meterRow.removeFromLeft(cellWidth).reduced(2, 1));
+                const auto placeCompactMeter = [] (juce::ProgressBar& meter,
+                                                    juce::Rectangle<int> cell)
+                {
+                    auto bounds = cell.reduced(2, 0);
+                    bounds.setHeight(juce::jmin(16, juce::jmax(12, cell.getHeight() - 2)));
+                    bounds.setY(cell.getCentreY() - bounds.getHeight() / 2);
+                    meter.setBounds(bounds);
+                };
+                placeCompactMeter(outputLeftMeter, meterRow.removeFromLeft(cellWidth));
+                placeCompactMeter(outputRightMeter, meterRow.removeFromLeft(cellWidth));
                 recordingFormatLabel.setBounds(
                     meterRow.removeFromLeft(cellWidth).reduced(2, 1));
                 recordingFormat.setBounds(
