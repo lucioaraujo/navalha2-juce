@@ -476,6 +476,10 @@ std::string encodeProjectJson(const ProjectStateV2& project)
     for (const auto& motif : project.motifSlots)
         motifSlots.push_back(encodeMotif(motif));
 
+    Json albumProject(nullptr);
+    if (project.hasAlbumProject)
+        albumProject = parseJson(encodeAlbumProject(project.albumProject));
+
     const auto timingName = project.timingMode == TimingMode::free ? "FREE"
         : project.timingMode == TimingMode::jitter ? "JITTER" : "GRID";
     Json root(Json::Object {
@@ -551,7 +555,8 @@ std::string encodeProjectJson(const ProjectStateV2& project)
             }},
             {"formDirector", encodeFormDirector(project.formDirector)},
             {"trace", encodeControlTrace(project.controlTrace)}
-        }}
+        }},
+        {"albumProject", std::move(albumProject)}
     });
     return serializeJson(root);
 }
@@ -766,6 +771,12 @@ ProjectStateV2 decodeProjectJson(std::string_view text)
             project.motifSlots[index] = decodeMotif(
                 slots->array()[index], index);
     project.motifLocks = decodeMotifLocks(child(motifMemory, "locks"));
+    if (const auto* albumProject = child(&root, "albumProject");
+        albumProject != nullptr && albumProject->isObject())
+    {
+        project.albumProject = decodeAlbumProject(serializeJson(*albumProject));
+        project.hasAlbumProject = true;
+    }
     return project;
 }
 }

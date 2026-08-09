@@ -1,0 +1,65 @@
+name: Package Debian (Ubuntu 22.04)
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    name: Build and package amd64
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check out Navalha 2 JUCE
+        uses: actions/checkout@v4
+
+      - name: Check out Pure Data reference assets
+        uses: actions/checkout@v4
+        with:
+          repository: lucioaraujo/navalha2-pd
+          path: navalha2-pd
+
+      - name: Check out JUCE 8.0.13
+        uses: actions/checkout@v4
+        with:
+          repository: juce-framework/JUCE
+          ref: 8.0.13
+          path: JUCE
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes \
+            cmake g++ ninja-build pkg-config dpkg-dev \
+            libasound2-dev libfontconfig1-dev libfreetype6-dev \
+            libgl1-mesa-dev libx11-dev libxcursor-dev libxext-dev \
+            libxinerama-dev libxrandr-dev
+
+      - name: Configure
+        run: |
+          cmake -S . -B build/ubuntu-22 -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DNAVALHA_JUCE_PATH="$GITHUB_WORKSPACE/JUCE" \
+            -DNAVALHA_PD_PATH="$GITHUB_WORKSPACE/navalha2-pd" \
+            -DNAVALHA_ENABLE_WEBVIEW=OFF
+
+      - name: Build and test
+        run: |
+          cmake --build build/ubuntu-22 --parallel 2
+          ctest --test-dir build/ubuntu-22 --output-on-failure
+
+      - name: Create Debian package
+        run: |
+          cpack --config build/ubuntu-22/CPackConfig.cmake \
+            -B dist
+
+      - name: Upload Debian package
+        uses: actions/upload-artifact@v4
+        with:
+          name: navalha2-deb-ubuntu-22-amd64
+          path: dist/*.deb
+          if-no-files-found: error

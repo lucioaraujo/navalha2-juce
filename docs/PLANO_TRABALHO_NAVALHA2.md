@@ -20,27 +20,41 @@ Atualizado em 9 de agosto de 2026.
   validado e backup recuperável;
 - TRACK MASTER A/B e matching relativo do ALBUM PROJECT implementados com
   estimativa interna explicitamente não certificada;
+- ALBUM PROJECT integrado ao Project v2 e ao Portable Project v2, preservando
+  compatibilidade com projetos anteriores que não carregam álbum;
+- SOURCE MIXER com modo BASIC persistente e ADVANCED sob demanda; pan, width e
+  saída técnica deixam de sobrecarregar o fluxo comum sem serem removidos;
+- workspaces EDIT, PLAY, COMPOSE e MIX agora filtram o canvas para a tarefa
+  atual, sem duplicar sessão nem motor de áudio; PERFORM continua separado;
+- o último diretório de REC é persistido, sem escolher automaticamente um
+  arquivo ou enfraquecer a confirmação explícita do destino;
+- pacote Debian interno gerável por CPack, com binário, atalho, ícone e
+  dependências de runtime calculadas automaticamente;
+- workflow GitHub Ubuntu 22.04 para gerar `.deb` amd64 mais compatível, com
+  checkout fixado do JUCE 8.0.13 e da referência PD;
 - 10/10 testes automatizados passando.
 
 ## Prioridade de hoje
 
 1. Executar o roteiro humano com áudio real, acervo de takes e dois monitores,
    incluindo MASTER A/B/matching e escrita/recuperação RIFF.
-2. Integrar o rascunho ALBUM PROJECT ao Project v2 artístico.
-3. Projetar workspaces reais e mixer BASIC/ADVANCED.
-4. Corrigir e validar Portable Project v2 com um ZIP real produzido pelo JUCE.
+2. Validar Portable Project v2 com um ZIP real produzido pelo JUCE.
+3. Concluir revisão textual e traduções EN/PT/FR/ES.
+4. Validar intercâmbio histórico `.nvl`/`.ptn` com arquivos reais, sem travar o
+   restante do uso.
+5. Enviar o `.deb` junto de `INSTALACAO_DEB_INTERNA.md` para a validação em
+   outra máquina Linux amd64.
 
 ## Próximas etapas técnicas
 
-- corrigir e validar Portable Project v2;
+- validar Portable Project v2 com material de uso;
 - concluir revisão textual e traduções EN/PT/FR/ES;
 - completar a auditoria de paridade PD→JUCE;
 - testar takes, TRACK MASTER e ALBUM MASTER com áudio real;
-- gerar `.deb` para validação interna;
+- instalar e usar o `.deb` interno em uma sessão humana, quando conveniente;
 - preparar builds Windows/macOS/Linux somente após aceitação humana.
 
 ## Lacunas de paridade ainda conhecidas
 
-- mixer BASIC/ADVANCED recolhível;
-- compatibilidade histórica `.nvl`/`.ptn`;
+- validação humana da compatibilidade histórica `.nvl`/`.ptn`;
 - tradução global de controles, mensagens e tooltips.

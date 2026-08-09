@@ -17,6 +17,7 @@
 #include <functional>
 #include <limits>
 #include <memory>
+#include <optional>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -24,6 +25,7 @@
 #include "core/AlbumProject.h"
 #include "core/AudioEngine.h"
 #include "core/Json.h"
+#include "core/LegacyFormat.h"
 #include "core/MasteringAlbumManifest.h"
 #include "core/MasteringAnalysis.h"
 #include "core/MasteringProcessor.h"
@@ -1731,6 +1733,15 @@ enum class PatternMacro
     gap
 };
 
+enum class MainWorkspace
+{
+    all,
+    edit,
+    play,
+    compose,
+    mix
+};
+
 struct PerformanceSnapshot
 {
     bool running = false;
@@ -1792,6 +1803,7 @@ public:
         configureButton(openProject, "OPEN PROJECT", [this] { chooseProjectToOpen(); });
         configureButton(saveProject, "SAVE PROJECT", [this] { chooseProjectToSave(); });
         configureButton(savePortable, "SAVE PORTABLE", [this] { choosePortableToSave(); });
+        configureButton(legacyIo, "LEGACY I/O", [this] { showLegacyMenu(); });
         savePortable.setTooltip(
             "Save a self-contained Project v2 ZIP with copies of SOURCE A/B. "
             "This does not render the performance.");
@@ -2391,6 +2403,15 @@ public:
         syncFormControls();
 
         configureParameterLabel(mixerHeaderLabel, "SOURCE MIXER");
+        mixerAdvanced.setButtonText("ADVANCED");
+        mixerAdvanced.setClickingTogglesState(true);
+        mixerAdvanced.onClick = [this]
+        {
+            mixerAdvancedVisible = mixerAdvanced.getToggleState();
+            updateMixerMode();
+            saveAudioSettings();
+        };
+        addAndMakeVisible(mixerAdvanced);
         configureParameterLabel(mixerLevelLabel, "LEVEL");
         mixerLevelLabel.setJustificationType(juce::Justification::centred);
         mixerLevelLabel.setColour(
@@ -3170,14 +3191,16 @@ public:
         auto controls = headerRow.reduced(0, 5);
         auto projectModule = controls.removeFromLeft(
             juce::jmin(
-                dualMonitorLayout ? 330 : 300,
+                dualMonitorLayout ? 420 : 390,
                 controls.getWidth() / 2));
-        const auto headerButtonWidth = projectModule.getWidth() / 3;
+        const auto headerButtonWidth = projectModule.getWidth() / 4;
         openProject.setBounds(
             projectModule.removeFromLeft(headerButtonWidth).reduced(4));
         saveProject.setBounds(
             projectModule.removeFromLeft(headerButtonWidth).reduced(4));
-        savePortable.setBounds(projectModule.reduced(4));
+        savePortable.setBounds(
+            projectModule.removeFromLeft(headerButtonWidth).reduced(4));
+        legacyIo.setBounds(projectModule.reduced(4));
         juce::Rectangle<int> heritageHeader;
         if (!dualMonitorLayout)
         {
@@ -3685,7 +3708,10 @@ public:
             lock->setBounds(
                 assistedLocksRow.removeFromLeft(lockWidth).reduced(3));
 
-        mixerHeaderLabel.setBounds(mixerRail.removeFromTop(26));
+        auto mixerHeader = mixerRail.removeFromTop(26);
+        mixerHeaderLabel.setBounds(
+            mixerHeader.removeFromLeft(mixerHeader.getWidth() * 2 / 3));
+        mixerAdvanced.setBounds(mixerHeader.reduced(2));
         auto mixerSources = mixerRail.removeFromTop(20);
         const auto mixerLevelHeading = mixerSources.withSizeKeepingCentre(
             juce::jmin(72, mixerSources.getWidth() / 4),
@@ -3709,8 +3735,11 @@ public:
             mixerLevelRow.removeFromLeft(
                 mixerLevelRow.getWidth() / 2).reduced(2));
         mixerLevels[1].setBounds(mixerLevelRow.reduced(2));
-        placeMixerPair(mixerPanLabel, mixerPans);
-        placeMixerPair(mixerWidthLabel, mixerWidths);
+        if (mixerAdvancedVisible)
+        {
+            placeMixerPair(mixerPanLabel, mixerPans);
+            placeMixerPair(mixerWidthLabel, mixerWidths);
+        }
         auto mixerSwitches = mixerRail.removeFromTop(34);
         for (std::size_t source = 0; source < mixerLevels.size(); ++source)
         {
@@ -3727,12 +3756,15 @@ public:
         mixerBalance.setBounds(mixerRail.removeFromTop(34).reduced(2));
         masterLabel.setBounds(mixerRail.removeFromTop(16).reduced(4, 0));
         master.setBounds(mixerRail.removeFromTop(34).reduced(2));
-        outputTrimLabel.setBounds(mixerRail.removeFromTop(16).reduced(4, 0));
-        auto technicalOutputRow = mixerRail.removeFromTop(34);
-        outputTrim.setBounds(
-            technicalOutputRow.removeFromLeft(
-                technicalOutputRow.getWidth() * 2 / 3).reduced(2));
-        outputMute.setBounds(technicalOutputRow.reduced(2));
+        if (mixerAdvancedVisible)
+        {
+            outputTrimLabel.setBounds(mixerRail.removeFromTop(16).reduced(4, 0));
+            auto technicalOutputRow = mixerRail.removeFromTop(34);
+            outputTrim.setBounds(
+                technicalOutputRow.removeFromLeft(
+                    technicalOutputRow.getWidth() * 2 / 3).reduced(2));
+            outputMute.setBounds(technicalOutputRow.reduced(2));
+        }
 
         const auto voicesHeaderHeight = dualMonitorLayout ? 20 : 24;
         const auto voiceControlRowHeight = dualMonitorLayout
@@ -3960,6 +3992,7 @@ public:
     void setUiLanguage(navalha::ui::Language language)
     {
         uiLanguage = language;
+        refreshLocalizedInterface();
         updateLibrarySearchPlaceholder();
         if (auto* settings = applicationProperties.getUserSettings())
         {
@@ -4008,6 +4041,12 @@ public:
         visibleViewportArea = newArea;
         resized();
         repaint();
+    }
+
+    void setWorkspace(MainWorkspace workspace)
+    {
+        activeWorkspace = workspace;
+        applyWorkspaceVisibility();
     }
 
     void explainLearnKey(const juce::String& key)
@@ -4455,7 +4494,13 @@ private:
             uiLanguage = navalha::ui::languageFromCode(
                 settings->getValue("uiLanguage", "en"));
             learningMode = settings->getBoolValue("learnMode", false);
+            mixerAdvancedVisible = settings->getBoolValue(
+                "mixerAdvanced", false);
         }
+        mixerAdvanced.setToggleState(
+            mixerAdvancedVisible, juce::dontSendNotification);
+        updateMixerMode();
+        refreshLocalizedInterface();
         learnModeLabel.setVisible(learningMode);
         learnTitle.setVisible(learningMode);
         learnBody.setVisible(learningMode);
@@ -4471,6 +4516,235 @@ private:
                  "RECHERCHER DES FICHIERS...", "BUSCAR ARCHIVOS..."},
                 uiLanguage),
             juce::Colour(Arcade::muted));
+    }
+
+    void refreshLocalizedInterface()
+    {
+        const auto localized = [this] (navalha::ui::LocalizedText value)
+        {
+            return navalha::ui::text(value, uiLanguage);
+        };
+        openProject.setButtonText(localized(
+            {"OPEN PROJECT", "ABRIR PROJETO", "OUVRIR PROJET", "ABRIR PROYECTO"}));
+        saveProject.setButtonText(localized(
+            {"SAVE PROJECT", "SALVAR PROJETO", "ENREGISTRER PROJET", "GUARDAR PROYECTO"}));
+        savePortable.setButtonText(localized(
+            {"SAVE PORTABLE", "SALVAR PORTÁTIL", "PROJET PORTABLE", "GUARDAR PORTÁTIL"}));
+        legacyIo.setButtonText(localized(
+            {"LEGACY I/O", "E/S LEGADA", "E/S HISTORIQUE", "E/S LEGADA"}));
+        resetTransport.setButtonText(localized(
+            {"RESET", "REINICIAR", "RÉINITIALISER", "REINICIAR"}));
+        masterLabel.setText(localized(
+            {"MASTER CREATIVE", "MASTER CRIATIVO", "MASTER CRÉATIF", "MASTER CREATIVO"}),
+            juce::dontSendNotification);
+        outputTrimLabel.setText(localized(
+            {"OUTPUT TRIM", "TRIM DE SAÍDA", "TRIM DE SORTIE", "TRIM DE SALIDA"}),
+            juce::dontSendNotification);
+        outputMute.setButtonText(localized(
+            {"MUTE", "SILENCIAR", "COUPER", "SILENCIAR"}));
+        tempoLabel.setText("BPM", juce::dontSendNotification);
+        divisionLabel.setText(localized(
+            {"RATE", "DIVISÃO", "DIVISION", "DIVISIÓN"}), juce::dontSendNotification);
+        patternLabel.setText(localized(
+            {"PATTERN", "PADRÃO", "PATTERN", "PATRÓN"}), juce::dontSendNotification);
+        timingLabel.setText(localized(
+            {"TIMING", "TEMPO", "TEMPS", "TIEMPO"}), juce::dontSendNotification);
+        jitterLabel.setText(localized(
+            {"JITTER %", "JITTER %", "JITTER %", "JITTER %"}), juce::dontSendNotification);
+        timingSeedLabel.setText(localized(
+            {"TIMING SEED", "SEMENTE DE TEMPO", "GRAINE TEMPORELLE", "SEMILLA DE TIEMPO"}),
+            juce::dontSendNotification);
+        applyTimingSeed.setButtonText(localized(
+            {"APPLY", "APLICAR", "APPLIQUER", "APLICAR"}));
+        patternCellsLabel.setText(localized(
+            {"STEPS", "PASSOS", "PAS", "PASOS"}), juce::dontSendNotification);
+        pitchLabel.setText(localized(
+            {"PITCH", "ALTURA", "HAUTEUR", "TONO"}), juce::dontSendNotification);
+        pitchMixLabel.setText(localized(
+            {"HERITAGE", "HERANÇA", "HÉRITAGE", "HERENCIA"}), juce::dontSendNotification);
+        pitchAudition.setButtonText(localized(
+            {"AUDITION", "OUVIR", "ÉCOUTER", "ESCUCHAR"}));
+        orderLabel.setText(localized(
+            {"ORDER", "ORDEM", "ORDRE", "ORDEN"}), juce::dontSendNotification);
+        randomA.setButtonText(localized(
+            {"RANDOM A", "ALEATÓRIO A", "ALÉATOIRE A", "ALEATORIO A"}));
+        randomB.setButtonText(localized(
+            {"RANDOM B", "ALEATÓRIO B", "ALÉATOIRE B", "ALEATORIO B"}));
+        randomAB.setButtonText(localized(
+            {"RANDOM A+B", "ALEATÓRIO A+B", "ALÉATOIRE A+B", "ALEATORIO A+B"}));
+        interleave.setButtonText(localized(
+            {"INTERLEAVE", "INTERCALAR", "ENTRELACER", "INTERCALAR"}));
+        forwardOrder.setButtonText(localized(
+            {"FORWARD", "DIRETO", "AVANT", "DIRECTO"}));
+        reverseOrder.setButtonText(localized(
+            {"REVERSE", "REVERSO", "INVERSE", "INVERSO"}));
+        zeroOrder.setButtonText(localized(
+            {"ZERO", "ZERAR", "ZÉRO", "CERO"}));
+        gestureLabel.setText(localized(
+            {"GESTURES", "GESTOS", "GESTES", "GESTOS"}), juce::dontSendNotification);
+        memoryToggle.setButtonText(localized(
+            {"MEMORY", "MEMÓRIA", "MÉMOIRE", "MEMORIA"}));
+        commitTransform.setButtonText(localized(
+            {"COMMIT", "CONFIRMAR", "VALIDER", "CONFIRMAR"}));
+        restoreTransform.setButtonText(localized(
+            {"RESTORE", "RESTAURAR", "RESTAURER", "RESTAURAR"}));
+        stutter.setButtonText(localized(
+            {"STUTTER x4", "GAGUEJO x4", "BÉGAIEMENT x4", "TARTAMUDEO x4"}));
+        reverseSlice.setButtonText(localized(
+            {"REVERSE", "REVERSO", "INVERSE", "INVERSO"}));
+        formLabel.setText(localized(
+            {"FORM", "FORMA", "FORME", "FORMA"}), juce::dontSendNotification);
+        formNext.setButtonText(localized(
+            {"NEXT", "PRÓXIMA", "SUIVANTE", "SIGUIENTE"}));
+        formReset.setButtonText(localized(
+            {"RESET", "REINICIAR", "RÉINITIALISER", "REINICIAR"}));
+        formAdd.setButtonText(localized(
+            {"ADD", "ADICIONAR", "AJOUTER", "AÑADIR"}));
+        formDuplicate.setButtonText(localized(
+            {"COPY", "COPIAR", "COPIER", "COPIAR"}));
+        formDelete.setButtonText(localized(
+            {"DELETE", "EXCLUIR", "SUPPRIMER", "ELIMINAR"}));
+        formUndo.setButtonText(localized(
+            {"UNDO", "DESFAZER", "ANNULER", "DESHACER"}));
+        formRedo.setButtonText(localized(
+            {"REDO", "REFAZER", "RÉTABLIR", "REHACER"}));
+        traceLabel.setText(localized(
+            {"XY MOD", "MOD XY", "MOD XY", "MOD XY"}), juce::dontSendNotification);
+        traceRecord.setButtonText(localized(
+            {"RECORD TRACE", "GRAVAR TRAÇO", "ENREGISTRER TRACE", "GRABAR TRAZA"}));
+        traceClear.setButtonText(localized(
+            {"CLEAR", "LIMPAR", "EFFACER", "LIMPIAR"}));
+        assistedLabel.setText(localized(
+            {"ASSISTED", "ASSISTIDO", "ASSISTÉ", "ASISTIDO"}), juce::dontSendNotification);
+        assistedNext.setButtonText(localized(
+            {"NEXT", "PRÓXIMA", "SUIVANTE", "SIGUIENTE"}));
+        assistedKeep.setButtonText(localized(
+            {"KEEP", "MANTER", "GARDER", "MANTENER"}));
+        assistedRestore.setButtonText(localized(
+            {"RESTORE", "RESTAURAR", "RESTAURER", "RESTAURAR"}));
+        assistedApplySeed.setButtonText(localized(
+            {"APPLY SEED", "APLICAR SEMENTE", "APPLIQUER GRAINE", "APLICAR SEMILLA"}));
+        assistedRewind.setButtonText(localized(
+            {"REWIND", "REBOBINAR", "REMBOBINER", "REBOBINAR"}));
+        assistedEnable.setButtonText(localized(
+            {"AUTO", "AUTO", "AUTO", "AUTO"}));
+        assistedRepeat.setButtonText(localized(
+            {"REPEAT", "REPETIR", "RÉPÉTER", "REPETIR"}));
+        assistedOrder.setButtonText(localized(
+            {"PATTERN", "PADRÃO", "PATTERN", "PATRÓN"}));
+        assistedRegion.setButtonText(localized(
+            {"REGION", "REGIÃO", "RÉGION", "REGIÓN"}));
+        assistedCuts.setButtonText(localized(
+            {"CUTS", "CORTES", "COUPES", "CORTES"}));
+        assistedTransform.setButtonText(localized(
+            {"TRANSFORM", "TRANSFORMAR", "TRANSFORMER", "TRANSFORMAR"}));
+        assistedGaps.setButtonText(localized(
+            {"GAPS", "PAUSAS", "SILENCES", "PAUSAS"}));
+        assistedFragments.setButtonText(localized(
+            {"FRAGMENTS", "FRAGMENTOS", "FRAGMENTS", "FRAGMENTOS"}));
+        motifLabel.setText(localized(
+            {"MOTIF MEMORY", "MEMÓRIA DE MOTIVOS", "MÉMOIRE DE MOTIFS", "MEMORIA DE MOTIVOS"}),
+            juce::dontSendNotification);
+        motifCapture.setButtonText(localized(
+            {"CAPTURE", "CAPTURAR", "CAPTURER", "CAPTURAR"}));
+        motifRecall.setButtonText(localized(
+            {"RECALL", "RECUPERAR", "RAPPELER", "RECUPERAR"}));
+        motifVary.setButtonText(localized(
+            {"VARY", "VARIAR", "VARIER", "VARIAR"}));
+        motifDelete.setButtonText(localized(
+            {"DELETE", "EXCLUIR", "SUPPRIMER", "ELIMINAR"}));
+        voicesHeaderLabel.setText(localized(
+            {"VIRTUAL VOICES", "VOZES VIRTUAIS", "VOIX VIRTUELLES", "VOCES VIRTUALES"}),
+            juce::dontSendNotification);
+        voiceAdvancedLabel.setText(localized(
+            {"VOICE DETAIL", "DETALHE DA VOZ", "DÉTAIL DE VOIX", "DETALLE DE VOZ"}),
+            juce::dontSendNotification);
+        voicePatternLabel.setText(localized(
+            {"VOICE PATTERN", "PADRÃO DA VOZ", "PATTERN DE VOIX", "PATRÓN DE VOZ"}),
+            juce::dontSendNotification);
+        for (std::size_t voice = 0; voice < voiceLabels.size(); ++voice)
+        {
+            voiceLabels[voice].setText(localized(
+                voice == 0
+                    ? navalha::ui::LocalizedText {"VOICE 1", "VOZ 1", "VOIX 1", "VOZ 1"}
+                    : navalha::ui::LocalizedText {"VOICE 2", "VOZ 2", "VOIX 2", "VOZ 2"}),
+                juce::dontSendNotification);
+            voiceEnabled[voice].setButtonText(localized(
+                {"ON", "LIGAR", "ACTIVER", "ACTIVAR"}));
+        }
+        updatePitchModeButtons();
+        syncTraceControls();
+        updateMemoryButton();
+        syncFormControls();
+        sliceEditorLabel.setText(localized(
+            {"SLICES", "SLICES", "SLICES", "SLICES"}), juce::dontSendNotification);
+        waveEditLabel.setText(localized(
+            {"WAVE EDIT", "EDIÇÃO DE ONDA", "ÉDITION D’ONDE", "EDICIÓN DE ONDA"}),
+            juce::dontSendNotification);
+        divideRegionLabel.setText(localized(
+            {"DIVIDE REGION", "DIVIDIR REGIÃO", "DIVISER RÉGION", "DIVIDIR REGIÓN"}),
+            juce::dontSendNotification);
+        selectRegionMode.setButtonText(localized(
+            {"SELECT REGION", "SELECIONAR REGIÃO", "SÉLECTIONNER RÉGION", "SELECCIONAR REGIÓN"}));
+        editSliceMode.setButtonText(localized(
+            {"EDIT SLICE", "EDITAR SLICE", "ÉDITER SLICE", "EDITAR SLICE"}));
+        setSlice.setButtonText(localized(
+            {"SET", "DEFINIR", "DÉFINIR", "FIJAR"}));
+        bladeMode.setButtonText("BLADE");
+        wholeRegion.setButtonText(localized(
+            {"WHOLE", "INTEIRA", "ENTIÈRE", "ENTERA"}));
+        undoBlade.setButtonText(localized(
+            {"UNDO", "DESFAZER", "ANNULER", "DESHACER"}));
+        playSlice.setButtonText(localized(
+            {"PLAY SLICE", "TOCAR SLICE", "JOUER SLICE", "TOCAR SLICE"}));
+        mixerHeaderLabel.setText(localized(
+            {"SOURCE MIXER", "MIXER DE FONTES", "MIXEUR DE SOURCES", "MEZCLADOR DE FUENTES"}),
+            juce::dontSendNotification);
+        mixerAdvanced.setButtonText(localized(
+            {"ADVANCED", "AVANÇADO", "AVANCÉ", "AVANZADO"}));
+        mixerLevelLabel.setText(localized(
+            {"LEVEL", "NÍVEL", "NIVEAU", "NIVEL"}), juce::dontSendNotification);
+        mixerPanLabel.setText(localized(
+            {"PAN", "PAN", "PAN", "PAN"}), juce::dontSendNotification);
+        mixerWidthLabel.setText(localized(
+            {"WIDTH", "LARGURA", "LARGEUR", "ANCHURA"}), juce::dontSendNotification);
+        mixerBalanceLabel.setText(localized(
+            {"A/B BALANCE", "BALANÇO A/B", "BALANCE A/B", "BALANCE A/B"}),
+            juce::dontSendNotification);
+        for (std::size_t source = 0; source < mixerMutes.size(); ++source)
+        {
+            mixerMutes[source].setButtonText(localized(
+                {"MUTE", "SILENCIAR", "COUPER", "SILENCIAR"}));
+            mixerSolos[source].setButtonText("SOLO");
+        }
+        outputMeterLabel.setText(localized(
+            {"MASTER OUT", "SAÍDA MASTER", "SORTIE MASTER", "SALIDA MASTER"}),
+            juce::dontSendNotification);
+        recordingFormatLabel.setText(localized(
+            {"REC FORMAT", "FORMATO REC", "FORMAT REC", "FORMATO REC"}),
+            juce::dontSendNotification);
+        libraryLabel.setText(localized(
+            {"AUDIO LIBRARY", "BIBLIOTECA DE ÁUDIO", "BIBLIOTHÈQUE AUDIO", "BIBLIOTECA DE AUDIO"}),
+            juce::dontSendNotification);
+        logLabel.setText(localized(
+            {"ACTIVITY LOG", "REGISTRO DE ATIVIDADE", "JOURNAL D’ACTIVITÉ", "REGISTRO DE ACTIVIDAD"}),
+            juce::dontSendNotification);
+        selectedLabel.setText(localized(
+            {"SELECTED FILE", "ARQUIVO SELECIONADO", "FICHIER SÉLECTIONNÉ", "ARCHIVO SELECCIONADO"}),
+            juce::dontSendNotification);
+        loadSelectedA.setButtonText(localized(
+            {"LOAD A", "CARREGAR A", "CHARGER A", "CARGAR A"}));
+        loadSelectedB.setButtonText(localized(
+            {"LOAD B", "CARREGAR B", "CHARGER B", "CARGAR B"}));
+        previewSelected.setButtonText(localized(
+            {"PREVIEW", "PRÉ-ESCUTA", "PRÉ-ÉCOUTE", "PREESCUCHA"}));
+        stopPreview.setButtonText("STOP");
+        chooseLibraryFolder.setButtonText(localized(
+            {"CHOOSE FOLDER...", "ESCOLHER PASTA...", "CHOISIR DOSSIER...", "ELEGIR CARPETA..."}));
+        copyLog.setButtonText(localized(
+            {"COPY", "COPIAR", "COPIER", "COPIAR"}));
+        clearLog.setButtonText(localized(
+            {"CLEAR", "LIMPAR", "EFFACER", "LIMPIAR"}));
     }
 
     void showDefaultLearnText()
@@ -4509,6 +4783,7 @@ private:
         registerLearn(openProject, "openproject");
         registerLearn(saveProject, "saveproject");
         registerLearn(savePortable, "saveportable");
+        registerLearn(legacyIo, "legacyio");
         registerLearn(play, "play");
         registerLearn(stop, "stop");
         registerLearn(resetTransport, "reset");
@@ -4658,6 +4933,7 @@ private:
                  &lockPitch, &lockGap, &lockMix, &lockVoices})
             registerLearn(*toggle, "motif");
         registerLearn(mixerHeaderLabel, "mixer");
+        registerLearn(mixerAdvanced, "mixer");
         registerLearn(mixerLevelLabel, "mixerlevel");
         registerLearn(mixerPanLabel, "mixerpan");
         registerLearn(mixerWidthLabel, "mixerwidth");
@@ -4841,6 +5117,10 @@ private:
                                + juce::String(exception.what()));
                 }
             }
+            const juce::File savedRecordingDirectory(
+                settings->getValue("recordingDirectory"));
+            if (savedRecordingDirectory.isDirectory())
+                recordingDirectory = savedRecordingDirectory;
             if (settings->getBoolValue(
                     "recordingMetadataPresetInitialized", false))
             {
@@ -4894,6 +5174,16 @@ private:
         static_cast<void>(settings->saveIfNeeded());
     }
 
+    void saveRecordingDirectory()
+    {
+        auto* settings = applicationProperties.getUserSettings();
+        if (settings == nullptr || !recordingDirectory.isDirectory())
+            return;
+        settings->setValue(
+            "recordingDirectory", recordingDirectory.getFullPathName());
+        static_cast<void>(settings->saveIfNeeded());
+    }
+
     void persistAlbumProject(navalha::AlbumProject candidate)
     {
         navalha::normalizeAlbumProject(candidate);
@@ -4918,8 +5208,122 @@ private:
             settings->setValue("outputTrimDb", outputTrim.getValue());
             settings->setValue(
                 "outputMuted", outputMute.getToggleState());
+            settings->setValue("mixerAdvanced", mixerAdvancedVisible);
             static_cast<void>(settings->saveIfNeeded());
         }
+    }
+
+    void updateMixerMode()
+    {
+        // Workspace tabs navigate the canvas but never hide a live control.
+        // This keeps the complete instrument discoverable on a single screen.
+        const auto mixerVisible = true;
+        mixerAdvanced.setToggleState(
+            mixerAdvancedVisible, juce::dontSendNotification);
+        mixerHeaderLabel.setVisible(mixerVisible);
+        mixerAdvanced.setVisible(mixerVisible);
+        mixerLevelLabel.setVisible(mixerVisible);
+        mixerBalanceLabel.setVisible(mixerVisible);
+        masterLabel.setVisible(mixerVisible);
+        master.setVisible(mixerVisible);
+        mixerBalance.setVisible(mixerVisible);
+        for (std::size_t source = 0; source < mixerLevels.size(); ++source)
+        {
+            mixerSourceLabels[source].setVisible(mixerVisible);
+            mixerLevels[source].setVisible(mixerVisible);
+            mixerMutes[source].setVisible(mixerVisible);
+            mixerSolos[source].setVisible(mixerVisible);
+        }
+        for (std::size_t source = 0; source < mixerLevels.size(); ++source)
+        {
+            mixerPans[source].setVisible(mixerVisible && mixerAdvancedVisible);
+            mixerWidths[source].setVisible(mixerVisible && mixerAdvancedVisible);
+        }
+        mixerPanLabel.setVisible(mixerVisible && mixerAdvancedVisible);
+        mixerWidthLabel.setVisible(mixerVisible && mixerAdvancedVisible);
+        outputTrimLabel.setVisible(mixerVisible && mixerAdvancedVisible);
+        outputTrim.setVisible(mixerVisible && mixerAdvancedVisible);
+        outputMute.setVisible(mixerVisible && mixerAdvancedVisible);
+        resized();
+        repaint();
+    }
+
+    void applyWorkspaceVisibility()
+    {
+        const auto show = [] (bool visible,
+                              std::initializer_list<juce::Component*> components)
+        {
+            for (auto* component : components)
+                component->setVisible(visible);
+        };
+        // EDIT, PLAY, COMPOSE and MIX are navigation shortcuts, not modal
+        // workspaces. All controls remain reachable after every selection.
+        const auto editing = true;
+        const auto playing = true;
+        const auto composing = true;
+
+        show(editing, {
+            &waveform, &waveEditLabel, &selectRegionMode, &editSliceMode,
+            &bladeMode, &wholeRegion, &undoBlade, &divideRegionLabel,
+            &sliceEditorLabel, &sliceSource, &sliceIndex, &sliceStart,
+            &sliceEnd, &setSlice, &playSlice});
+        for (auto& button : divideRegionButtons)
+            button.setVisible(editing);
+
+        show(playing, {
+            &tempoLabel, &tempo, &divisionLabel, &division, &patternLabel,
+            &pattern, &timingLabel, &timing, &jitterLabel, &jitterControl,
+            &timingSeedLabel, &timingSeedEditor, &applyTimingSeed,
+            &pitchLabel, &pitchSemitones, &pitchMixLabel, &pitchMix,
+            &patternCellsLabel, &orderLabel, &gestureLabel, &gestureStep,
+            &memoryToggle, &mutationAmount, &erosionAmount,
+            &deconstructAmount, &commitTransform, &restoreTransform,
+            &stutter, &burst, &micro, &reverseSlice});
+        for (auto& cell : patternCells)
+            cell.setVisible(playing);
+        for (auto* button : {&randomA, &randomB, &randomAB, &interleave,
+                             &forwardOrder, &reverseOrder, &zeroOrder,
+                             &gapOrder})
+            button->setVisible(playing);
+
+        show(composing, {
+            &formLabel, &formScene, &formEnable, &formHold, &formNext,
+            &formReset, &formBars, &formEnergy, &formVariation,
+            &formTransition, &formBankA, &formBankB, &formName, &formDensity,
+            &formTension, &formStability, &formContinuity, &formContrast,
+            &formStereoMotion, &formLock, &formAdd, &formDuplicate,
+            &formDelete, &formMoveUp, &formMoveDown, &formUndo, &formRedo,
+            &formCaptureA, &formCaptureB, &traceLabel, &traceRecord,
+            &traceLoop, &traceClear, &traceInfo, &tracePad, &assistedLabel,
+            &assistedEnable, &assistedRepeat, &assistedSource, &assistedOrder,
+            &assistedRegion, &assistedCuts, &assistedMix, &assistedTransform,
+            &assistedGaps, &assistedPitch, &assistedFragments, &assistedMinBpm,
+            &assistedMaxBpm, &assistedVariation, &assistedSeed,
+            &assistedApplySeed, &assistedRewind, &assistedNext, &assistedKeep,
+            &assistedRestore, &motifLabel, &motifName, &motifCapture,
+            &motifRecall, &motifVary, &motifDelete, &motifInfo,
+            &voicesHeaderLabel, &voiceAdvancedLabel, &voiceEditor,
+            &voicePatternLength, &voiceFocusStart, &voiceFocusEnd, &voiceAttack,
+            &voiceRelease, &voicePatternLabel});
+        for (auto& slot : motifSlotButtons)
+            slot.setVisible(composing);
+        for (auto* lock : {&lockSource, &lockCuts, &lockPattern, &lockTransform,
+                           &lockPitch, &lockGap, &lockMix, &lockVoices})
+            lock->setVisible(composing);
+        for (std::size_t voice = 0; voice < voiceEnabled.size(); ++voice)
+        {
+            voiceLabels[voice].setVisible(composing);
+            voiceEnabled[voice].setVisible(composing);
+            voiceSources[voice].setVisible(composing);
+            voiceDivisions[voice].setVisible(composing);
+            voicePitches[voice].setVisible(composing);
+            voiceLevels[voice].setVisible(composing);
+            voicePans[voice].setVisible(composing);
+        }
+        for (auto& cell : voicePatternCells)
+            cell.setVisible(composing);
+
+        updateMixerMode();
     }
 
     void refreshAudioConnectionStatus()
@@ -5307,8 +5711,11 @@ private:
         const auto heritageEnabled = pitchMix.getValue() > 0.0001;
         pitchBypass.setToggleState(
             heritageEnabled, juce::dontSendNotification);
-        pitchBypass.setButtonText(
-            heritageEnabled ? "HERITAGE ON" : "HERITAGE OFF");
+        pitchBypass.setButtonText(navalha::ui::text(
+            heritageEnabled
+                ? navalha::ui::LocalizedText {"HERITAGE ON", "HERITAGE LIGADO", "HERITAGE ACTIF", "HERITAGE ACTIVO"}
+                : navalha::ui::LocalizedText {"HERITAGE OFF", "HERITAGE DESLIGADO", "HERITAGE DÉSACTIVÉ", "HERITAGE DESACTIVADO"},
+            uiLanguage));
         pitchZero.setToggleState(
             std::lround(pitchSemitones.getValue()) == 0,
             juce::dontSendNotification);
@@ -5337,11 +5744,18 @@ private:
 
     void syncTraceControls()
     {
-        traceRecord.setButtonText(
-            traceRecording ? "STOP TRACE"
-                : traceArmed ? "TRACE ARMED" : "RECORD TRACE");
-        traceLoop.setButtonText(
-            traceLooping ? "STOP LOOP" : "TRACE LOOP");
+        traceRecord.setButtonText(navalha::ui::text(
+            traceRecording
+                ? navalha::ui::LocalizedText {"STOP TRACE", "PARAR TRAÇO", "ARRÊTER TRACE", "DETENER TRAZA"}
+                : traceArmed
+                    ? navalha::ui::LocalizedText {"TRACE ARMED", "TRAÇO ARMADO", "TRACE ARMÉE", "TRAZA ARMADA"}
+                    : navalha::ui::LocalizedText {"RECORD TRACE", "GRAVAR TRAÇO", "ENREGISTRER TRACE", "GRABAR TRAZA"},
+            uiLanguage));
+        traceLoop.setButtonText(navalha::ui::text(
+            traceLooping
+                ? navalha::ui::LocalizedText {"STOP LOOP", "PARAR LOOP", "ARRÊTER BOUCLE", "DETENER BUCLE"}
+                : navalha::ui::LocalizedText {"TRACE LOOP", "LOOP DE TRAÇO", "BOUCLE DE TRACE", "BUCLE DE TRAZA"},
+            uiLanguage));
         traceInfo.setText(
             juce::String(uiControlTrace.size()) + " pts | "
                 + juce::String(uiControlTrace.durationMs() / 1000.0, 1)
@@ -5858,8 +6272,11 @@ private:
         const auto patternIndex = selectedPatternIndex();
         const auto step = static_cast<std::size_t>(
             std::max(0, gestureStep.getSelectedItemIndex()));
-        memoryToggle.setButtonText(
-            uiPatternMemory[patternIndex][step] ? "MEMORY *" : "MEMORY");
+        memoryToggle.setButtonText(navalha::ui::text(
+            uiPatternMemory[patternIndex][step]
+                ? navalha::ui::LocalizedText {"MEMORY *", "MEMÓRIA *", "MÉMOIRE *", "MEMORIA *"}
+                : navalha::ui::LocalizedText {"MEMORY", "MEMÓRIA", "MÉMOIRE", "MEMORIA"},
+            uiLanguage));
     }
 
     void syncGestureControls()
@@ -6030,9 +6447,21 @@ private:
         formContrast.setValue(scene.contrast, juce::dontSendNotification);
         formStereoMotion.setValue(
             scene.stereoMotion, juce::dontSendNotification);
-        formLock.setButtonText(scene.locked ? "UNLOCK" : "LOCK");
-        formEnable.setButtonText(form.enabled ? "FORM ON" : "ARM FORM");
-        formHold.setButtonText(form.hold ? "RELEASE" : "HOLD");
+        formLock.setButtonText(navalha::ui::text(
+            scene.locked
+                ? navalha::ui::LocalizedText {"UNLOCK", "DESBLOQUEAR", "DÉVERROUILLER", "DESBLOQUEAR"}
+                : navalha::ui::LocalizedText {"LOCK", "BLOQUEAR", "VERROUILLER", "BLOQUEAR"},
+            uiLanguage));
+        formEnable.setButtonText(navalha::ui::text(
+            form.enabled
+                ? navalha::ui::LocalizedText {"FORM ON", "FORMA LIGADA", "FORME ACTIVE", "FORMA ACTIVA"}
+                : navalha::ui::LocalizedText {"ARM FORM", "ARMAR FORMA", "ARMER FORME", "ARMAR FORMA"},
+            uiLanguage));
+        formHold.setButtonText(navalha::ui::text(
+            form.hold
+                ? navalha::ui::LocalizedText {"RELEASE", "LIBERAR", "RELÂCHER", "LIBERAR"}
+                : navalha::ui::LocalizedText {"HOLD", "SEGURAR", "MAINTENIR", "MANTENER"},
+            uiLanguage));
         formHold.setEnabled(form.enabled);
         formUndo.setEnabled(uiFormDirector.canUndo());
         formRedo.setEnabled(uiFormDirector.canRedo());
@@ -6748,6 +7177,8 @@ private:
         }
         project.motifSlots = uiMotifSlots;
         project.selectedMotifSlot = selectedMotifSlot;
+        project.hasAlbumProject = true;
+        project.albumProject = albumProjectDraft;
         const auto projectDirectory = projectFile.getParentDirectory();
         for (std::size_t source = 0; source < sourceFiles.size(); ++source)
         {
@@ -6915,6 +7346,233 @@ private:
             });
     }
 
+    void showLegacyMenu()
+    {
+        juce::PopupMenu menu;
+        menu.addItem(1, navalha::ui::text(
+            {"IMPORT .NVL / .PTN", "IMPORTAR .NVL / .PTN",
+             "IMPORTER .NVL / .PTN", "IMPORTAR .NVL / .PTN"}, uiLanguage));
+        menu.addSeparator();
+        menu.addItem(2, navalha::ui::text(
+            {"EXPORT .NVL", "EXPORTAR .NVL", "EXPORTER .NVL", "EXPORTAR .NVL"},
+            uiLanguage));
+        menu.addItem(3, navalha::ui::text(
+            {"EXPORT .PTN", "EXPORTAR .PTN", "EXPORTER .PTN", "EXPORTAR .PTN"},
+            uiLanguage));
+        menu.showMenuAsync(
+            juce::PopupMenu::Options().withTargetComponent(&legacyIo),
+            [this] (int choice)
+            {
+                if (choice == 1) chooseLegacyToImport();
+                else if (choice == 2) chooseLegacyNvlToSave();
+                else if (choice == 3) chooseLegacyPtnToSave();
+            });
+    }
+
+    void chooseLegacyToImport()
+    {
+        fileChooser = std::make_unique<juce::FileChooser>(
+            navalha::ui::text(
+                {"Import Legacy Navalha Files", "Importar arquivos legados Navalha",
+                 "Importer des fichiers historiques Navalha", "Importar archivos legados Navalha"},
+                uiLanguage),
+            juce::File {}, "*.nvl;*.ptn");
+        fileChooser->launchAsync(
+            juce::FileBrowserComponent::openMode
+                | juce::FileBrowserComponent::canSelectFiles
+                | juce::FileBrowserComponent::canSelectMultipleItems,
+            [this] (const juce::FileChooser& chooser)
+            {
+                const auto files = chooser.getResults();
+                juce::File nvl;
+                juce::File ptn;
+                for (const auto& file : files)
+                {
+                    if (file.hasFileExtension("nvl")) nvl = file;
+                    else if (file.hasFileExtension("ptn")) ptn = file;
+                }
+                try
+                {
+                    if (nvl == juce::File {} && ptn == juce::File {})
+                        throw std::invalid_argument(navalha::ui::text(
+                            {"Select a .nvl or .ptn file",
+                             "Selecione um arquivo .nvl ou .ptn",
+                             "Sélectionnez un fichier .nvl ou .ptn",
+                             "Seleccione un archivo .nvl o .ptn"},
+                            uiLanguage).toStdString());
+                    importLegacyFiles(nvl, ptn);
+                }
+                catch (const std::exception& exception)
+                {
+                    showStatus(navalha::ui::text(
+                        {"LEGACY IMPORT FAILED | ", "IMPORTAÇÃO LEGADA FALHOU | ",
+                         "IMPORT HISTORIQUE ÉCHOUÉ | ", "IMPORTACIÓN LEGADA FALLÓ | "},
+                        uiLanguage) + juce::String(exception.what()));
+                }
+                fileChooser.reset();
+            });
+    }
+
+    void importLegacyFiles(const juce::File& nvl, const juce::File& ptn)
+    {
+        const auto importedNvl = nvl == juce::File {}
+            ? std::optional<navalha::LegacyNvl> {}
+            : std::optional<navalha::LegacyNvl> {navalha::parseLegacyNvl(
+                nvl.loadFileAsString().toStdString(), nvl.getFileName().toStdString())};
+        const auto importedPtn = ptn == juce::File {}
+            ? std::optional<navalha::LegacyPatterns> {}
+            : std::optional<navalha::LegacyPatterns> {navalha::parseLegacyPatterns(
+                ptn.loadFileAsString().toStdString(), ptn.getFileName().toStdString())};
+
+        if (importedNvl && importedNvl->operationalCount == 0)
+            throw std::invalid_argument(navalha::ui::text(
+                {"The .nvl file has no operational slices",
+                 "O arquivo .nvl não tem slices operacionais",
+                 "Le fichier .nvl ne contient aucune slice opérationnelle",
+                 "El archivo .nvl no tiene slices operativos"}, uiLanguage).toStdString());
+        if (importedNvl && importedNvl->operationalCount > navalha::maxSlices)
+            throw std::invalid_argument(navalha::ui::text(
+                {"The .nvl file exceeds Navalha 2's 128-slice limit",
+                 "O arquivo .nvl excede o limite de 128 slices do Navalha 2",
+                 "Le fichier .nvl dépasse la limite de 128 slices de Navalha 2",
+                 "El archivo .nvl supera el límite de 128 slices de Navalha 2"},
+                uiLanguage).toStdString());
+
+        navalha::SliceBank importedSlices;
+        if (importedNvl)
+        {
+            importedSlices.divideRegion(0.0, 1.0, importedNvl->operationalCount);
+            for (std::size_t index = 0; index < importedNvl->operationalCount; ++index)
+            {
+                const auto slice = importedNvl->storedSlices[index];
+                if (!slice.isValid())
+                    throw std::invalid_argument(navalha::ui::text(
+                        {"Invalid slice ", "Slice inválido ", "Slice invalide ", "Slice inválido "},
+                        uiLanguage).toStdString() + std::to_string(index) + " .nvl");
+                importedSlices.setSlice(index, slice);
+            }
+        }
+
+        recorder.stop();
+        stopAudioAndSynchronize();
+        if (importedNvl)
+        {
+            session.sources[0].sliceBank = importedSlices;
+            session.formSliceBanks[0].set(
+                navalha::SliceBankProfile::working, importedSlices);
+            uiSliceBanks[0] = importedSlices;
+            uiNamedSliceBanks[0].set(
+                navalha::SliceBankProfile::working, importedSlices);
+            legacySampleReference = importedNvl->sampleReference;
+            legacyPatternReference = importedNvl->patternReference;
+        }
+        if (importedPtn)
+        {
+            for (std::size_t row = 0; row < navalha::patternCount; ++row)
+                session.patterns.setPattern(row, importedPtn->rows[row]);
+            uiPatterns = session.patterns;
+        }
+        syncControlsFromSession();
+        setAudioChannels(0, 2);
+
+        juce::String statusText = navalha::ui::text(
+            {"LEGACY IMPORTED", "LEGADO IMPORTADO", "HISTORIQUE IMPORTÉ", "LEGADO IMPORTADO"},
+            uiLanguage);
+        if (importedNvl)
+            statusText += " | " + juce::String(importedNvl->operationalCount)
+                + navalha::ui::text(
+                    {" SLICES", " SLICES", " SLICES", " SLICES"}, uiLanguage);
+        if (importedPtn)
+            statusText += navalha::ui::text(
+                {" | PATTERNS", " | PADRÕES", " | PATTERNS", " | PATRONES"}, uiLanguage);
+        if (importedNvl && !importedNvl->sampleReference.empty())
+            statusText += navalha::ui::text(
+                {" | LOAD SOURCE A MANUALLY", " | CARREGUE SOURCE A MANUALMENTE",
+                 " | CHARGEZ SOURCE A MANUELLEMENT", " | CARGUE SOURCE A MANUALMENTE"},
+                uiLanguage);
+        showStatus(statusText);
+    }
+
+    [[nodiscard]] std::string legacySampleName() const
+    {
+        if (sourceFiles[0].existsAsFile())
+            return sourceFiles[0].getFileName().toStdString();
+        return legacySampleReference;
+    }
+
+    void chooseLegacyNvlToSave()
+    {
+        fileChooser = std::make_unique<juce::FileChooser>(
+            navalha::ui::text(
+                {"Export Legacy .nvl", "Exportar .nvl legado",
+                 "Exporter .nvl historique", "Exportar .nvl legado"}, uiLanguage),
+            juce::File {}, "*.nvl");
+        fileChooser->launchAsync(
+            juce::FileBrowserComponent::saveMode
+                | juce::FileBrowserComponent::canSelectFiles
+                | juce::FileBrowserComponent::warnAboutOverwriting,
+            [this] (const juce::FileChooser& chooser)
+            {
+                auto file = chooser.getResult();
+                if (file != juce::File {})
+                {
+                    if (!file.hasFileExtension("nvl")) file = file.withFileExtension("nvl");
+                    stopAudioAndSynchronize();
+                    const auto patternName = legacyPatternReference.empty()
+                        ? "patterns.ptn" : legacyPatternReference;
+                    const auto saved = file.replaceWithText(juce::String::fromUTF8(
+                        navalha::encodeLegacyNvl(
+                            legacySampleName(), patternName, uiSliceBanks[0]).c_str()));
+                    setAudioChannels(0, 2);
+                    showStatus(saved
+                        ? navalha::ui::text(
+                              {"LEGACY .NVL EXPORTED | ", "LEGADO .NVL EXPORTADO | ",
+                               "HISTORIQUE .NVL EXPORTÉ | ", "LEGADO .NVL EXPORTADO | "},
+                              uiLanguage) + file.getFileName()
+                        : navalha::ui::text(
+                              {"LEGACY .NVL EXPORT FAILED", "EXPORTAÇÃO LEGADA .NVL FALHOU",
+                               "EXPORT .NVL HISTORIQUE ÉCHOUÉ", "EXPORTACIÓN LEGADA .NVL FALLÓ"},
+                              uiLanguage));
+                }
+                fileChooser.reset();
+            });
+    }
+
+    void chooseLegacyPtnToSave()
+    {
+        fileChooser = std::make_unique<juce::FileChooser>(
+            navalha::ui::text(
+                {"Export Legacy .ptn", "Exportar .ptn legado",
+                 "Exporter .ptn historique", "Exportar .ptn legado"}, uiLanguage),
+            juce::File {}, "*.ptn");
+        fileChooser->launchAsync(
+            juce::FileBrowserComponent::saveMode
+                | juce::FileBrowserComponent::canSelectFiles
+                | juce::FileBrowserComponent::warnAboutOverwriting,
+            [this] (const juce::FileChooser& chooser)
+            {
+                auto file = chooser.getResult();
+                if (file != juce::File {})
+                {
+                    if (!file.hasFileExtension("ptn")) file = file.withFileExtension("ptn");
+                    stopAudioAndSynchronize();
+                    const auto saved = file.replaceWithText(juce::String::fromUTF8(
+                        navalha::encodeLegacyPatterns(uiPatterns).c_str()));
+                    setAudioChannels(0, 2);
+                    showStatus(saved
+                        ? navalha::ui::text(
+                              {"LEGACY .PTN EXPORTED | ", "LEGADO .PTN EXPORTADO | ",
+                               "HISTORIQUE .PTN EXPORTÉ | ", "LEGADO .PTN EXPORTADO | "},
+                              uiLanguage) + file.getFileName()
+                        : navalha::ui::text(
+                              {"LEGACY .PTN EXPORT FAILED", "EXPORTAÇÃO LEGADA .PTN FALHOU",
+                               "EXPORT .PTN HISTORIQUE ÉCHOUÉ", "EXPORTACIÓN LEGADA .PTN FALLÓ"},
+                              uiLanguage));
+                }
+                fileChooser.reset();
+            });
+    }
+
     void openProjectFile(const juce::File& file)
     {
         juce::MemoryBlock bytes;
@@ -6954,6 +7612,8 @@ private:
             }
             uiMotifSlots = openedProject.motifSlots;
             selectedMotifSlot = openedProject.selectedMotifSlot;
+            if (openedProject.hasAlbumProject)
+                persistAlbumProject(openedProject.albumProject);
 
             for (std::size_t source = 0; source < sourceBuffers.size(); ++source)
                 engine.setSourceBuffer(source, sourceBuffers[source].get());
@@ -7100,7 +7760,11 @@ private:
             return;
         }
         fileChooser = std::make_unique<juce::FileChooser>(
-            "Record MASTER WAV", juce::File {}, "*.wav");
+            "Record MASTER WAV",
+            recordingDirectory.isDirectory()
+                ? recordingDirectory
+                : juce::File::getSpecialLocation(juce::File::userMusicDirectory),
+            "*.wav");
         fileChooser->launchAsync(
             juce::FileBrowserComponent::saveMode
                 | juce::FileBrowserComponent::canSelectFiles
@@ -7173,6 +7837,8 @@ private:
                     recorderObservedRunning = started;
                     if (started)
                     {
+                        recordingDirectory = file.getParentDirectory();
+                        saveRecordingDirectory();
                         activeRecordingFile = file;
                         activeRecordingCreatedAt = createdAt;
                         activeRecordingRate = rate;
@@ -7208,6 +7874,7 @@ private:
     navalha::RecordingWriterService recorder {engine};
     navalha::TakeCatalog takeCatalog;
     navalha::AlbumProject albumProjectDraft;
+    juce::File recordingDirectory;
     juce::File activeRecordingFile;
     juce::Time activeRecordingCreatedAt;
     std::uint32_t activeRecordingRate = 0;
@@ -7224,6 +7891,8 @@ private:
     std::array<juce::File, 2> sourceFiles;
     std::array<std::string, 2> sourceMediaTypes {
         "audio/wav", "audio/wav"};
+    std::string legacySampleReference;
+    std::string legacyPatternReference;
     std::unique_ptr<juce::FileChooser> fileChooser;
     juce::Label title;
     juce::Label status;
@@ -7260,6 +7929,7 @@ private:
     juce::Label assistedLabel;
     juce::Label motifLabel;
     juce::Label mixerHeaderLabel;
+    juce::TextButton mixerAdvanced;
     juce::Label mixerLevelLabel;
     juce::Label mixerPanLabel;
     juce::Label mixerWidthLabel;
@@ -7281,6 +7951,7 @@ private:
     juce::TextButton openProject;
     juce::TextButton saveProject;
     juce::TextButton savePortable;
+    juce::TextButton legacyIo;
     juce::TextButton record;
     juce::ToggleButton outputMute;
     juce::TextButton pitchBypass;
@@ -7430,6 +8101,8 @@ private:
     navalha::MotifLocks uiMotifLocks;
     std::uint32_t uiAssistedSeed = navalha::AssistedRng::defaultSeed;
     bool syncingAssistedControls = false;
+    bool mixerAdvancedVisible = false;
+    MainWorkspace activeWorkspace = MainWorkspace::all;
     std::array<juce::Slider, 2> mixerLevels;
     std::array<juce::Slider, 2> mixerPans;
     std::array<juce::Slider, 2> mixerWidths;
@@ -10486,14 +11159,10 @@ public:
             juce::Label::backgroundColourId, juce::Colour(Arcade::background));
         addAndMakeVisible(footer);
 
-        configureJump(edit, "EDIT / PREPARE", 0);
-        configureAction(play, "PLAY / PERFORM", [this]
-        {
-            if (mainContent != nullptr && openPerform)
-                openPerform(*mainContent, true);
-        });
-        configureJump(compose, "COMPOSE / FORM", 610);
-        configureJump(mix, "MIX / VOICES", 896);
+        configureWorkspace(edit, "EDIT / PREPARE", 0, MainWorkspace::edit);
+        configureWorkspace(play, "PLAY / PERFORM", 0, MainWorkspace::play);
+        configureWorkspace(compose, "COMPOSE / FORM", 610, MainWorkspace::compose);
+        configureWorkspace(mix, "MIX / VOICES", 0, MainWorkspace::mix);
         configureAction(productionWindow, "TAKES / MASTER", [this]
         {
             if (mainContent != nullptr && openProduction)
@@ -10532,6 +11201,7 @@ public:
                 tutorialWindow->setLanguage(language);
             if (appInfoWindow != nullptr)
                 appInfoWindow->setLanguage(language);
+            refreshNavigationLabels();
         };
         languagePicker.getProperties().set("learnKey", "language");
         addAndMakeVisible(languagePicker);
@@ -10580,7 +11250,8 @@ public:
         // A Desktop listener receives hover events from every JUCE window,
         // including detached PERFORM, TAKE, MASTER, TUTORIAL and ABOUT views.
         juce::Desktop::getInstance().addGlobalMouseListener(this);
-        edit.setToggleState(true, juce::dontSendNotification);
+        mainContent->setWorkspace(MainWorkspace::all);
+        refreshNavigationLabels();
         performWindow.setToggleState(
             dualMonitorRequested, juce::dontSendNotification);
 
@@ -10659,6 +11330,32 @@ public:
     }
 
 private:
+    void refreshNavigationLabels()
+    {
+        const auto language = mainContent == nullptr
+            ? navalha::ui::Language::english : mainContent->getUiLanguage();
+        const auto localized = [language] (navalha::ui::LocalizedText value)
+        {
+            return navalha::ui::text(value, language);
+        };
+        edit.setButtonText(localized(
+            {"EDIT / PREPARE", "EDITAR / PREPARAR", "ÉDITER / PRÉPARER", "EDITAR / PREPARAR"}));
+        play.setButtonText(localized(
+            {"PLAY / PERFORM", "TOCAR / PERFORMAR", "JOUER / PERFORMER", "TOCAR / INTERPRETAR"}));
+        compose.setButtonText(localized(
+            {"COMPOSE / FORM", "COMPOR / FORMA", "COMPOSER / FORME", "COMPONER / FORMA"}));
+        mix.setButtonText(localized(
+            {"MIX / VOICES", "MIX / VOZES", "MIX / VOIX", "MEZCLA / VOCES"}));
+        productionWindow.setButtonText(localized(
+            {"TAKES / MASTER", "TAKES / MASTER", "PRISES / MASTER", "TOMAS / MASTER"}));
+        performWindow.setButtonText(localized(
+            {"DUAL MONITOR", "DOIS MONITORES", "DOUBLE ÉCRAN", "DOBLE MONITOR"}));
+        tutorialButton.setButtonText(localized(
+            {"TUTORIAL", "TUTORIAL", "TUTORIEL", "TUTORIAL"}));
+        appInfoButton.setButtonText(localized(
+            {"ABOUT", "SOBRE", "À PROPOS", "ACERCA DE"}));
+    }
+
     void mouseEnter(const juce::MouseEvent& event) override
     {
         if (mainContent == nullptr || !mainContent->isLearningMode())
@@ -10676,19 +11373,31 @@ private:
         }
     }
 
-    void configureJump(juce::TextButton& button,
-                       const juce::String& text,
-                       int targetY)
+    void configureWorkspace(juce::TextButton& button,
+                            const juce::String& text,
+                            int targetY,
+                            MainWorkspace workspace)
     {
         button.setButtonText(text);
         button.setClickingTogglesState(false);
         auto* selected = &button;
-        button.onClick = [this, targetY, selected]
+        button.onClick = [this, targetY, selected, workspace]
         {
+            if (selected->getToggleState())
+            {
+                edit.setToggleState(false, juce::dontSendNotification);
+                play.setToggleState(false, juce::dontSendNotification);
+                compose.setToggleState(false, juce::dontSendNotification);
+                mix.setToggleState(false, juce::dontSendNotification);
+                mainContent->setWorkspace(MainWorkspace::all);
+                viewport.setViewPosition(0, 0);
+                return;
+            }
             edit.setToggleState(selected == &edit, juce::dontSendNotification);
             play.setToggleState(selected == &play, juce::dontSendNotification);
             compose.setToggleState(selected == &compose, juce::dontSendNotification);
             mix.setToggleState(selected == &mix, juce::dontSendNotification);
+            mainContent->setWorkspace(workspace);
             viewport.setViewPosition(0, targetY);
         };
         addAndMakeVisible(button);

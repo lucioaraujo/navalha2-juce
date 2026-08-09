@@ -8,6 +8,7 @@
 #include "core/FormDirector.h"
 #include "core/HeritagePitch.h"
 #include "core/Json.h"
+#include "core/LegacyFormat.h"
 #include "core/LookaheadLimiter.h"
 #include "core/MasteringAnalysis.h"
 #include "core/MasteringAlbum.h"
@@ -1545,6 +1546,29 @@ int main()
     savedMotif.jitter = 23.0;
     savedMotif.heritagePitchSemitones = 5;
     savedMotif.heritagePitchMode = 1.0;
+    savedProject.hasAlbumProject = true;
+    savedProject.albumProject.title = "Ruptures in water";
+    savedProject.albumProject.artist = "RASGO";
+    savedProject.albumProject.notes = "Editorial order travels with Project v2.";
+    navalha::AlbumProjectTrack savedAlbumTrack;
+    savedAlbumTrack.id = "album-track-1";
+    savedAlbumTrack.takeId = "take-1";
+    savedAlbumTrack.title = "Opening cut";
+    savedAlbumTrack.filename = "opening.wav";
+    savedAlbumTrack.status = "MASTER";
+    savedAlbumTrack.notes = "Keep the abrupt ending.";
+    savedAlbumTrack.durationSeconds = 12.5;
+    savedAlbumTrack.settings.durationSeconds = 12.5;
+    savedAlbumTrack.settings.trimDb = -1.5;
+    savedAlbumTrack.settings.gapAfterSeconds = 0.5;
+    savedAlbumTrack.settings.fadeInSeconds = 0.25;
+    savedAlbumTrack.settings.fadeOutSeconds = 0.1;
+    savedAlbumTrack.hasAnalysis = true;
+    savedAlbumTrack.review.status = "MASTER";
+    savedAlbumTrack.review.rating = 4;
+    savedAlbumTrack.review.notes = "ready";
+    savedAlbumTrack.recipeJson = "{\"format\":\"navalha-take-recipe\"}";
+    savedProject.albumProject.tracks.push_back(std::move(savedAlbumTrack));
 
     SessionModel restoredSession;
     restoreProjectState(savedProject, restoredSession);
@@ -1634,13 +1658,19 @@ int main()
                 && decodedProject.motifSlots[3].timingMode
                     == TimingMode::jitter
                 && decodedProject.motifSlots[3].heritagePitchSemitones == 5
+                && decodedProject.hasAlbumProject
+                && decodedProject.albumProject.title == "Ruptures in water"
+                && decodedProject.albumProject.tracks.size() == 1
+                && decodedProject.albumProject.tracks[0].takeId == "take-1"
+                && decodedProject.albumProject.tracks[0].settings.trimDb == -1.5
                 && decodedProject.assisted.minBpm == 72
                 && decodedProject.assisted.maxBpm == 144
                 && decodedProject.assisted.variation == 68,
             "Project v2 JSON must round-trip musical and deterministic state");
     require(projectJson.find("\"format\":\"navalha-project\"") != std::string::npos
                 && projectJson.find("\"version\":2") != std::string::npos
-                && projectJson.find("\"RUPTURE A\"") != std::string::npos,
+                && projectJson.find("\"RUPTURE A\"") != std::string::npos
+                && projectJson.find("\"Ruptures in water\"") != std::string::npos,
             "Project JSON must retain the v0.28.1 format/version contract");
 
     ProjectStateV1 legacyProject;
@@ -2083,15 +2113,69 @@ int main()
     }
     require(rejected, "Portable ZIP extraction must reject CRC-corrupted entries");
 
+    const auto legacyNvl = parseLegacyNvl(
+        "# historical Navalha preset\n"
+        "filename archive/source.wav;\n"
+        "pattern archive/patterns.ptn;\n"
+        "start 0 0;\nend 0 0.25;\n"
+        "start 1 0.25;\nend 1 0.5;\n"
+        "start 3 0;\nend 3 0;\n"
+        "unknown preserved value;\n",
+        "breakcore.nvl");
+    require(legacyNvl.name == "breakcore.nvl"
+                && legacyNvl.sampleReference == "archive/source.wav"
+                && legacyNvl.patternReference == "archive/patterns.ptn"
+                && legacyNvl.storedSlices.size() == 4
+                && legacyNvl.operationalCount == 2
+                && legacyNvl.incompleteIndices.size() == 1
+                && legacyNvl.incompleteIndices[0] == 2
+                && legacyNvl.unknownLines.size() == 1,
+            "Legacy NVL parser must preserve references, padded slices and diagnostics");
+
+    const auto legacyPatterns = parseLegacyPatterns(
+        "#matrix 16 4\n6 37 10 20;\n4 6 5 6 0 5 0 1\n",
+        "breakcore.ptn");
+    require(legacyPatterns.name == "breakcore.ptn"
+                && legacyPatterns.declaredRows == 16
+                && legacyPatterns.declaredColumns == 4
+                && legacyPatterns.sourceRows == 2
+                && legacyPatterns.rows[0][0] == 6
+                && legacyPatterns.rows[0][3] == 20
+                && legacyPatterns.rows[0][4] == 0
+                && legacyPatterns.rows[1][7] == 1
+                && legacyPatterns.warnings.size() == 3,
+            "Legacy PTN parser must clamp/pad rows and report matrix differences");
+    SliceBank legacyExportSlices;
+    legacyExportSlices.divideRegion(0.0, 1.0, 4);
+    PatternBank legacyExportPatterns;
+    legacyExportPatterns.setCell(0, 0, 6);
+    legacyExportPatterns.setCell(0, 1, 37);
+    const auto exportedNvl = encodeLegacyNvl(
+        "source.wav", "patterns.ptn", legacyExportSlices);
+    const auto exportedPatterns = encodeLegacyPatterns(legacyExportPatterns);
+    const auto reparsedNvl = parseLegacyNvl(exportedNvl);
+    const auto reparsedPatterns = parseLegacyPatterns(exportedPatterns);
+    require(reparsedNvl.storedSlices.size() == 4
+                && approximately(reparsedNvl.storedSlices[1].start, 0.25)
+                && reparsedPatterns.rows[0][0] == 6
+                && reparsedPatterns.rows[0][1] == 37,
+            "Legacy export must round-trip with the compatible parser");
+
     const auto navalhaPortable = createPortableProject(
         savedProject,
         {reinterpret_cast<const std::uint8_t*>(encodedBytes.data()), encodedBytes.size()});
     const auto openedPortable = openPortableProject(navalhaPortable);
     require(openedPortable.project.patterns.cell(3, 4) == 205
+                && openedPortable.project.hasAlbumProject
+                && openedPortable.project.albumProject.title
+                    == "Ruptures in water"
+                && openedPortable.project.albumProject.tracks.size() == 1
+                && openedPortable.project.albumProject.tracks[0].takeId
+                    == "take-1"
                 && openedPortable.sourceA != nullptr
                 && openedPortable.sourceA->size() == 2
                 && openedPortable.sourceB == nullptr,
-            "Navalha portable pack must restore project state and assigned source audio");
+            "Navalha portable pack must restore editorial state and assigned source audio");
 
     const auto unwantedFileArchive = encodePortableArchive({
         {"project.navalha", projectJsonBytes},

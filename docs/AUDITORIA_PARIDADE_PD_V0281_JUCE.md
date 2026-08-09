@@ -29,14 +29,13 @@ operação, mas não transforma esta auditoria em declaração de paridade total
 o tutorial nativo é uma síntese dos dez capítulos e a tradução integral de
 todos os rótulos do instrumento ainda não foi feita.
 
-Bloqueadores reais para declarar paridade funcional completa:
+O bloqueador restante para declarar substituição integral é a aceitação humana:
+áudio real, dois monitores, sessão prolongada e intercâmbio com arquivos legados
+reais. Não há item funcional desta matriz marcado como ausente.
 
-1. importação/exportação histórica `.nvl`/`.ptn`;
-2. validações humanas de áudio real, dois monitores e sessão prolongada.
-
-Contagem não ponderada da matriz nesta atualização: 40 áreas completas,
-completas técnicas ou implementadas no fluxo equivalente; 8 parciais; 3
-ausentes; e uma conveniência Web substituída deliberadamente por comportamento
+Contagem não ponderada da matriz nesta atualização: 45 áreas completas,
+completas técnicas ou implementadas no fluxo equivalente; 6 parciais; nenhuma
+ausente; e uma conveniência Web substituída deliberadamente por comportamento
 nativo. Os estados “completo técnico” continuam exigindo aceitação humana onde
 indicado e não autorizam declarar substituição integral do produto.
 
@@ -62,7 +61,7 @@ indicado e não autorizam declarar substituição integral do produto.
 | XY BPM × PITCH | Completo | main/PERFORM compartilham a mesma sessão |
 | Heritage Pitch | Completo técnico | ainda requer aprovação auditiva humana |
 | Source Mixer A/B | Completo | painel vertical sob ACTIVITY LOG; level, pan, width, mute, solo e balance |
-| Mixer BASIC/ADVANCED recolhível | Ausente | todos os controles continuam visíveis na main |
+| Mixer BASIC/ADVANCED recolhível | Completo | BASIC mostra level, mute/solo, balance e MASTER; ADVANCED revela pan, width e saída técnica; preferência local persistente |
 | AUTO MIX conservador | Completo no Assisted | não há botão BASIC separado como no Web |
 | Duas Virtual Voices | Completo | source, divisão, foco, pattern, pitch, envelope, level e pan |
 | FORM básico | Completo | arm, hold, next, reset, barras, energia e variação |
@@ -72,7 +71,7 @@ indicado e não autorizam declarar substituição integral do produto.
 | Motif locks | Completo | oito categorias persistidas e respeitadas pelo Assisted |
 | Oito slots de Motif Memory | Completo | snapshot nomeado, CAPTURE/RECALL/VARY/DELETE e Project/Portable v2 |
 | REC pós-MASTER 16/24/float | Completo técnico | writer assíncrono, publicação atômica, telemetria e auto-stop de 5 minutos; falta validação humana com sinal audível |
-| Pasta padrão de gravação persistente | Parcial | usuário escolhe o WAV ao iniciar cada REC |
+| Pasta padrão de gravação persistente | Completo técnico | último diretório de REC é persistido e reaberto como destino padrão; o nome do WAV continua uma escolha explícita por segurança |
 | Metadados de gravação/preset | Completo técnico | catálogo edita título/artista/projeto/ano/comentário; take selecionado pode virar preset persistente; escrita RIFF posterior é explícita, assíncrona e recuperável, com parcial validado e backup; falta aceitação humana entre programas/sistemas de arquivos |
 | TAKE Timeline | Completo técnico | novos WAVs entram automaticamente; `IMPORT WAV FOLDER` descobre gravações anteriores recursivamente, deduplica por caminho e lê dados técnicos/tags RIFF sem alterar o áudio; falta ensaio humano com acervo heterogêneo |
 | Review/status/rating/tags | Completo | estados EXPERIMENT…MASTER, rating 0–5, tags e notas persistem no catálogo privado |
@@ -86,15 +85,15 @@ indicado e não autorizam declarar substituição integral do produto.
 | Project v2 leve | Completo | referências seguras, estado e recarga |
 | Portable Project v2 | Completo técnico | `SAVE PORTABLE` cria o ZIP v2 pelo mesmo núcleo que `OPEN PROJECT` reabre; contratos cobrem estado, áudio SOURCE A/B, CRC, allowlist e caminhos seguros. Falta apenas a aceitação humana em outro computador/sistema de arquivos. |
 | Migração Project JSON v1 | Completo | fixtures e CTest |
-| Import/export `.nvl`/`.ptn` | Ausente | Project v1 JSON não substitui os formatos históricos |
-| STORE/EXPORT legado | Ausente | edição atual é imediata, mas não há compatibilidade documental |
+| Import/export `.nvl`/`.ptn` | Completo técnico | `LEGACY I/O` importa `.nvl` e/ou `.ptn`, valida fatias e limites, preserva referências e exporta os dois formatos; falta apenas intercâmbio humano com acervo histórico real |
+| STORE/EXPORT legado | Completo técnico | o menu `LEGACY I/O` exporta explicitamente `.nvl` e `.ptn`; a edição continua imediata no modelo nativo, sem depender do STORE implícito do Web |
 | Janela PERFORM com um motor | Completo | transporte, source, REC, macros, gestos, FORM, XY e estado compartilhado |
 | Pop-out de qualquer módulo | Parcial | PERFORM e MASTER têm janelas; módulos arbitrários não |
-| Workspaces PLAY/EDIT/COMPOSE | Parcial | navegação posiciona módulos; não isola completamente cada contexto |
+| Workspaces PLAY/EDIT/COMPOSE | Parcial | abas nativas navegam até edição, performance, composição e mix no mesmo motor, mas não ocultam controles: a decisão prioriza descoberta e acesso contínuo no desktop em vez do filtro estrito do Web |
 | Segundo monitor adaptativo | Parcial validado visualmente | distribuição automática sem rolagem em duas telas adequadas, janela PERFORM no monitor secundário, preferência persistente e fallback rolável; falta ensaio humano prolongado |
 | VIEW 100/115/130/145 do Web | Específico Web, não adotado | removido por decisão de UX: redimensionamento JUCE, DPI do sistema, layout dual e scrollbar substituem o zoom interno sem criar combinações ambíguas |
 | Tutorial, LEARN e ajuda contextual | Parcial | tutorial nativo com 10 capítulos e LEARN persistente por mouse/foco no painel fixo; cobertura JUCE é ampla, mas ainda não replica os 106 tópicos do Web |
-| Idiomas PT/EN/FR/ES | Parcial | seletor persistente; tutorial e LEARN têm quatro idiomas; tradução global de controles, mensagens, tooltips e revisão textual ainda pendentes |
+| Idiomas PT/EN/FR/ES | Parcial | seletor persistente; tutorial, LEARN, controles principais e o fluxo `LEGACY I/O` têm quatro idiomas; tradução global de todas as mensagens/tooltips e revisão textual ainda pendentes |
 | ABOUT | Completo de interface | janela Arcade nativa contém versão, referência, autoria, licenças e aviso de paridade parcial; diagnóstico permanece corretamente separado |
 
 ## Auditoria de layout e usabilidade
@@ -149,8 +148,8 @@ indicado e não autorizam declarar substituição integral do produto.
 - O XY continua grande o suficiente para gesto contínuo.
 - O conteúdo pesado da janela é pré-carregado sem criar uma janela visível;
   a primeira abertura medida ficou em aproximadamente 316 ms.
-- LEVEL/MUTE/SOLO permanecem decisões humanas; uma futura camada BASIC/ADVANCED
-  reduzirá a densidade da main.
+- LEVEL/MUTE/SOLO permanecem decisões humanas; a alternância BASIC/ADVANCED
+  mantém-nos imediatos e revela PAN/WIDTH/OUTPUT TRIM quando necessário.
 
 ### Auditoria de controles com dupla função
 
@@ -216,15 +215,13 @@ Mantidos separados por segurança ou por não representarem um estado binário:
 
 ## Ordem recomendada para concluir
 
-1. Workspaces reais e mixer BASIC/ADVANCED.
-2. Compatibilidade `.nvl`/`.ptn`.
-3. Completar tradução global e ampliar LEARN dos grupos nativos até a
+1. Completar tradução global e ampliar LEARN dos grupos nativos até a
    granularidade dos 106 tópicos Web quando houver controle equivalente.
-4. Aceitação auditiva com sinal real, incluindo MASTER A/B/matching,
+2. Aceitação auditiva com sinal real, incluindo MASTER A/B/matching,
    escrita/recuperação RIFF,
    auto-stop de 5 minutos, dois monitores e soak prolongado.
-5. Gerar `.deb` para validação interna; somente depois preparar publicação
-   multiplataforma.
+5. Instalar e usar o `.deb` interno em validação humana; somente depois
+   preparar publicação multiplataforma.
 
 Nenhum item marcado como ausente deve ser descrito como implementado em
 `PARIDADE_V0281.md` até existir no núcleo e estar acessível na interface.

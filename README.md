@@ -221,6 +221,17 @@ dois processos e os testes podem ser repetidos com:
 
 `NAVALHA_JOBS` permite alterar explicitamente o limite de paralelismo.
 
+### Pacote Debian compatível
+
+O pacote gerado localmente reflete a versão das bibliotecas da máquina de
+build. Para produzir o `.deb` interno mais compatível, abrir **Actions** no
+GitHub e executar o workflow **Package Debian (Ubuntu 22.04)**. Ele usa Ubuntu
+22.04, fixa JUCE 8.0.13, executa CTest e disponibiliza o artefacto `.deb` amd64
+para download. O mesmo workflow é disparado ao publicar uma tag `v*`.
+
+As instruções para a pessoa que irá instalar o artefacto estão em
+[`docs/INSTALACAO_DEB_INTERNA.md`](docs/INSTALACAO_DEB_INTERNA.md).
+
 ## Comparação de WAVs
 
 O build também gera `navalha_compare_wav`, usado para comparar uma renderização

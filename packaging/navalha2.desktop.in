@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Navalha 2
+Comment=Live sample slicing and performance instrument
+Exec=Navalha\ 2
+Icon=navalha2
+Categories=AudioVideo;Audio;Music;
+Terminal=false

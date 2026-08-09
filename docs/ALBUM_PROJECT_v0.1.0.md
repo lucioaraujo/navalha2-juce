@@ -24,9 +24,12 @@ duração original das faixas, sem incluir os gaps do master.
 
 ## Persistência e formato
 
-O rascunho persiste nas preferências privadas do aplicativo. A exportação usa
-`navalha-album-project` v1, compatível conceitualmente com a referência Web, e
-preserva:
+O rascunho persiste nas preferências privadas do aplicativo e, ao salvar um
+`Project v2` ou `Portable Project v2`, passa a viajar embutido no arquivo
+artístico. Ao abrir esse projeto, o álbum embutido substitui o rascunho local;
+projetos v2 antigos que não possuem esse campo preservam o rascunho local para
+continuar compatíveis. A exportação usa `navalha-album-project` v1, compatível
+conceitualmente com a referência Web, e preserva:
 
 - ordem e identidade do take;
 - título, nome de arquivo, duração e status;
@@ -53,7 +56,6 @@ não exige relocalizar gravações já existentes.
 
 ## Limitações conhecidas
 
-- o rascunho privado ainda não integra o arquivo artístico Project v2;
 - não há importação de um `navalha-album-project` exportado pela interface;
 - trims, gaps e fades usam os valores preservados pelo modelo, mas ainda não
   possuem edição manual por faixa no builder JUCE; o trim pode ser calculado

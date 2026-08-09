@@ -21,6 +21,11 @@ O protótipo JUCE não substitui o runtime atual até cumprir estes contratos.
 > de todos os rótulos e a granularidade completa das 106 notas LEARN do Web
 > continuam parciais.
 
+> Atualização de 09/08/2026: `LEGACY I/O` importa `.nvl` e/ou `.ptn`, valida o
+> conteúdo antes de alterar a sessão e exporta ambos os formatos. A camada tem
+> testes C++ de parse/round-trip; ainda requer intercâmbio humano com acervo
+> histórico real antes de declarar substituição integral.
+
 ## Estado do núcleo C++ (ainda sem aprovação auditiva)
 
 - implementado: bancos A/B fixos, divisão, edição de limites, BLADE e undo;

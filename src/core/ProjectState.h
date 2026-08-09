@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <string>
 
+#include "core/AlbumProject.h"
 #include "core/SessionModel.h"
 
 namespace navalha
@@ -69,6 +70,10 @@ struct ProjectStateV2
     MotifLocks motifLocks;
     std::array<MotifSnapshot, motifSlotCount> motifSlots;
     std::size_t selectedMotifSlot = 0;
+    // The album is editorial state, not realtime DSP state.  It travels with
+    // a Project v2 when present, while older projects deliberately omit it.
+    bool hasAlbumProject = false;
+    AlbumProject albumProject;
 };
 
 struct ProjectStateV1

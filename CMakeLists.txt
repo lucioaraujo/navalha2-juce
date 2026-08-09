@@ -22,6 +22,7 @@ add_library(navalha_core STATIC
     src/core/FormDirector.cpp
     src/core/HeritagePitch.cpp
     src/core/Json.cpp
+    src/core/LegacyFormat.cpp
     src/core/LookaheadLimiter.cpp
     src/core/MasteringAnalysis.cpp
     src/core/MasteringAlbum.cpp
@@ -170,4 +171,19 @@ if (NAVALHA_BUILD_JUCE_APP)
             "JUCE was not found. The dependency is intentionally not vendored. "
             "Set JUCE_DIR or CMAKE_PREFIX_PATH after choosing the JUCE licence.")
     endif()
+endif()
+
+if (UNIX AND NOT APPLE)
+    set(CPACK_GENERATOR "DEB")
+    set(CPACK_PACKAGE_NAME "navalha2")
+    set(CPACK_PACKAGE_VENDOR "Navalha 2")
+    set(CPACK_PACKAGE_CONTACT "Navalha 2")
+    set(CPACK_PACKAGE_DESCRIPTION_SUMMARY
+        "Navalha 2 — live sample slicing and performance instrument")
+    set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Navalha 2")
+    set(CPACK_DEBIAN_PACKAGE_SECTION "sound")
+    set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
+    set(CPACK_PACKAGE_FILE_NAME
+        "navalha2_${PROJECT_VERSION}_${CMAKE_SYSTEM_PROCESSOR}")
+    include(CPack)
 endif()

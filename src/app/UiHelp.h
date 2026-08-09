@@ -68,6 +68,8 @@ inline constexpr std::array learnEntries {
         {"Saves the current state and source references; it does not render audio.", "Salva o estado e as referências das fontes; não renderiza áudio.", "Enregistre l’état et les références des sources, sans rendu audio.", "Guarda el estado y las referencias de las fuentes; no renderiza audio."}},
     LearnEntry {"saveportable", {"SAVE PORTABLE", "SALVAR PORTÁTIL", "PROJET PORTABLE", "GUARDAR PORTÁTIL"},
         {"Creates a self-contained Project v2 ZIP with copies of SOURCE A and B.", "Cria um ZIP Project v2 autônomo com cópias de SOURCE A e B.", "Crée un ZIP Project v2 autonome avec des copies de SOURCE A et B.", "Crea un ZIP Project v2 autónomo con copias de SOURCE A y B."}},
+    LearnEntry {"legacyio", {"LEGACY I/O", "E/S LEGADA", "E/S HISTORIQUE", "E/S LEGADA"},
+        {"Imports or exports the historical .nvl and .ptn files. A legacy .nvl records only a sample name, so load SOURCE A manually after import.", "Importa ou exporta os arquivos históricos .nvl e .ptn. Um .nvl legado guarda apenas o nome do sample; carregue SOURCE A manualmente após importar.", "Importe ou exporte les fichiers historiques .nvl et .ptn. Un .nvl historique ne garde que le nom du sample : chargez SOURCE A manuellement après import.", "Importa o exporta los archivos históricos .nvl y .ptn. Un .nvl legado solo guarda el nombre del sample; cargue SOURCE A manualmente después de importar."}},
     LearnEntry {"play", {"PLAY", "PLAY", "PLAY", "PLAY"},
         {"Starts the current pattern and sequencer.", "Inicia o pattern e o sequenciador atuais.", "Démarre le pattern et le séquenceur courants.", "Inicia el patrón y el secuenciador actuales."}},
     LearnEntry {"stop", {"STOP", "STOP", "STOP", "STOP"},

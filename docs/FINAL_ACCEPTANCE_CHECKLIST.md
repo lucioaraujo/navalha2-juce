@@ -145,6 +145,6 @@ não substituir o runtime v0.28.1 enquanto alguma seção permanecer reprovada.
   arquivos como confirmação operacional; o round-trip automatizado do núcleo,
   incluindo fontes A/B, CRC e rejeição de caminhos inseguros, já está aprovado;
 - repetir a validação com áudio efetivamente audível no MASTER;
-- gerar um `.deb` para validação interna;
+- gerar e instalar um `.deb` para validação interna;
 - somente após a aceitação humana, preparar builds Windows/macOS/Linux e
   documentação de instalação.

@@ -38,6 +38,20 @@ target_compile_definitions(Navalha2Juce PRIVATE
     JUCE_USE_CURL=0
 )
 
+if (UNIX AND NOT APPLE)
+    configure_file(
+        "${CMAKE_SOURCE_DIR}/packaging/navalha2.desktop.in"
+        "${CMAKE_CURRENT_BINARY_DIR}/navalha2.desktop"
+        @ONLY)
+    install(TARGETS Navalha2Juce RUNTIME DESTINATION bin)
+    install(FILES
+        "${NAVALHA_PD_PATH}/app/assets/brand/navalha2-app-icon-128.png"
+        DESTINATION share/icons/hicolor/128x128/apps
+        RENAME navalha2.png)
+    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/navalha2.desktop"
+        DESTINATION share/applications)
+endif()
+
 if (NAVALHA_BUILD_TESTS AND UNIX AND NOT APPLE)
     add_test(
         NAME navalha_juce_headless_guard
