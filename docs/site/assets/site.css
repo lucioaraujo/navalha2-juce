@@ -77,7 +77,7 @@ h2 { font-size: clamp(2.2rem, 3.8vw, 4.2rem); margin-bottom: 26px; }
 h3 { font-size: .9rem; letter-spacing: .04em; text-transform: uppercase; }
 .large-copy { color: #c4cbca; font-size: clamp(1rem, 1.35vw, 1.28rem); max-width: 920px; }
 
-.hero { min-height: calc(100vh - 68px); grid-template-columns: minmax(0, 1.04fr) minmax(420px, .96fr); align-items: center; padding-block: clamp(60px, 8vw, 120px); }
+.hero { min-height: calc(100vh - 68px); grid-template-columns: minmax(0, 1.04fr) minmax(420px, .96fr); align-items: start; padding: clamp(34px, 4vw, 56px) 0 clamp(60px, 8vw, 120px); }
 .hero-copy { min-width: 0; }
 .hero-branding { display: flex; align-items: end; gap: clamp(12px, 2vw, 26px); margin-bottom: 32px; }
 .hero-wordmark { width: min(500px, 78%); margin: 0; }
@@ -234,7 +234,7 @@ h3 { font-size: .9rem; letter-spacing: .04em; text-transform: uppercase; }
   .wide-copy, .principles, .learn-section .section-copy, .steps, .learn-note { grid-column: 1; }
   .section-heading, .workspace-map, .interface-frame, .interface-screenshot, .tech-grid, .signal-chain, .evidence, .status-columns, .doc-grid { margin-left: 0; }
   .workflow-section > .section-label, .technology-section > .section-label, .status-section > .section-label, .documentation-section > .section-label, .interface-section > .section-label { position: static; }
-  .hero { min-height: auto; padding-top: 45px; }
+  .hero { min-height: auto; padding-top: 28px; }
   .hero-branding { margin-bottom: 24px; }
   .hero-wordmark { width: min(460px, 76%); }
   .hero-machine { min-height: 520px; padding: 12px; box-shadow: 10px 10px 0 rgba(213,31,44,.13); }
