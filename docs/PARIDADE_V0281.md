@@ -11,8 +11,9 @@ O protótipo JUCE não substitui o runtime atual até cumprir estes contratos.
 
 > Atualização JUCE v0.1.0: a primeira etapa da TAKE Timeline agora registra
 > novos WAVs finalizados, preserva review/metadados/recipe em catálogo privado
-> e oferece TAKE → SOURCE A/B. Descoberta de gravações anteriores, preset RIFF
-> e cursor exato do Assisted continuam pendentes.
+> e oferece TAKE → SOURCE A/B. A descoberta/importação de WAVs anteriores, o
+> preset das próximas gravações e a escrita RIFF posterior com backup também
+> estão implementados. O cursor exato do Assisted continua pendente.
 
 > Atualização de interface de 03/08/2026: `LANG`, `TUTORIAL`, `LEARN` e `ABOUT`
 > foram incorporados ao cabeçalho nativo; LEARN usa o painel fixo do
@@ -144,6 +145,8 @@ O protótipo JUCE não substitui o runtime atual até cumprir estes contratos.
   deduplicação por caminho, dados técnicos e leitura de tags RIFF disponíveis;
 - implementado: preset persistente de metadados derivado do take selecionado e
   aplicado exclusivamente a gravações futuras;
+- implementado: escrita posterior opcional de `RIFF LIST/INFO` a partir do
+  catálogo, com confirmação, parcial validado, backup e troca recuperável;
 - implementado: ALBUM PROJECT v1 persistente com deduplicação de takes, ordem,
   receipt/review, duração total, exportação e render direto pelo ALBUM MASTER;
 - implementado: decisões Assisted de source e seleção de pattern;
@@ -158,8 +161,8 @@ O protótipo JUCE não substitui o runtime atual até cumprir estes contratos.
 - implementado: catálogo TAKE v1 persistente, limitado e validado;
 - implementado: janela TAKE Timeline com status, rating, tags, notas e recipe;
 - implementado: retorno não destrutivo de TAKE para SOURCE A/B;
-- pendente: descoberta de gravações anteriores, preset/escrita RIFF e cursor
-  Assisted exato na recipe;
+- pendente: cursor Assisted exato na recipe e aceitação humana da escrita RIFF
+  com cópias de takes reais;
 - implementado: telemetria Assisted de source/pattern/mixer de volta à UI;
 - validado parcialmente: ensaio visual/interativo do shell em sessão gráfica,
   incluindo waveform A/B, edição por arraste, TRACE XY, SOURCE MIXER lateral,

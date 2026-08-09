@@ -29,16 +29,14 @@ operação, mas não transforma esta auditoria em declaração de paridade total
 o tutorial nativo é uma síntese dos dez capítulos e a tradução integral de
 todos os rótulos do instrumento ainda não foi feita.
 
-Bloqueadores reais para declarar paridade funcional completa, após a primeira
-etapa da TAKE Timeline em JUCE v0.1.0:
+Bloqueadores reais para declarar paridade funcional completa:
 
-1. escrita RIFF posterior e opcional dos metadados editados no catálogo;
-2. importação/exportação histórica `.nvl`/`.ptn`;
-3. preview/audição dentro de MASTER e matching relativo do fluxo v0.28;
-4. validações humanas de áudio real, dois monitores e sessão prolongada.
+1. importação/exportação histórica `.nvl`/`.ptn`;
+2. preview/audição dentro de MASTER e matching relativo do fluxo v0.28;
+3. validações humanas de áudio real, dois monitores e sessão prolongada.
 
-Contagem não ponderada da matriz nesta atualização: 37 áreas completas,
-completas técnicas ou implementadas no fluxo equivalente; 10 parciais; 4
+Contagem não ponderada da matriz nesta atualização: 38 áreas completas,
+completas técnicas ou implementadas no fluxo equivalente; 9 parciais; 4
 ausentes; e uma conveniência Web substituída deliberadamente por comportamento
 nativo. Os estados “completo técnico” continuam exigindo aceitação humana onde
 indicado e não autorizam declarar substituição integral do produto.
@@ -76,7 +74,7 @@ indicado e não autorizam declarar substituição integral do produto.
 | Oito slots de Motif Memory | Completo | snapshot nomeado, CAPTURE/RECALL/VARY/DELETE e Project/Portable v2 |
 | REC pós-MASTER 16/24/float | Completo técnico | writer assíncrono, publicação atômica, telemetria e auto-stop de 5 minutos; falta validação humana com sinal audível |
 | Pasta padrão de gravação persistente | Parcial | usuário escolhe o WAV ao iniciar cada REC |
-| Metadados de gravação/preset | Parcial | catálogo edita título/artista/projeto/ano/comentário; take selecionado pode virar preset persistente das próximas gravações; falta escrita RIFF posterior |
+| Metadados de gravação/preset | Completo técnico | catálogo edita título/artista/projeto/ano/comentário; take selecionado pode virar preset persistente; escrita RIFF posterior é explícita, assíncrona e recuperável, com parcial validado e backup; falta aceitação humana entre programas/sistemas de arquivos |
 | TAKE Timeline | Completo técnico | novos WAVs entram automaticamente; `IMPORT WAV FOLDER` descobre gravações anteriores recursivamente, deduplica por caminho e lê dados técnicos/tags RIFF sem alterar o áudio; falta ensaio humano com acervo heterogêneo |
 | Review/status/rating/tags | Completo | estados EXPERIMENT…MASTER, rating 0–5, tags e notas persistem no catálogo privado |
 | Recipe JSON por TAKE | Parcial | snapshot pré-REC exportável; cursor interno Assisted é declarado indisponível |
@@ -213,21 +211,20 @@ Mantidos separados por segurança ou por não representarem um estado binário:
   Lúcio Araújo (2026).
 - Toda janela interna usa o mesmo LookAndFeel: main, PERFORM, TAKE, MASTER,
   TUTORIAL, ABOUT e AUDIO SETUP. Avisos operacionais aparecem no painel de
-  status/log em vez de alertas genéricos. Seletores de arquivo e pasta são a
-  única exceção deliberada: continuam nativos do sistema por segurança,
-  acessibilidade e integração com permissões.
+  status/log em vez de alertas genéricos. Seletores de arquivo/pasta continuam
+  nativos do sistema, e a escrita RIFF usa confirmação modal deliberada porque
+  modifica um arquivo externo ao catálogo.
 
 ## Ordem recomendada para concluir
 
-1. Escrita RIFF posterior, explícita e recuperável, para metadados de catálogo.
-2. Workspaces reais e mixer BASIC/ADVANCED.
-3. Compatibilidade `.nvl`/`.ptn`.
-4. Preview MASTER; playhead temporal e pré-escuta da Library já foram transpostos.
-5. Completar tradução global e ampliar LEARN dos grupos nativos até a
+1. Workspaces reais e mixer BASIC/ADVANCED.
+2. Compatibilidade `.nvl`/`.ptn`.
+3. Preview MASTER; playhead temporal e pré-escuta da Library já foram transpostos.
+4. Completar tradução global e ampliar LEARN dos grupos nativos até a
    granularidade dos 106 tópicos Web quando houver controle equivalente.
-6. Aceitação auditiva com sinal real, incluindo o auto-stop de 5 minutos,
-   dois monitores e soak prolongado.
-7. Gerar `.deb` para validação interna; somente depois preparar publicação
+5. Aceitação auditiva com sinal real, incluindo escrita/recuperação RIFF,
+   auto-stop de 5 minutos, dois monitores e soak prolongado.
+6. Gerar `.deb` para validação interna; somente depois preparar publicação
    multiplataforma.
 
 Nenhum item marcado como ausente deve ser descrito como implementado em

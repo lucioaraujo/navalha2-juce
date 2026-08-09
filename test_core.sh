@@ -45,6 +45,7 @@ c++ -std=c++20 -Wall -Wextra -Wpedantic -Werror -pthread \
   "$SCRIPT_DIR/src/core/TruePeakDetector.cpp" \
   "$SCRIPT_DIR/src/core/WavStreamWriter.cpp" \
   "$SCRIPT_DIR/src/core/WavMemoryReader.cpp" \
+  "$SCRIPT_DIR/src/core/WavMetadataRewriter.cpp" \
   "$SCRIPT_DIR/src/core/WaveformPeaks.cpp" \
   "$SCRIPT_DIR/src/validation/TruePeakFixtures.cpp" \
   "$SCRIPT_DIR/tests/SessionModelTests.cpp" \

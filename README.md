@@ -94,6 +94,8 @@ O runtime atual continua em:
 - regressão dourada específica para detectar alterações na cadeia TRACK MASTER;
 - comparação objetiva WebAudio/C++ sobre 353.708 frames dentro de 0,25 dB;
 - metadados RIFF LIST/INFO para título, artista, projeto, ano e comentário;
+- escrita RIFF posterior opcional na TAKE Timeline, com confirmação, parcial
+  validado, backup por link inteligente/cópia e substituição recuperável;
 - RNG Mulberry32 do Assisted Performer idêntico ao JavaScript, com seed/cursor;
 - planejador Assisted por frase com tempo, transformações, pitch e fragmentos;
 - decisões Assisted de source, pattern, region, cuts e AUTO MIX;

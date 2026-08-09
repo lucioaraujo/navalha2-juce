@@ -24,6 +24,53 @@ void writeU32(std::ostream& stream, std::uint32_t value)
 }
 }
 
+void writeWavInfoListChunk(
+    std::ostream& stream, const WavMetadata& metadata)
+{
+    const auto hasMetadata = !metadata.title.empty()
+        || !metadata.artist.empty() || !metadata.project.empty()
+        || !metadata.year.empty() || !metadata.comment.empty();
+    if (!hasMetadata)
+        return;
+
+    const auto listStart = stream.tellp();
+    stream.write("LIST", 4);
+    writeU32(stream, 0);
+    stream.write("INFO", 4);
+    const auto writeTag = [&stream] (const char* id, const std::string& input)
+    {
+        if (input.empty())
+            return;
+        auto value = input.substr(0, 4095);
+        for (auto& character : value)
+            if (character == '\0')
+                character = ' ';
+        stream.write(id, 4);
+        const auto size = static_cast<std::uint32_t>(value.size() + 1);
+        writeU32(stream, size);
+        stream.write(value.data(), static_cast<std::streamsize>(value.size()));
+        stream.put('\0');
+        if ((size & 1U) != 0)
+            stream.put('\0');
+    };
+    writeTag("INAM", metadata.title);
+    writeTag("IART", metadata.artist);
+    writeTag("IPRD", metadata.project);
+    writeTag("ICRD", metadata.year);
+    writeTag("ICMT", metadata.comment);
+
+    const auto listEnd = stream.tellp();
+    if (listStart < 0 || listEnd < listStart)
+        throw std::runtime_error("Failed to write WAV metadata");
+    stream.seekp(listStart + std::streamoff(4));
+    writeU32(
+        stream,
+        static_cast<std::uint32_t>(listEnd - listStart - std::streamoff(8)));
+    stream.seekp(listEnd);
+    if (!stream)
+        throw std::runtime_error("Failed to write WAV metadata");
+}
+
 WavStreamWriter::WavStreamWriter(std::ostream& output,
                                  std::uint32_t sampleRate,
                                  WavSampleFormat format,
@@ -130,43 +177,7 @@ void WavStreamWriter::writeHeader()
 
 void WavStreamWriter::writeInfoList()
 {
-    const auto hasMetadata = !tags.title.empty() || !tags.artist.empty()
-        || !tags.project.empty() || !tags.year.empty() || !tags.comment.empty();
-    if (!hasMetadata)
-        return;
-
-    const auto listStart = stream.tellp();
-    stream.write("LIST", 4);
-    writeU32(stream, 0);
-    stream.write("INFO", 4);
-
-    const auto writeTag = [this] (const char* id, const std::string& input)
-    {
-        if (input.empty())
-            return;
-        auto value = input.substr(0, 4095);
-        for (auto& character : value)
-            if (character == '\0')
-                character = ' ';
-        stream.write(id, 4);
-        const auto size = static_cast<std::uint32_t>(value.size() + 1);
-        writeU32(stream, size);
-        stream.write(value.data(), static_cast<std::streamsize>(value.size()));
-        stream.put('\0');
-        if ((size & 1U) != 0)
-            stream.put('\0');
-    };
-
-    writeTag("INAM", tags.title);
-    writeTag("IART", tags.artist);
-    writeTag("IPRD", tags.project);
-    writeTag("ICRD", tags.year);
-    writeTag("ICMT", tags.comment);
-
-    const auto listEnd = stream.tellp();
-    stream.seekp(listStart + std::streamoff(4));
-    writeU32(stream, static_cast<std::uint32_t>(listEnd - listStart - std::streamoff(8)));
-    stream.seekp(listEnd);
+    writeWavInfoListChunk(stream, tags);
 }
 
 void WavStreamWriter::writePcm16(float sample)

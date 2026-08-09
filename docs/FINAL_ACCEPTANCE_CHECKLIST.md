@@ -70,6 +70,29 @@ Esta comparação comprova paridade histórica, não ceiling true peak, BS.1770,
 neutralidade de bypass ou qualidade do novo modo de master proposto na auditoria
 de saída.
 
+## Escrita RIFF posterior e recuperação
+
+Usar somente uma cópia descartável de um take conhecido no primeiro ensaio.
+
+1. Importar o WAV na TAKE Timeline e editar TITLE, ARTIST, PROJECT/ALBUM, YEAR
+   e COMMENT.
+2. Confirmar que `SAVE METADATA / REVIEW` não modifica o WAV.
+3. Acionar `WRITE RIFF TAGS + BACKUP`, ler a confirmação e concluir a ação.
+4. Verificar no log o tipo e o nome do backup, e confirmar que esse arquivo
+   existe ao lado do take.
+5. Fechar/reabrir o take no Navalha e em pelo menos outro leitor de tags.
+6. Ouvir original preservado e WAV reescrito em comparação A/B, sem ajustar
+   ganho, e confirmar duração, canais, sample rate e bit depth.
+7. Restaurar manualmente o backup em uma cópia de teste e confirmar que ele é
+   utilizável.
+8. Repetir uma vez em outro sistema de arquivos quando houver mídia adequada,
+   cobrindo tanto `SMART LINK` quanto `FILE COPY` se possível.
+
+Aprovar somente se as tags forem interoperáveis, o backup for recuperável e
+não houver mudança audível nem arquivo `.riff.partial` abandonado. Os contratos
+automatizados já comprovam igualdade exata dos chunks `data`, mas não substituem
+este teste de permissões, ferramentas externas e recuperação operacional.
+
 ## Shell, áudio real e dois monitores
 
 1. Abrir o standalone, selecionar dispositivo e carregar A/B.

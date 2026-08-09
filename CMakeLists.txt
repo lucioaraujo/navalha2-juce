@@ -45,6 +45,7 @@ add_library(navalha_core STATIC
     src/core/TruePeakDetector.cpp
     src/core/WavStreamWriter.cpp
     src/core/WavMemoryReader.cpp
+    src/core/WavMetadataRewriter.cpp
     src/core/WaveformPeaks.cpp
 )
 

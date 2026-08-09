@@ -3,7 +3,9 @@
 ## Escopo implementado
 
 A migração JUCE passa a registrar automaticamente cada WAV finalizado com
-sucesso em um catálogo local persistente. O áudio gravado permanece imutável.
+sucesso em um catálogo local persistente. Salvar ou revisar o catálogo não
+altera o áudio gravado; a escrita RIFF posterior é uma ação distinta e
+explicitamente confirmada.
 
 Cada entrada conserva:
 
@@ -34,6 +36,8 @@ O editor permite:
 - importar recursivamente uma pasta de WAVs anteriores, sem copiar ou mover os
   arquivos, deduplicando pelo caminho completo registrado;
 - atualizar metadados de catálogo e revisão;
+- escrever opcionalmente os campos de catálogo em `RIFF LIST/INFO`, após criar
+  e validar um parcial e preservar o WAV anterior em backup identificável;
 - exportar a recipe de um take como JSON;
 - usar o WAV como SOURCE A ou SOURCE B;
 - enviar o take diretamente ao TRACK MASTER, que o carrega e analisa sem
@@ -75,13 +79,17 @@ preservados. A ampliação dessa telemetria permanece uma tarefa futura.
 
 ## Limitações conhecidas
 
-- editar os campos da janela altera o catálogo privado, não os chunks RIFF INFO
-  do WAV;
+- `SAVE METADATA / REVIEW` altera apenas o catálogo; a ação separada
+  `WRITE RIFF TAGS + BACKUP` é necessária para modificar o WAV;
+- a escrita posterior aceita somente RIFF/WAVE clássico de até 4 GiB; não
+  reescreve RF64, Wave64, AIFF ou arquivos sem permissão;
 - a descoberta é explícita por `IMPORT WAV FOLDER`; não há varredura automática
   de toda a pasta Music ao iniciar o aplicativo.
 
 O fluxo editorial e seus limites estão documentados em
 [`ALBUM_PROJECT_v0.1.0.md`](ALBUM_PROJECT_v0.1.0.md).
+O contrato transacional da escrita posterior está em
+[`RIFF_METADATA_REWRITE_v0.1.0.md`](RIFF_METADATA_REWRITE_v0.1.0.md).
 
 ## Versionamento visual
 

@@ -36,6 +36,7 @@
 #include "core/SessionModel.h"
 #include "core/TakeCatalog.h"
 #include "core/WavMemoryReader.h"
+#include "core/WavMetadataRewriter.h"
 #include "core/WavStreamWriter.h"
 #include "core/WaveformPeaks.h"
 
@@ -138,8 +139,11 @@ DecodedSourceFile decodeSourceFile(const juce::File& file)
 
     juce::AudioFormatManager formats;
     formats.registerBasicFormats();
+    auto input = file.createInputStream();
+    if (input == nullptr)
+        throw std::invalid_argument("WAV could not be opened for validation");
     auto reader = std::unique_ptr<juce::AudioFormatReader>(
-        formats.createReaderFor(file));
+        formats.createReaderFor(std::move(input)));
     if (reader == nullptr || reader->lengthInSamples <= 0
         || reader->lengthInSamples
             > static_cast<juce::int64>(navalha::maxDecodedAudioFrames))
@@ -218,6 +222,134 @@ void publishMasterWav(const juce::File& outputFile,
             std::error_code ignored;
             std::filesystem::remove(partialPath, ignored);
         }
+        throw;
+    }
+}
+
+struct RiffMetadataFileResult
+{
+    juce::File backupFile;
+    navalha::WavMetadataRewriteReport report;
+    bool backupIsHardLink = false;
+};
+
+struct AudioFileLayout
+{
+    double sampleRate = 0.0;
+    juce::int64 frames = 0;
+    unsigned int channels = 0;
+    unsigned int bitsPerSample = 0;
+};
+
+std::filesystem::path nativeFilesystemPath(const juce::File& file)
+{
+#if JUCE_WINDOWS
+    return std::filesystem::path(file.getFullPathName().toStdWString());
+#else
+    return std::filesystem::path(file.getFullPathName().toStdString());
+#endif
+}
+
+AudioFileLayout inspectAudioFileLayout(const juce::File& file)
+{
+    juce::AudioFormatManager formats;
+    formats.registerBasicFormats();
+    auto reader = std::unique_ptr<juce::AudioFormatReader>(
+        formats.createReaderFor(file));
+    if (reader == nullptr || reader->sampleRate <= 0.0
+        || reader->lengthInSamples <= 0 || reader->numChannels == 0)
+        throw std::invalid_argument("Rewritten WAV failed structural validation");
+    return {
+        reader->sampleRate, reader->lengthInSamples,
+        reader->numChannels, reader->bitsPerSample};
+}
+
+RiffMetadataFileResult rewriteRiffMetadataFile(
+    const juce::File& source, navalha::WavMetadata metadata)
+{
+    if (!source.existsAsFile() || !source.hasFileExtension("wav;wave"))
+        throw std::invalid_argument("TAKE must be an existing WAV file");
+
+    navalha::normalizeWavMetadata(metadata);
+    const auto originalLayout = inspectAudioFileLayout(source);
+    const auto token = juce::Uuid().toString().substring(0, 12);
+    const auto partial = source.getSiblingFile(
+        "." + source.getFileName() + "." + token + ".riff.partial");
+    auto backup = source.getSiblingFile(
+        source.getFileNameWithoutExtension()
+        + "_before-riff-"
+        + juce::Time::getCurrentTime().formatted("%Y%m%d-%H%M%S")
+        + source.getFileExtension());
+    if (backup.exists())
+        backup = source.getSiblingFile(
+            backup.getFileNameWithoutExtension() + "-" + token
+            + source.getFileExtension());
+
+    bool partialCreated = false;
+    bool backupCreated = false;
+    bool replacementAttempted = false;
+    try
+    {
+        std::ifstream input(nativeFilesystemPath(source), std::ios::binary);
+        if (!input)
+            throw std::runtime_error("Unable to read WAV for RIFF metadata");
+        std::ofstream output(
+            nativeFilesystemPath(partial), std::ios::binary | std::ios::trunc);
+        partialCreated = partial.existsAsFile();
+        if (!output)
+            throw std::runtime_error("Unable to create RIFF metadata partial file");
+        auto report = navalha::rewriteWavInfoMetadata(
+            input, output, std::move(metadata));
+        output.close();
+        input.close();
+        if (!output || !partial.existsAsFile() || partial.getSize() <= 0)
+            throw std::runtime_error("Unable to finalize RIFF metadata partial file");
+
+        const auto rewrittenLayout = inspectAudioFileLayout(partial);
+        if (std::abs(
+                rewrittenLayout.sampleRate - originalLayout.sampleRate) > 0.001
+            || rewrittenLayout.frames != originalLayout.frames
+            || rewrittenLayout.channels != originalLayout.channels
+            || rewrittenLayout.bitsPerSample != originalLayout.bitsPerSample)
+            throw std::runtime_error(
+                "Rewritten WAV does not match the original audio layout");
+
+        std::error_code hardLinkError;
+        std::filesystem::create_hard_link(
+            nativeFilesystemPath(source), nativeFilesystemPath(backup),
+            hardLinkError);
+        const auto backupIsHardLink = !hardLinkError;
+        if (!backupIsHardLink)
+        {
+            constexpr juce::int64 safetyReserve = 64LL * 1024LL * 1024LL;
+            const auto available = source.getParentDirectory().getBytesFreeOnVolume();
+            if (available < source.getSize() + safetyReserve)
+                throw std::runtime_error(
+                    "Insufficient space for the verified RIFF backup");
+            if (!source.copyFileTo(backup))
+            {
+                backupCreated = backup.existsAsFile();
+                throw std::runtime_error("Unable to create RIFF metadata backup");
+            }
+        }
+        backupCreated = true;
+        if (!backup.existsAsFile() || backup.getSize() != source.getSize())
+            throw std::runtime_error("RIFF metadata backup failed validation");
+
+        replacementAttempted = true;
+        if (!partial.replaceFileIn(source))
+            throw std::runtime_error("Unable to replace WAV with verified partial file");
+        partialCreated = false;
+        return {backup, report, backupIsHardLink};
+    }
+    catch (...)
+    {
+        if (partialCreated)
+            static_cast<void>(partial.deleteFile());
+        if (backupCreated && !replacementAttempted)
+            static_cast<void>(backup.deleteFile());
+        else if (backupCreated && !source.existsAsFile())
+            static_cast<void>(backup.copyFileTo(source));
         throw;
     }
 }
@@ -3998,6 +4130,101 @@ public:
         }
     }
 
+    bool rewriteTakeRiffMetadata(
+        std::string_view id,
+        navalha::WavMetadata metadata,
+        std::function<void(bool, const juce::String&)> completion = {})
+    {
+        bool expected = false;
+        if (!metadataRewriteBusy.compare_exchange_strong(expected, true))
+        {
+            showStatus("RIFF METADATA | ANOTHER WRITE IS ACTIVE");
+            return false;
+        }
+
+        const auto* entry = takeCatalog.find(id);
+        if (entry == nullptr)
+        {
+            metadataRewriteBusy.store(false);
+            showStatus("RIFF METADATA | TAKE NOT FOUND");
+            return false;
+        }
+        const juce::File source(utf8(entry->audioPath));
+        if (!source.existsAsFile() || !source.hasFileExtension("wav;wave"))
+        {
+            metadataRewriteBusy.store(false);
+            showStatus("RIFF METADATA | WAV AUDIO NOT AVAILABLE");
+            return false;
+        }
+
+        navalha::normalizeWavMetadata(metadata);
+        const auto takeId = std::string(id);
+        showStatus("RIFF METADATA | VERIFYING PARTIAL + BACKUP...");
+        juce::Component::SafePointer<MainComponent> safe(this);
+        const auto launched = juce::Thread::launch(
+            [safe, takeId, source, metadata = std::move(metadata),
+             completion = std::move(completion)] () mutable
+            {
+                RiffMetadataFileResult result;
+                juce::String error;
+                bool succeeded = false;
+                const auto catalogMetadata = metadata;
+                try
+                {
+                    result = rewriteRiffMetadataFile(source, std::move(metadata));
+                    succeeded = true;
+                }
+                catch (const std::exception& exception)
+                {
+                    error = exception.what();
+                }
+                catch (...)
+                {
+                    error = "Unknown RIFF metadata write failure";
+                }
+
+                juce::MessageManager::callAsync(
+                    [safe, takeId, source, catalogMetadata, result, error, succeeded,
+                     completion = std::move(completion)] () mutable
+                    {
+                        if (safe == nullptr)
+                            return;
+                        safe->metadataRewriteBusy.store(false);
+                        if (!succeeded)
+                        {
+                            const auto detail = "FAILED | " + error;
+                            safe->showStatus("RIFF METADATA " + detail);
+                            if (completion)
+                                completion(false, detail);
+                            return;
+                        }
+
+                        if (const auto* current = safe->takeCatalog.find(takeId))
+                        {
+                            auto updated = *current;
+                            updated.metadata = catalogMetadata;
+                            safe->takeCatalog.upsert(std::move(updated));
+                            safe->saveTakeCatalog();
+                        }
+                        const auto backupKind = result.backupIsHardLink
+                            ? "SMART LINK" : "FILE COPY";
+                        const auto detail =
+                            juce::String("WRITTEN | BACKUP ") + backupKind + " | "
+                            + result.backupFile.getFileName();
+                        safe->showStatus("RIFF METADATA | " + detail);
+                        if (completion)
+                            completion(true, detail);
+                    });
+            });
+        if (!launched)
+        {
+            metadataRewriteBusy.store(false);
+            showStatus("RIFF METADATA | WORKER COULD NOT START");
+            return false;
+        }
+        return true;
+    }
+
     bool useTakeAsSource(std::string_view id, std::size_t sourceIndex)
     {
         const auto* entry = takeCatalog.find(id);
@@ -6869,6 +7096,7 @@ private:
         "Navalha 2 recording", "Navalha 2", "JUCE migration", "", ""};
     std::string activeRecordingRecipe;
     std::atomic<double> activeSampleRate {44100.0};
+    std::atomic<bool> metadataRewriteBusy {false};
     std::array<std::unique_ptr<navalha::StereoAudioBuffer>, 2> sourceBuffers;
     std::array<std::vector<std::uint8_t>, 2> sourceWavData;
     std::array<juce::File, 2> sourceFiles;
@@ -7239,6 +7467,10 @@ public:
                 static_cast<void>(main.useTakeAsSource(selectedId, 1));
         });
         configureButton(save, "SAVE METADATA / REVIEW", [this] { saveSelected(); });
+        configureButton(writeRiff, "WRITE RIFF TAGS + BACKUP", [this]
+        {
+            requestRiffMetadataWrite();
+        });
         configureButton(exportRecipe, "EXPORT RECIPE JSON", [this]
         {
             exportSelectedRecipe();
@@ -7277,14 +7509,15 @@ public:
         useA.getProperties().set("arcadeAccent", "play");
         useB.getProperties().set("arcadeAccent", "play");
         save.getProperties().set("arcadeAccent", "record");
+        writeRiff.getProperties().set("arcadeAccent", "record");
         sendToMaster.getProperties().set("arcadeAccent", "play");
         addToAlbum.getProperties().set("arcadeAccent", "play");
         sendToMaster.getProperties().set("learnKey", "masterwindow");
 
         note.setText(
-            "The recorded WAV remains unchanged. Review data and the performance "
-            "recipe are stored in Navalha's private TAKE catalog. The REC preset "
-            "is applied only to future recordings.",
+            "SAVE keeps review data in Navalha's private catalog. RIFF WRITE is "
+            "a separate, explicit action: it verifies a partial WAV and preserves "
+            "a timestamped backup. The REC preset affects only future recordings.",
             juce::dontSendNotification);
         note.setColour(
             juce::Label::textColourId, juce::Colour(Arcade::muted));
@@ -7363,6 +7596,7 @@ public:
         sendToMaster.setBounds(
             saveActions.removeFromLeft(saveActionWidth).reduced(2));
         addToAlbum.setBounds(saveActions.reduced(2));
+        writeRiff.setBounds(area.removeFromTop(42).reduced(2));
         auto presetActions = area.removeFromTop(42);
         setPreset.setBounds(presetActions.removeFromLeft(
             presetActions.getWidth() / 2).reduced(2));
@@ -7460,6 +7694,10 @@ private:
         sendToMaster.setEnabled(
             static_cast<bool>(sendToMasterAction)
             && juce::File(utf8(entry->audioPath)).existsAsFile());
+        const juce::File audioFile(utf8(entry->audioPath));
+        writeRiff.setEnabled(
+            audioFile.existsAsFile()
+            && audioFile.hasFileExtension("wav;wave"));
     }
 
     void refreshCatalog()
@@ -7520,6 +7758,55 @@ private:
         }
     }
 
+    void requestRiffMetadataWrite()
+    {
+        const auto* entry = main.take(selectedId);
+        if (entry == nullptr)
+            return;
+        const juce::File source(utf8(entry->audioPath));
+        if (!source.existsAsFile() || !source.hasFileExtension("wav;wave"))
+            return;
+
+        const auto id = selectedId;
+        juce::Component::SafePointer<TakeTimelineComponent> safe(this);
+        juce::AlertWindow::showAsync(
+            juce::MessageBoxOptions()
+                .withIconType(juce::MessageBoxIconType::WarningIcon)
+                .withTitle("WRITE RIFF METADATA?")
+                .withMessage(
+                    "This changes only the WAV LIST/INFO metadata, not the "
+                    "audio samples. Navalha will first build and validate a "
+                    "partial WAV, then preserve the original as a timestamped "
+                    "backup beside the TAKE.")
+                .withButton("WRITE + BACKUP")
+                .withButton("CANCEL")
+                .withAssociatedComponent(this),
+            [safe, id] (int result)
+            {
+                if (safe == nullptr || result != 1 || safe->selectedId != id)
+                    return;
+                safe->writeRiff.setButtonText("WRITING RIFF...");
+                safe->writeRiff.setEnabled(false);
+                const auto started = safe->main.rewriteTakeRiffMetadata(
+                    id, safe->editorMetadata(),
+                    [safe] (bool, const juce::String&)
+                    {
+                        if (safe == nullptr)
+                            return;
+                        safe->writeRiff.setButtonText(
+                            "WRITE RIFF TAGS + BACKUP");
+                        safe->selectedRowsChanged(
+                            safe->list.getSelectedRow());
+                    });
+                if (!started)
+                {
+                    safe->writeRiff.setButtonText(
+                        "WRITE RIFF TAGS + BACKUP");
+                    safe->selectedRowsChanged(safe->list.getSelectedRow());
+                }
+            });
+    }
+
     void exportSelectedRecipe()
     {
         const auto* entry = main.take(selectedId);
@@ -7571,10 +7858,10 @@ private:
 
     void setEditorEnabled(bool enabled)
     {
-        const std::array<juce::Component*, 16> components {
+        const std::array<juce::Component*, 17> components {
             &title, &artist, &project, &year, &comment, &status, &rating,
             &tags, &notes, &useA, &useB, &save, &exportRecipe,
-            &sendToMaster, &addToAlbum, &setPreset};
+            &sendToMaster, &addToAlbum, &setPreset, &writeRiff};
         for (auto* component : components)
             component->setEnabled(enabled);
     }
@@ -7638,6 +7925,7 @@ private:
     juce::TextButton useA;
     juce::TextButton useB;
     juce::TextButton save;
+    juce::TextButton writeRiff;
     juce::TextButton exportRecipe;
     juce::TextButton sendToMaster;
     juce::TextButton addToAlbum;

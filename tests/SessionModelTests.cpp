@@ -28,8 +28,9 @@
 #include "core/StereoMixer.h"
 #include "core/TakeCatalog.h"
 #include "core/TruePeakDetector.h"
-#include "core/WavStreamWriter.h"
 #include "core/WavMemoryReader.h"
+#include "core/WavMetadataRewriter.h"
+#include "core/WavStreamWriter.h"
 #include "core/WaveformPeaks.h"
 #include "validation/TruePeakFixtures.h"
 
@@ -88,6 +89,27 @@ std::uint32_t readU32(const std::string& data, std::size_t offset)
         | (static_cast<std::uint32_t>(static_cast<unsigned char>(data[offset + 1])) << 8U)
         | (static_cast<std::uint32_t>(static_cast<unsigned char>(data[offset + 2])) << 16U)
         | (static_cast<std::uint32_t>(static_cast<unsigned char>(data[offset + 3])) << 24U);
+}
+
+std::size_t findRiffChunk(const std::string& data, std::string_view id)
+{
+    if (data.size() < 12 || id.size() != 4)
+        return std::string::npos;
+    const auto declaredEnd = static_cast<std::uint64_t>(readU32(data, 4)) + 8U;
+    if (declaredEnd > data.size())
+        return std::string::npos;
+    auto offset = std::size_t {12};
+    while (offset + 8 <= declaredEnd)
+    {
+        const auto chunkBytes = static_cast<std::uint64_t>(readU32(data, offset + 4));
+        const auto paddedBytes = chunkBytes + (chunkBytes & 1U);
+        if (paddedBytes > declaredEnd - offset - 8U)
+            return std::string::npos;
+        if (data.compare(offset, 4, id) == 0)
+            return offset;
+        offset += static_cast<std::size_t>(8U + paddedBytes);
+    }
+    return std::string::npos;
 }
 
 std::int16_t readI16(const std::string& data, std::size_t offset)
@@ -1866,6 +1888,87 @@ int main()
         reinterpret_cast<const std::uint8_t*>(metadataBytes.data()), metadataBytes.size()});
     require(metadataDecoded->size() == 1,
             "WAV decoder must skip metadata chunks and still find audio data");
+
+    const auto audioPayload = [] (const std::string& wav)
+    {
+        const auto dataOffset = findRiffChunk(wav, "data");
+        require(dataOffset != std::string::npos && dataOffset + 8 <= wav.size(),
+                "WAV fixture must contain a data chunk");
+        const auto dataBytes = readU32(wav, dataOffset + 4);
+        require(dataOffset + 8 + dataBytes <= wav.size(),
+                "WAV fixture data chunk must fit its container");
+        return wav.substr(dataOffset + 8, dataBytes);
+    };
+    const auto originalAudioPayload = audioPayload(metadataBytes);
+    const auto metadataWithTrailing = metadataBytes + "TRAILING-BYTES";
+    std::istringstream metadataInput(metadataWithTrailing, std::ios::binary);
+    std::ostringstream rewrittenMetadata(std::ios::binary);
+    const auto rewriteReport = rewriteWavInfoMetadata(
+        metadataInput, rewrittenMetadata,
+        {"Edited take", "Lúcio Araújo", "Album", "2027", "Reviewed"});
+    const auto rewrittenMetadataBytes = rewrittenMetadata.str();
+    require(rewriteReport.infoListsRemoved == 1
+                && rewriteReport.infoListWritten
+                && rewriteReport.audioDataBytes == originalAudioPayload.size()
+                && rewrittenMetadataBytes.find("Edited take")
+                    != std::string::npos
+                && rewrittenMetadataBytes.find("Navalha take")
+                    == std::string::npos,
+            "RIFF metadata rewrite must replace the previous INFO list");
+    require(audioPayload(rewrittenMetadataBytes) == originalAudioPayload,
+            "RIFF metadata rewrite must preserve audio bytes exactly");
+    require(rewrittenMetadataBytes.ends_with("TRAILING-BYTES")
+                && readU32(rewrittenMetadataBytes, 4)
+                    == rewriteReport.riffBytes - 8,
+            "RIFF metadata rewrite must preserve bytes outside declared RIFF");
+
+    std::istringstream secondMetadataInput(
+        rewrittenMetadataBytes, std::ios::binary);
+    std::ostringstream secondMetadataOutput(std::ios::binary);
+    const auto secondRewriteReport = rewriteWavInfoMetadata(
+        secondMetadataInput, secondMetadataOutput,
+        {"Final title", "Artist", "Album", "2028", "Approved"});
+    const auto secondMetadataBytes = secondMetadataOutput.str();
+    const auto firstList = secondMetadataBytes.find("LIST");
+    require(secondRewriteReport.infoListsRemoved == 1
+                && firstList != std::string::npos
+                && secondMetadataBytes.find("LIST", firstList + 4)
+                    == std::string::npos
+                && audioPayload(secondMetadataBytes) == originalAudioPayload,
+            "Repeated RIFF edits must keep one INFO list and identical audio");
+
+    std::istringstream clearMetadataInput(
+        secondMetadataBytes, std::ios::binary);
+    std::ostringstream clearMetadataOutput(std::ios::binary);
+    const auto clearReport = rewriteWavInfoMetadata(
+        clearMetadataInput, clearMetadataOutput, {});
+    const auto clearedMetadataBytes = clearMetadataOutput.str();
+    require(clearReport.infoListsRemoved == 1
+                && !clearReport.infoListWritten
+                && clearedMetadataBytes.find("LIST") == std::string::npos
+                && audioPayload(clearedMetadataBytes) == originalAudioPayload,
+            "Empty RIFF metadata must remove INFO without touching audio");
+
+    auto malformedMetadataBytes = metadataBytes;
+    malformedMetadataBytes[4] = static_cast<char>(0xff);
+    malformedMetadataBytes[5] = static_cast<char>(0xff);
+    malformedMetadataBytes[6] = static_cast<char>(0xff);
+    malformedMetadataBytes[7] = static_cast<char>(0x7f);
+    rejected = false;
+    try
+    {
+        std::istringstream malformedInput(
+            malformedMetadataBytes, std::ios::binary);
+        std::ostringstream malformedOutput(std::ios::binary);
+        static_cast<void>(rewriteWavInfoMetadata(
+            malformedInput, malformedOutput, {"Unsafe", "", "", "", ""}));
+    }
+    catch (const std::invalid_argument&)
+    {
+        rejected = true;
+    }
+    require(rejected,
+            "RIFF metadata rewrite must reject inconsistent declared sizes");
 
     const auto peaks = buildWaveformPeaks(*decodedWav, 1);
     require(peaks.size() == 1 && peaks[0].minimumLeft < -0.99F

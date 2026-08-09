@@ -16,14 +16,17 @@ Atualizado em 9 de agosto de 2026.
 - FORM Advanced concluído com nome, undo/redo e captura persistente A/B;
 - importação de takes anteriores auditada e preset de metadados implementado;
 - ALBUM PROJECT integrado ao catálogo, persistente, ordenável e renderizável;
+- escrita RIFF posterior integrada à TAKE Timeline com confirmação, parcial
+  validado e backup recuperável;
 - 10/10 testes automatizados passando.
 
 ## Prioridade de hoje
 
-1. Projetar escrita RIFF posterior explícita, atômica e recuperável.
-2. Adicionar preview A/B no MASTER e fluxo de matching relativo.
-3. Executar o roteiro humano com áudio real, acervo de takes e dois monitores.
-4. Integrar o rascunho ALBUM PROJECT ao Project v2 artístico.
+1. Adicionar preview A/B no MASTER e fluxo de matching relativo.
+2. Executar o roteiro humano com áudio real, acervo de takes e dois monitores,
+   incluindo escrita/recuperação RIFF.
+3. Integrar o rascunho ALBUM PROJECT ao Project v2 artístico.
+4. Projetar workspaces reais e mixer BASIC/ADVANCED.
 
 ## Próximas etapas técnicas
 

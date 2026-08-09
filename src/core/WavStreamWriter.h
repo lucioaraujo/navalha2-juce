@@ -36,6 +36,9 @@ struct WavMetadata
     std::string comment;
 };
 
+void writeWavInfoListChunk(
+    std::ostream& output, const WavMetadata& metadata);
+
 class WavStreamWriter
 {
 public:
