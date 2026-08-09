@@ -42,3 +42,11 @@ if (header) {
   updateHeader();
   window.addEventListener('scroll', updateHeader, { passive: true });
 }
+
+const contactButton = document.querySelector('[data-contact-email]');
+if (contactButton) {
+  contactButton.addEventListener('click', () => {
+    const address = String.fromCharCode(108, 117, 99, 105, 111, 46, 109, 97, 116, 101, 109, 97, 64, 103, 109, 97, 105, 108, 46, 99, 111, 109);
+    window.location.assign(`mailto:${address}`);
+  });
+}
