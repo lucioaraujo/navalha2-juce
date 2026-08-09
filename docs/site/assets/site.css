@@ -55,8 +55,7 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .brand img { object-fit: contain; image-rendering: pixelated; }
 .brand-copy { display: grid; line-height: 1.08; }
 .brand-copy strong { color: var(--white); font-family: var(--display); font-size: 1.12rem; letter-spacing: .08em; }
-.brand-copy strong b { color: var(--yellow); }
-.brand-copy span { color: var(--steel); font-size: .5rem; letter-spacing: .035em; }
+.brand-copy .brand-number { color: var(--yellow) !important; }
 .main-nav { justify-self: center; display: flex; gap: clamp(16px, 2.6vw, 40px); }
 .main-nav a, .repo-link { color: var(--steel); font-size: .69rem; font-weight: 700; letter-spacing: .11em; text-decoration: none; text-transform: uppercase; }
 .main-nav a:hover, .main-nav a[aria-current="true"], .repo-link:hover { color: var(--yellow); }
