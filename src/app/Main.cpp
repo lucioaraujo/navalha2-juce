@@ -3872,6 +3872,26 @@ public:
         return takeCatalog.find(id);
     }
 
+    [[nodiscard]] const navalha::WavMetadata& recordingPreset() const noexcept
+    {
+        return recordingMetadataPreset;
+    }
+
+    void setRecordingPreset(navalha::WavMetadata metadata)
+    {
+        navalha::normalizeWavMetadata(metadata);
+        recordingMetadataPreset = std::move(metadata);
+        saveRecordingPreset();
+        showStatus("RECORDING METADATA PRESET SAVED");
+    }
+
+    void clearRecordingPreset()
+    {
+        recordingMetadataPreset = {};
+        saveRecordingPreset();
+        showStatus("RECORDING METADATA PRESET CLEARED");
+    }
+
     bool updateTake(navalha::TakeEntry entry)
     {
         try
@@ -3923,10 +3943,7 @@ public:
                 >= navalha::maximumTakeCatalogEntries)
                 break;
             const auto path = file.getFullPathName().toStdString();
-            const auto alreadyPresent = std::any_of(
-                takeCatalog.entries().begin(), takeCatalog.entries().end(),
-                [&path] (const auto& entry) { return entry.audioPath == path; });
-            if (alreadyPresent)
+            if (takeCatalog.findByAudioPath(path) != nullptr)
                 continue;
             auto reader = std::unique_ptr<juce::AudioFormatReader>(
                 formats.createReaderFor(file));
@@ -4371,6 +4388,17 @@ private:
                                + juce::String(exception.what()));
                 }
             }
+            if (settings->getBoolValue(
+                    "recordingMetadataPresetInitialized", false))
+            {
+                recordingMetadataPreset = {
+                    settings->getValue("recordingPresetTitle").toStdString(),
+                    settings->getValue("recordingPresetArtist").toStdString(),
+                    settings->getValue("recordingPresetProject").toStdString(),
+                    settings->getValue("recordingPresetYear").toStdString(),
+                    settings->getValue("recordingPresetComment").toStdString()};
+                navalha::normalizeWavMetadata(recordingMetadataPreset);
+            }
         }
         setAudioChannels(0, 2, savedState.get());
     }
@@ -4392,6 +4420,25 @@ private:
             showStatus("TAKE CATALOG SAVE FAILED | "
                        + juce::String(exception.what()));
         }
+    }
+
+    void saveRecordingPreset()
+    {
+        auto* settings = applicationProperties.getUserSettings();
+        if (settings == nullptr)
+            return;
+        settings->setValue("recordingMetadataPresetInitialized", true);
+        settings->setValue(
+            "recordingPresetTitle", utf8(recordingMetadataPreset.title));
+        settings->setValue(
+            "recordingPresetArtist", utf8(recordingMetadataPreset.artist));
+        settings->setValue(
+            "recordingPresetProject", utf8(recordingMetadataPreset.project));
+        settings->setValue(
+            "recordingPresetYear", utf8(recordingMetadataPreset.year));
+        settings->setValue(
+            "recordingPresetComment", utf8(recordingMetadataPreset.comment));
+        static_cast<void>(settings->saveIfNeeded());
     }
 
     void saveAudioSettings()
@@ -6637,9 +6684,7 @@ private:
                         fileChooser.reset();
                         return;
                     }
-                    const navalha::WavMetadata metadata {
-                        "Navalha 2 recording", "Navalha 2",
-                        "JUCE migration", "", ""};
+                    const auto metadata = recordingMetadataPreset;
                     std::string recipe;
                     try
                     {
@@ -6702,6 +6747,8 @@ private:
     navalha::WavSampleFormat activeRecordingFormat =
         navalha::WavSampleFormat::pcm24;
     navalha::WavMetadata activeRecordingMetadata;
+    navalha::WavMetadata recordingMetadataPreset {
+        "Navalha 2 recording", "Navalha 2", "JUCE migration", "", ""};
     std::string activeRecordingRecipe;
     std::atomic<double> activeSampleRate {44100.0};
     std::array<std::unique_ptr<navalha::StereoAudioBuffer>, 2> sourceBuffers;
@@ -7085,6 +7132,23 @@ public:
             if (file.existsAsFile())
                 sendToMasterAction(file);
         });
+        configureButton(setPreset, "SET AS REC PRESET", [this]
+        {
+            if (!selectedId.empty())
+            {
+                main.setRecordingPreset(editorMetadata());
+                refreshPresetInfo();
+            }
+        });
+        configureButton(clearPreset, "CLEAR REC PRESET", [this]
+        {
+            main.clearRecordingPreset();
+            refreshPresetInfo();
+        });
+        presetInfo.setColour(
+            juce::Label::textColourId, juce::Colour(Arcade::muted));
+        presetInfo.setJustificationType(juce::Justification::centredLeft);
+        addAndMakeVisible(presetInfo);
         useA.getProperties().set("arcadeAccent", "play");
         useB.getProperties().set("arcadeAccent", "play");
         save.getProperties().set("arcadeAccent", "record");
@@ -7093,7 +7157,8 @@ public:
 
         note.setText(
             "The recorded WAV remains unchanged. Review data and the performance "
-            "recipe are stored in Navalha's private TAKE catalog.",
+            "recipe are stored in Navalha's private TAKE catalog. The REC preset "
+            "is applied only to future recordings.",
             juce::dontSendNotification);
         note.setColour(
             juce::Label::textColourId, juce::Colour(Arcade::muted));
@@ -7170,6 +7235,11 @@ public:
         exportRecipe.setBounds(
             saveActions.removeFromLeft(saveActionWidth).reduced(2));
         sendToMaster.setBounds(saveActions.reduced(2));
+        auto presetActions = area.removeFromTop(42);
+        setPreset.setBounds(presetActions.removeFromLeft(
+            presetActions.getWidth() / 2).reduced(2));
+        clearPreset.setBounds(presetActions.reduced(2));
+        presetInfo.setBounds(area.removeFromTop(24).reduced(4, 0));
         note.setBounds(area.removeFromTop(48).reduced(4));
     }
 
@@ -7278,6 +7348,30 @@ private:
         summary.setText(
             juce::String(count) + (count == 1 ? " TAKE" : " TAKES"),
             juce::dontSendNotification);
+        refreshPresetInfo();
+    }
+
+    [[nodiscard]] navalha::WavMetadata editorMetadata() const
+    {
+        return {
+            title.getText().toStdString(), artist.getText().toStdString(),
+            project.getText().toStdString(), year.getText().toStdString(),
+            comment.getText().toStdString()};
+    }
+
+    void refreshPresetInfo()
+    {
+        const auto& preset = main.recordingPreset();
+        auto description = utf8(preset.title);
+        if (description.isEmpty())
+            description = utf8(preset.project);
+        if (description.isEmpty())
+            description = utf8(preset.artist);
+        presetInfo.setText(
+            description.isEmpty()
+                ? "REC PRESET | EMPTY"
+                : "REC PRESET | " + description,
+            juce::dontSendNotification);
     }
 
     void saveSelected()
@@ -7286,10 +7380,7 @@ private:
         if (current == nullptr)
             return;
         auto entry = *current;
-        entry.metadata = {
-            title.getText().toStdString(), artist.getText().toStdString(),
-            project.getText().toStdString(), year.getText().toStdString(),
-            comment.getText().toStdString()};
+        entry.metadata = editorMetadata();
         entry.review = {
             status.getText().toStdString(),
             std::max(0, rating.getSelectedItemIndex()),
@@ -7352,10 +7443,10 @@ private:
 
     void setEditorEnabled(bool enabled)
     {
-        const std::array<juce::Component*, 14> components {
+        const std::array<juce::Component*, 15> components {
             &title, &artist, &project, &year, &comment, &status, &rating,
             &tags, &notes, &useA, &useB, &save, &exportRecipe,
-            &sendToMaster};
+            &sendToMaster, &setPreset};
         for (auto* component : components)
             component->setEnabled(enabled);
     }
@@ -7422,6 +7513,9 @@ private:
     juce::TextButton exportRecipe;
     juce::TextButton sendToMaster;
     juce::TextButton importFolder;
+    juce::TextButton setPreset;
+    juce::TextButton clearPreset;
+    juce::Label presetInfo;
     juce::Label note;
     std::unique_ptr<juce::FileChooser> chooser;
     std::function<void(const juce::File&)> sendToMasterAction;

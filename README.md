@@ -148,6 +148,10 @@ O runtime atual continua em:
 - playhead A/B lock-free derivado dos players principais, com cursor e
   readout atual/duração nas duas waveforms, inclusive em reverse;
 - gravação selecionável em PCM16, PCM24 ou float32 com diagnóstico de drops;
+- TAKE Timeline com importação recursiva/deduplicada de WAVs anteriores e
+  leitura dos metadados RIFF disponíveis;
+- preset privado de metadados derivado de qualquer take e aplicado somente às
+  gravações futuras;
 - painel JUCE de dispositivo, saída estéreo, buffer e sample rate;
 - configuração do dispositivo persistida nas preferências locais do aplicativo;
 - invariantes compatíveis com Project v2;

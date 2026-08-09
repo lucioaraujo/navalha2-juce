@@ -2148,6 +2148,8 @@ int main()
     const auto* decodedTake = decodedTakeCatalog.find(takeEntry.id);
     require(decodedTake != nullptr
                 && decodedTake->audioPath == takeEntry.audioPath
+                && decodedTakeCatalog.findByAudioPath(takeEntry.audioPath)
+                    == decodedTake
                 && decodedTake->sampleFormat == WavSampleFormat::pcm24
                 && decodedTake->review.status == "SELECTED"
                 && decodedTake->review.rating == 4
@@ -2155,6 +2157,17 @@ int main()
                 && decodedTake->recipeJson.find("navalha-take-recipe")
                     != std::string::npos,
             "TAKE catalog v1 must preserve provenance, review and recipe");
+    WavMetadata oversizedPreset {
+        std::string(200, 'T'), std::string(200, 'A'),
+        std::string(200, 'P'), std::string(20, 'Y'),
+        std::string(600, 'C')};
+    normalizeWavMetadata(oversizedPreset);
+    require(oversizedPreset.title.size() == 160
+                && oversizedPreset.artist.size() == 160
+                && oversizedPreset.project.size() == 160
+                && oversizedPreset.year.size() == 12
+                && oversizedPreset.comment.size() == 500,
+            "Recording metadata presets must share TAKE catalog text limits");
     takeEntry.review.status = "UNKNOWN";
     takeEntry.review.rating = 99;
     takeCatalog.upsert(takeEntry);

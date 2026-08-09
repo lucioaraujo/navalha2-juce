@@ -140,6 +140,10 @@ O protótipo JUCE não substitui o runtime atual até cumprir estes contratos.
 - implementado: controles nativos de AUTO, vocabulário, BPM mínimo/máximo,
   variation, seed e rewind;
 - implementado: persistência Project v2 das configurações do Assisted;
+- implementado: importação explícita e recursiva de pastas de takes WAV,
+  deduplicação por caminho, dados técnicos e leitura de tags RIFF disponíveis;
+- implementado: preset persistente de metadados derivado do take selecionado e
+  aplicado exclusivamente a gravações futuras;
 - implementado: decisões Assisted de source e seleção de pattern;
 - implementado: recombinação Assisted de pattern com reverse, interleave,
   substituição limitada, MEMORY e mínimo de células sonoras;

@@ -31,14 +31,35 @@ referenciado não está mais no caminho registrado.
 
 O editor permite:
 
+- importar recursivamente uma pasta de WAVs anteriores, sem copiar ou mover os
+  arquivos, deduplicando pelo caminho completo registrado;
 - atualizar metadados de catálogo e revisão;
 - exportar a recipe de um take como JSON;
 - usar o WAV como SOURCE A ou SOURCE B;
 - enviar o take diretamente ao TRACK MASTER, que o carrega e analisa sem
   modificar o arquivo original.
+- transformar os metadados do take selecionado no preset das próximas
+  gravações ou limpar esse preset.
 
 `USE AS SOURCE A/B` decodifica o WAV em memória pelo mesmo caminho seguro da
 Audio Library. Não move, renomeia nem reescreve o take original.
+
+`IMPORT WAV FOLDER` aceita `.wav`/`.wave`, percorre subpastas, rejeita arquivos
+que o decoder JUCE não reconhece e recupera duração, frames, sample rate,
+formato e tags RIFF INFO quando disponíveis. Repetir a importação da mesma
+pasta não duplica entradas já registradas pelo mesmo caminho absoluto.
+
+## Preset de metadados de gravação
+
+`SET AS REC PRESET` usa os campos TITLE, ARTIST, PROJECT/ALBUM, YEAR e COMMENT
+visíveis no take selecionado. O preset é limitado pelos mesmos contratos do
+catálogo, persiste nas configurações privadas e é copiado para o writer quando
+uma nova gravação começa. Alterações posteriores no take não modificam uma
+gravação que já esteja em curso.
+
+`CLEAR REC PRESET` mantém as próximas gravações sem tags textuais. A primeira
+execução do candidato JUCE conserva o preset legado `Navalha 2 recording /
+Navalha 2 / JUCE migration` até que o usuário salve ou limpe sua preferência.
 
 ## Recipe e limite de reprodutibilidade
 
@@ -53,11 +74,10 @@ preservados. A ampliação dessa telemetria permanece uma tarefa futura.
 
 ## Limitações conhecidas
 
-- gravações JUCE anteriores a este catálogo não são descobertas
-  automaticamente;
 - editar os campos da janela altera o catálogo privado, não os chunks RIFF INFO
   do WAV;
-- ainda não há preset padrão de metadados para novas gravações;
+- a descoberta é explícita por `IMPORT WAV FOLDER`; não há varredura automática
+  de toda a pasta Music ao iniciar o aplicativo;
 - o ALBUM PROJECT builder ainda não foi ligado ao catálogo de takes.
 
 ## Versionamento visual

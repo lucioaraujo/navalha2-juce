@@ -40,6 +40,8 @@ public:
     [[nodiscard]] const std::vector<TakeEntry>& entries() const noexcept;
     [[nodiscard]] TakeEntry* find(std::string_view id) noexcept;
     [[nodiscard]] const TakeEntry* find(std::string_view id) const noexcept;
+    [[nodiscard]] const TakeEntry* findByAudioPath(
+        std::string_view audioPath) const noexcept;
     void upsert(TakeEntry entry);
     bool remove(std::string_view id) noexcept;
     void clear() noexcept;
@@ -49,6 +51,7 @@ private:
 };
 
 void normalizeTakeEntry(TakeEntry& entry);
+void normalizeWavMetadata(WavMetadata& metadata);
 [[nodiscard]] std::string encodeTakeCatalog(const TakeCatalog& catalog);
 [[nodiscard]] TakeCatalog decodeTakeCatalog(std::string_view json);
 [[nodiscard]] const char* toString(WavSampleFormat format) noexcept;

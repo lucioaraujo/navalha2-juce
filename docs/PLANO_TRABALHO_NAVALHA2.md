@@ -14,14 +14,15 @@ Atualizado em 9 de agosto de 2026.
 - saída live-safe, dither TPDF PCM16/24 e site público inicial;
 - playhead/readout temporal A/B ligado à telemetria real do motor;
 - FORM Advanced concluído com nome, undo/redo e captura persistente A/B;
+- importação de takes anteriores auditada e preset de metadados implementado;
 - 10/10 testes automatizados passando.
 
 ## Prioridade de hoje
 
-1. Descobrir/importar takes anteriores e fechar preset/escrita RIFF posterior.
-2. Criar ALBUM PROJECT builder integrado à TAKE Timeline.
+1. Criar ALBUM PROJECT builder integrado à TAKE Timeline.
+2. Projetar escrita RIFF posterior explícita, atômica e recuperável.
 3. Adicionar preview A/B no MASTER e fluxo de matching relativo.
-4. Executar o roteiro humano com áudio real e dois monitores.
+4. Executar o roteiro humano com áudio real, acervo de takes e dois monitores.
 
 ## Próximas etapas técnicas
 
@@ -35,7 +36,6 @@ Atualizado em 9 de agosto de 2026.
 ## Lacunas de paridade ainda conhecidas
 
 - mixer BASIC/ADVANCED recolhível;
-- importação de takes antigos;
 - ALBUM PROJECT builder;
 - preview A/B no painel MASTER;
 - compatibilidade histórica `.nvl`/`.ptn`;

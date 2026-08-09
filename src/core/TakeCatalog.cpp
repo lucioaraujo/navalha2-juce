@@ -108,6 +108,18 @@ const TakeEntry* TakeCatalog::find(std::string_view id) const noexcept
     return found == values.end() ? nullptr : &*found;
 }
 
+const TakeEntry* TakeCatalog::findByAudioPath(
+    std::string_view audioPath) const noexcept
+{
+    const auto found = std::find_if(
+        values.begin(), values.end(),
+        [audioPath] (const auto& entry)
+        {
+            return entry.audioPath == audioPath;
+        });
+    return found == values.end() ? nullptr : &*found;
+}
+
 void TakeCatalog::upsert(TakeEntry entry)
 {
     normalizeTakeEntry(entry);
@@ -139,11 +151,7 @@ void normalizeTakeEntry(TakeEntry& entry)
     limit(entry.audioPath, 4096);
     limit(entry.filename, 255);
     limit(entry.createdAt, 64);
-    limit(entry.metadata.title, 160);
-    limit(entry.metadata.artist, 160);
-    limit(entry.metadata.project, 160);
-    limit(entry.metadata.year, 12);
-    limit(entry.metadata.comment, 500);
+    normalizeWavMetadata(entry.metadata);
     limit(entry.review.status, 16);
     limit(entry.review.tags, 240);
     limit(entry.review.notes, 500);
@@ -162,6 +170,15 @@ void normalizeTakeEntry(TakeEntry& entry)
         if (!recipe.isObject())
             throw std::invalid_argument("TAKE recipe must be a JSON object");
     }
+}
+
+void normalizeWavMetadata(WavMetadata& metadata)
+{
+    limit(metadata.title, 160);
+    limit(metadata.artist, 160);
+    limit(metadata.project, 160);
+    limit(metadata.year, 12);
+    limit(metadata.comment, 500);
 }
 
 std::string encodeTakeCatalog(const TakeCatalog& catalog)

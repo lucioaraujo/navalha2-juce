@@ -32,14 +32,14 @@ todos os rótulos do instrumento ainda não foi feita.
 Bloqueadores reais para declarar paridade funcional completa, após a primeira
 etapa da TAKE Timeline em JUCE v0.1.0:
 
-1. descoberta/importação de takes anteriores e preset/escrita RIFF de metadados;
+1. escrita RIFF posterior e opcional dos metadados editados no catálogo;
 2. construtor de ALBUM PROJECT a partir dos takes;
 3. importação/exportação histórica `.nvl`/`.ptn`;
 4. preview/audição dentro de MASTER e matching relativo do fluxo v0.28;
 5. validações humanas de áudio real, dois monitores e sessão prolongada.
 
-Contagem não ponderada da matriz nesta atualização: 35 áreas completas,
-completas técnicas ou implementadas no fluxo equivalente; 11 parciais; 5
+Contagem não ponderada da matriz nesta atualização: 36 áreas completas,
+completas técnicas ou implementadas no fluxo equivalente; 10 parciais; 5
 ausentes; e uma conveniência Web substituída deliberadamente por comportamento
 nativo. Os estados “completo técnico” continuam exigindo aceitação humana onde
 indicado e não autorizam declarar substituição integral do produto.
@@ -77,8 +77,8 @@ indicado e não autorizam declarar substituição integral do produto.
 | Oito slots de Motif Memory | Completo | snapshot nomeado, CAPTURE/RECALL/VARY/DELETE e Project/Portable v2 |
 | REC pós-MASTER 16/24/float | Completo técnico | writer assíncrono, publicação atômica, telemetria e auto-stop de 5 minutos; falta validação humana com sinal audível |
 | Pasta padrão de gravação persistente | Parcial | usuário escolhe o WAV ao iniciar cada REC |
-| Metadados de gravação/preset | Parcial | catálogo edita título/artista/projeto/ano/comentário; falta preset e escrita RIFF posterior |
-| TAKE Timeline | Parcial | novos WAVs finalizados entram no catálogo persistente e janela nativa; falta descobrir/importar gravações anteriores |
+| Metadados de gravação/preset | Parcial | catálogo edita título/artista/projeto/ano/comentário; take selecionado pode virar preset persistente das próximas gravações; falta escrita RIFF posterior |
+| TAKE Timeline | Completo técnico | novos WAVs entram automaticamente; `IMPORT WAV FOLDER` descobre gravações anteriores recursivamente, deduplica por caminho e lê dados técnicos/tags RIFF sem alterar o áudio; falta ensaio humano com acervo heterogêneo |
 | Review/status/rating/tags | Completo | estados EXPERIMENT…MASTER, rating 0–5, tags e notas persistem no catálogo privado |
 | Recipe JSON por TAKE | Parcial | snapshot pré-REC exportável; cursor interno Assisted é declarado indisponível |
 | TAKE → SOURCE A/B | Completo | recarrega o WAV pelo decoder seguro sem alterar o take original |
@@ -220,8 +220,8 @@ Mantidos separados por segurança ou por não representarem um estado binário:
 
 ## Ordem recomendada para concluir
 
-1. Importação/descoberta de takes anteriores, preset e escrita RIFF opcional.
-2. ALBUM PROJECT builder integrado aos takes.
+1. ALBUM PROJECT builder integrado aos takes.
+2. Escrita RIFF posterior, explícita e recuperável, para metadados de catálogo.
 3. Workspaces reais e mixer BASIC/ADVANCED.
 4. Compatibilidade `.nvl`/`.ptn`.
 5. Preview MASTER; playhead temporal e pré-escuta da Library já foram transpostos.
