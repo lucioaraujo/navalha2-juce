@@ -103,10 +103,23 @@ que a v0.28.1 Pure Data/web permanece a referência funcional.
 
 ## Etapas
 
-1. consolidar conteúdo conceitual e histórico;
-2. fechar a ficha técnica e o tutorial;
+1. consolidar conteúdo conceitual e histórico — **primeira versão concluída**;
+2. fechar a ficha técnica e o tutorial — **primeira versão concluída**;
 3. selecionar e legendar screenshots;
-4. criar o HTML/CSS responsivo em `docs/site/`;
+4. criar o HTML/CSS responsivo em `docs/site/` — **concluído**;
 5. revisar EN/PT/FR/ES;
-6. testar links, acessibilidade e visualização em resoluções diferentes;
+6. testar links, acessibilidade e visualização em resoluções diferentes —
+   **estrutura, assets e renders 1440×1000/390×844 aprovados**;
 7. publicar junto com uma release estável.
+
+## Implementação de 2026-08-09
+
+A primeira versão inglesa está em [`site/index.html`](site/index.html), sem
+dependências externas. Ela inclui conceito, linhagem, workspaces, quick start,
+mapa estrutural da interface, ficha técnica, cadeia de saída, estado honesto do
+projeto, documentação e créditos. Os ativos de marca aprovados foram copiados
+sem alteração e possuem origem/checksums em `site/assets/README.md`.
+
+A galeria continua deliberadamente pendente: screenshots de desenvolvimento
+existem, mas incluem contexto do desktop. A publicação deve receber capturas
+limpas single/dual da versão aceita, sem dados pessoais ou janelas externas.
