@@ -23,6 +23,10 @@ Before public deployment:
   tablet and wide desktop widths;
 - complete the authorial/editorial review of PT/FR/ES copy before marking those
   editions `approved`;
+- expand and editorially review the `TAKES / MASTER` section so recording,
+  review and mastering are represented as musical and editorial processes;
+- expand the tutorial and contextual `LEARN` copy so learning is represented as
+  practice within the instrument, not as a peripheral help feature;
 - run the four language routes through the HTML/link/accessibility checks.
 
 ## Localization architecture

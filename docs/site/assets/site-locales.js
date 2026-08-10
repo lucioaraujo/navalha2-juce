@@ -422,4 +422,53 @@
     "Live-safe technical output stage": "Etapa técnica de salida segura para directo",
     "Slice · recombine · perform": "Cortar · recombinar · interpretar"
   });
+
+  Object.assign(window.NavalhaSiteLocales.pt, {
+    "04 / TAKES / MASTER": "04 / TAKES / MASTER",
+    "A take is a decision made audible": "Um take é uma decisão tornada audível",
+    "A take is not residue. It is the work becoming legible.": "Um take não é resíduo. É a obra tornando-se legível.",
+    "REC captures the same post-safety signal that reaches the device and the meter: no hidden export path, no substitute mix. A take preserves the moment where cutting, gesture and form become a musical decision that can be heard again, described, compared and carried forward.": "REC captura o mesmo sinal pós-segurança que chega ao dispositivo e ao medidor: sem caminho de exportação oculto, sem mixagem substituta. Um take preserva o momento em que corte, gesto e forma se tornam uma decisão musical que pode ser ouvida novamente, descrita, comparada e levada adiante.",
+    "Capture without erasing": "Capture sem apagar",
+    "Each finalized WAV keeps its technical identity and optional metadata. It can return to SOURCE A or B without replacing the original material or concealing the route that produced it.": "Cada WAV finalizado preserva sua identidade técnica e metadados opcionais. Ele pode retornar a SOURCE A ou B sem substituir o material original nem ocultar o percurso que o produziu.",
+    "Review is part of performance": "A revisão faz parte da performance",
+    "TAKE Timeline turns recording into an editorial space: listen, annotate, rate, compare and retain the recipe of a decision before it becomes memory without context.": "TAKE Timeline transforma a gravação em um espaço editorial: escutar, anotar, avaliar, comparar e preservar a receita de uma decisão antes que ela se torne memória sem contexto.",
+    "Master as a second listening": "Master como segunda escuta",
+    "TRACK and ALBUM tools are not a promise to make everything louder. They prepare a careful second pass: level, sequence, gaps, fades and evidence remain visible before a take becomes an edition.": "As ferramentas TRACK e ALBUM não prometem tornar tudo mais alto. Elas preparam uma segunda passagem cuidadosa: nível, sequência, espaços, fades e evidências permanecem visíveis antes que um take se torne uma edição.",
+    "Performance route": "Percurso da performance",
+    "PERFORM": "PERFORM", "REVIEW": "REVISÃO", "WORK / EDITION": "OBRA / EDIÇÃO",
+    "The native app treats learning as a performance surface, not a help overlay. Ten chapters move from material to take, while the contextual LEARN panel keeps the meaning of a control available at the moment of use — in EN/PT/FR/ES.": "O aplicativo nativo trata o aprendizado como superfície de performance, não como ajuda sobreposta. Dez capítulos percorrem o caminho da matéria ao take, enquanto o painel LEARN contextual mantém o sentido de cada controle disponível no momento de uso — em EN/PT/FR/ES.",
+    "05 / QUICK START": "05 / INÍCIO RÁPIDO", "06 / INTERFACE": "06 / INTERFACE", "07 / TECHNOLOGY": "07 / TECNOLOGIA", "08 / STATUS": "08 / ESTADO", "09 / DOCUMENTATION": "09 / DOCUMENTAÇÃO", "10 / CREDITS": "10 / CRÉDITOS"
+  });
+
+  Object.assign(window.NavalhaSiteLocales.fr, {
+    "04 / TAKES / MASTER": "04 / PRISES / MASTER",
+    "A take is a decision made audible": "Une prise est une décision rendue audible",
+    "A take is not residue. It is the work becoming legible.": "Une prise n’est pas un résidu. C’est l’œuvre qui devient lisible.",
+    "REC captures the same post-safety signal that reaches the device and the meter: no hidden export path, no substitute mix. A take preserves the moment where cutting, gesture and form become a musical decision that can be heard again, described, compared and carried forward.": "REC capture le même signal post-sécurité qui atteint le périphérique et le vu-mètre : ni chemin d’export caché ni mixage de substitution. Une prise préserve le moment où découpe, geste et forme deviennent une décision musicale que l’on peut réécouter, décrire, comparer et prolonger.",
+    "Capture without erasing": "Capturer sans effacer",
+    "Each finalized WAV keeps its technical identity and optional metadata. It can return to SOURCE A or B without replacing the original material or concealing the route that produced it.": "Chaque WAV finalisé conserve son identité technique et ses métadonnées optionnelles. Il peut retourner vers SOURCE A ou B sans remplacer le matériau original ni masquer le parcours qui l’a produit.",
+    "Review is part of performance": "La révision fait partie de la performance",
+    "TAKE Timeline turns recording into an editorial space: listen, annotate, rate, compare and retain the recipe of a decision before it becomes memory without context.": "TAKE Timeline transforme l’enregistrement en espace éditorial : écouter, annoter, évaluer, comparer et conserver la recette d’une décision avant qu’elle ne devienne un souvenir sans contexte.",
+    "Master as a second listening": "Le master comme seconde écoute",
+    "TRACK and ALBUM tools are not a promise to make everything louder. They prepare a careful second pass: level, sequence, gaps, fades and evidence remain visible before a take becomes an edition.": "Les outils TRACK et ALBUM ne promettent pas de tout rendre plus fort. Ils préparent une seconde passe attentive : niveau, séquence, silences, fondus et preuves restent visibles avant qu’une prise devienne une édition.",
+    "Performance route": "Parcours de performance", "REVIEW": "RÉVISION", "WORK / EDITION": "ŒUVRE / ÉDITION",
+    "The native app treats learning as a performance surface, not a help overlay. Ten chapters move from material to take, while the contextual LEARN panel keeps the meaning of a control available at the moment of use — in EN/PT/FR/ES.": "L’application native traite l’apprentissage comme une surface de performance, et non comme une aide superposée. Dix chapitres vont de la matière à la prise, tandis que le panneau contextuel LEARN maintient le sens de chaque contrôle disponible au moment de son usage — en EN/PT/FR/ES.",
+    "05 / QUICK START": "05 / DÉMARRAGE RAPIDE", "06 / INTERFACE": "06 / INTERFACE", "07 / TECHNOLOGY": "07 / TECHNOLOGIE", "08 / STATUS": "08 / STATUT", "09 / DOCUMENTATION": "09 / DOCUMENTATION", "10 / CREDITS": "10 / CRÉDITS"
+  });
+
+  Object.assign(window.NavalhaSiteLocales.es, {
+    "04 / TAKES / MASTER": "04 / TOMAS / MASTER",
+    "A take is a decision made audible": "Una toma es una decisión hecha audible",
+    "A take is not residue. It is the work becoming legible.": "Una toma no es un residuo. Es la obra haciéndose legible.",
+    "REC captures the same post-safety signal that reaches the device and the meter: no hidden export path, no substitute mix. A take preserves the moment where cutting, gesture and form become a musical decision that can be heard again, described, compared and carried forward.": "REC captura la misma señal posterior a la seguridad que llega al dispositivo y al medidor: sin ruta de exportación oculta ni mezcla sustitutiva. Una toma preserva el momento en que corte, gesto y forma se convierten en una decisión musical que puede volver a oírse, describirse, compararse y llevarse adelante.",
+    "Capture without erasing": "Capturar sin borrar",
+    "Each finalized WAV keeps its technical identity and optional metadata. It can return to SOURCE A or B without replacing the original material or concealing the route that produced it.": "Cada WAV finalizado conserva su identidad técnica y sus metadatos opcionales. Puede volver a SOURCE A o B sin reemplazar el material original ni ocultar el recorrido que lo produjo.",
+    "Review is part of performance": "La revisión es parte de la performance",
+    "TAKE Timeline turns recording into an editorial space: listen, annotate, rate, compare and retain the recipe of a decision before it becomes memory without context.": "TAKE Timeline convierte la grabación en un espacio editorial: escuchar, anotar, valorar, comparar y conservar la receta de una decisión antes de que se convierta en memoria sin contexto.",
+    "Master as a second listening": "El master como segunda escucha",
+    "TRACK and ALBUM tools are not a promise to make everything louder. They prepare a careful second pass: level, sequence, gaps, fades and evidence remain visible before a take becomes an edition.": "Las herramientas TRACK y ALBUM no prometen hacerlo todo más fuerte. Preparan una segunda pasada cuidadosa: nivel, secuencia, espacios, fundidos y evidencias permanecen visibles antes de que una toma se convierta en una edición.",
+    "Performance route": "Recorrido de performance", "REVIEW": "REVISIÓN", "WORK / EDITION": "OBRA / EDICIÓN",
+    "The native app treats learning as a performance surface, not a help overlay. Ten chapters move from material to take, while the contextual LEARN panel keeps the meaning of a control available at the moment of use — in EN/PT/FR/ES.": "La aplicación nativa trata el aprendizaje como una superficie de performance, no como una ayuda superpuesta. Diez capítulos recorren el camino de la materia a la toma, mientras el panel contextual LEARN mantiene disponible el sentido de cada control en el momento de uso — en EN/PT/FR/ES.",
+    "05 / QUICK START": "05 / INICIO RÁPIDO", "06 / INTERFACE": "06 / INTERFAZ", "07 / TECHNOLOGY": "07 / TECNOLOGÍA", "08 / STATUS": "08 / ESTADO", "09 / DOCUMENTATION": "09 / DOCUMENTACIÓN", "10 / CREDITS": "10 / CRÉDITOS"
+  });
 })();
