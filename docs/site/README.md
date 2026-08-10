@@ -1,8 +1,10 @@
 # Navalha 2 public site
 
-Static, dependency-free first publication candidate for the Navalha 2 project.
-English is the primary language in this version. Editorially reviewed static
-PT/FR/ES pages remain a future documentation task.
+Static, dependency-free publication candidate for the Navalha 2 project.
+English is the canonical editorial source. Internal Portuguese, French and
+Spanish editions reuse that layout through local translation dictionaries at
+`assets/site-locales.js`; they do not call an external translation service at
+runtime. Language routes are `/pt/`, `/fr/` and `/es/`.
 
 Serve the repository root locally so that links to sibling documentation work:
 
@@ -19,7 +21,21 @@ Before public deployment:
 - capture clean JUCE single/dual-monitor screenshots without desktop context;
 - run the HTML/link/accessibility checks and repeat visual checks at mobile,
   tablet and wide desktop widths;
-- translate the approved English copy to PT/FR/ES.
+- complete the authorial/editorial review of PT/FR/ES copy before marking those
+  editions `approved`;
+- run the four language routes through the HTML/link/accessibility checks.
+
+## Localization architecture
+
+`index.html` is the canonical layout and English copy. Each localized route has
+a small entry page with localized metadata. `assets/localized-page.js` loads the
+canonical markup, applies the selected local dictionary and then initializes
+the regular site behavior. Layout and content therefore do not fork into four
+manually maintained HTML copies.
+
+The editions are currently `draft/review`: their routes, navigation, assets and
+responsive rendering are implemented and tested, while final linguistic review
+remains an editorial approval step.
 
 ## Custom subdomain
 

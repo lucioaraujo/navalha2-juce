@@ -19,6 +19,7 @@
 html { scroll-behavior: smooth; }
 body {
   margin: 0;
+  overflow-x: clip;
   background:
     linear-gradient(rgba(255,255,255,.018) 1px, transparent 1px),
     linear-gradient(90deg, rgba(255,255,255,.018) 1px, transparent 1px),
@@ -59,7 +60,7 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .main-nav { justify-self: center; display: flex; gap: clamp(16px, 2.6vw, 40px); }
 .main-nav a, .repo-link { color: var(--steel); font-size: .69rem; font-weight: 700; letter-spacing: .11em; text-decoration: none; text-transform: uppercase; }
 .main-nav a:hover, .main-nav a[aria-current="true"], .repo-link:hover { color: var(--yellow); }
-.language-nav { display: flex; gap: 7px; white-space: nowrap; }
+.language-nav { justify-self: end; display: flex; gap: 7px; white-space: nowrap; }
 .language-nav a { color: var(--steel); font-size: .62rem; font-weight: 700; letter-spacing: .08em; text-decoration: none; }
 .language-nav a:hover, .language-nav a.active { color: var(--yellow); }
 .repo-link { justify-self: end; padding: 8px 12px; border: 1px solid var(--yellow-dim); color: var(--yellow); white-space: nowrap; }
@@ -252,7 +253,6 @@ h3 { font-size: .9rem; letter-spacing: .04em; text-transform: uppercase; }
 @media (max-width: 780px) {
   .site-header { gap: 10px; }
   .brand-copy { display: none; }
-  .language-nav { display: none; }
   .repo-link { font-size: .58rem; }
   .main-nav.open { grid-template-columns: 1fr 1fr; gap: 16px; text-align: left; }
   .section, .hero { width: min(100% - 24px, var(--max)); }
