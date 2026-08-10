@@ -62,7 +62,7 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .language-nav { display: flex; gap: 7px; white-space: nowrap; }
 .language-nav a { color: var(--steel); font-size: .62rem; font-weight: 700; letter-spacing: .08em; text-decoration: none; }
 .language-nav a:hover, .language-nav a.active { color: var(--yellow); }
-.repo-link { padding: 8px 12px; border: 1px solid var(--yellow-dim); color: var(--yellow); }
+.repo-link { justify-self: end; padding: 8px 12px; border: 1px solid var(--yellow-dim); color: var(--yellow); white-space: nowrap; }
 .nav-toggle { display: none; border: 1px solid var(--line); background: var(--panel); color: var(--white); font: 700 .7rem var(--mono); padding: 10px; }
 
 .section, .hero { width: min(100% - 36px, var(--max)); margin-inline: auto; }
