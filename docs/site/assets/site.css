@@ -218,7 +218,7 @@ h3 { font-size: .9rem; letter-spacing: .04em; text-transform: uppercase; }
 .doc-grid strong { margin-top: 60px; font-size: .85rem; }
 .doc-grid i { position: absolute; top: 22px; right: 22px; color: var(--steel); font-style: normal; }
 
-.credits-section { display: grid; grid-template-columns: 150px 1fr; gap: clamp(24px, 5vw, 80px); }
+.credits-section { display: grid; grid-template-columns: 150px 1fr; gap: clamp(24px, 5vw, 80px); padding-bottom: clamp(36px, 5vw, 64px); }
 .credits-copy { max-width: 940px; }
 .credits-copy p { padding: 14px 0; border-bottom: 1px solid var(--line); color: var(--steel); }
 .credits-copy strong { color: var(--white); }
