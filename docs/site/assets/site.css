@@ -43,7 +43,7 @@ button, a { -webkit-tap-highlight-color: transparent; }
   top: 0;
   min-height: 68px;
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: auto 1fr auto auto;
   align-items: center;
   gap: 26px;
   padding: 8px max(18px, calc((100vw - var(--max)) / 2));
@@ -59,6 +59,9 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .main-nav { justify-self: center; display: flex; gap: clamp(16px, 2.6vw, 40px); }
 .main-nav a, .repo-link { color: var(--steel); font-size: .69rem; font-weight: 700; letter-spacing: .11em; text-decoration: none; text-transform: uppercase; }
 .main-nav a:hover, .main-nav a[aria-current="true"], .repo-link:hover { color: var(--yellow); }
+.language-nav { display: flex; gap: 7px; }
+.language-nav a { color: var(--steel); font-size: .62rem; font-weight: 700; letter-spacing: .08em; text-decoration: none; }
+.language-nav a:hover, .language-nav a.active { color: var(--yellow); }
 .repo-link { padding: 8px 12px; border: 1px solid var(--yellow-dim); color: var(--yellow); }
 .nav-toggle { display: none; border: 1px solid var(--line); background: var(--panel); color: var(--white); font: 700 .7rem var(--mono); padding: 10px; }
 
@@ -232,7 +235,7 @@ h3 { font-size: .9rem; letter-spacing: .04em; text-transform: uppercase; }
 .dialog-close:hover { color: var(--yellow); }
 
 @media (max-width: 1120px) {
-  .site-header { grid-template-columns: auto auto 1fr; }
+  .site-header { grid-template-columns: auto auto 1fr auto; }
   .nav-toggle { display: block; }
   .main-nav { display: none; position: absolute; top: 67px; left: 0; right: 0; padding: 18px; background: var(--ink); border-bottom: 1px solid var(--line); }
   .main-nav.open { display: grid; grid-template-columns: repeat(5, 1fr); text-align: center; }
@@ -249,6 +252,7 @@ h3 { font-size: .9rem; letter-spacing: .04em; text-transform: uppercase; }
 @media (max-width: 780px) {
   .site-header { gap: 10px; }
   .brand-copy { display: none; }
+  .language-nav { display: none; }
   .repo-link { font-size: .58rem; }
   .main-nav.open { grid-template-columns: 1fr 1fr; gap: 16px; text-align: left; }
   .section, .hero { width: min(100% - 24px, var(--max)); }
