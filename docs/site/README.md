@@ -1,9 +1,7 @@
 # Navalha 2 public site
 
 Static, dependency-free first publication candidate for the Navalha 2 project.
-English is the primary language in this version. The header includes PT/FR/ES
-full-page translation links as an interim reading aid. They are intentionally
-kept separate from the original English source; editorially reviewed static
+English is the primary language in this version. Editorially reviewed static
 PT/FR/ES pages remain a future documentation task.
 
 Serve the repository root locally so that links to sibling documentation work:
