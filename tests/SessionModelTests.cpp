@@ -2202,13 +2202,54 @@ int main()
                 && approximately(masteringMetrics.rms, 0.5)
                 && approximately(masteringMetrics.peakDb,
                                  20.0 * std::log10(0.5))
-                && approximately(masteringMetrics.estimatedLufs,
-                                 -0.691 + 10.0 * std::log10(0.25))
                 && approximately(masteringMetrics.correlation, 1.0)
                 && approximately(masteringMetrics.crestDb, 0.0),
-            "MASTER analysis must match the v0.28.1 internal meter");
+            "MASTER analysis must match the v0.28.1 internal meter"
+            " (peak/rms/correlation/crest - estimatedLufs is checked"
+            " separately below, it is no longer part of this parity)");
+    // estimatedLufs stopped mirroring v0.28.1's plain-RMS formula on 18 ago.
+    // 2026 (AUDITORIA_ENGENHARIA_SAIDA_AUDIO.md 3.6) - it is now a real
+    // ITU-R BS.1770-4 K-weighted, gated integrated measurement, which needs
+    // at least one full 400 ms block to mean anything. This 4-frame fixture
+    // is far too short for that (by design, for the peak/rms checks above),
+    // so it correctly reads as the "nothing measurable" sentinel now.
+    require(approximately(masteringMetrics.estimatedLufs, -120.691),
+            "estimatedLufs on a buffer shorter than one 400 ms BS.1770 block"
+            " must report the defined silence/no-data sentinel, not a"
+            " misleadingly precise number");
+    {
+        // A full second of the same full-scale alternating pattern gives
+        // BS.1770 enough contiguous audio for real gated blocks. Not
+        // hand-derived (K-weighting at a signal sitting on Nyquist is not
+        // simple arithmetic) - measured from this implementation itself and
+        // bounded generously, the same spirit as the golden checksums
+        // elsewhere in this suite being measured values, not hand proofs.
+        // The bound exists to catch gross breakage (silence, NaN/Inf, wildly
+        // implausible values), not to pin an exact bit pattern.
+        std::vector<float> secondLeft(48000, 0.0F);
+        std::vector<float> secondRight(48000, 0.0F);
+        for (std::size_t frame = 0; frame < secondLeft.size(); ++frame)
+        {
+            const auto value = (frame % 2 == 0) ? 0.5F : -0.5F;
+            secondLeft[frame] = value;
+            secondRight[frame] = value;
+        }
+        const StereoAudioBuffer sustainedFixture(
+            48000.0, secondLeft, secondRight);
+        const auto sustainedMetrics = analyzeForMastering(sustainedFixture);
+        const auto sustainedMessage = std::string(
+            "estimatedLufs on a full-scale-ish sustained tone must be a"
+            " finite, plausible BS.1770 reading, not silence/NaN/Inf: ")
+            + std::to_string(sustainedMetrics.estimatedLufs);
+        require(std::isfinite(sustainedMetrics.estimatedLufs)
+                    && sustainedMetrics.estimatedLufs > -30.0
+                    && sustainedMetrics.estimatedLufs < 6.0,
+                sustainedMessage.c_str());
+    }
+    auto loudMetrics = masteringMetrics;
+    loudMetrics.estimatedLufs = -6.7;
     require(approximately(
-                recommendedLoudnessTrimDb(masteringMetrics, -14.0), -6.0),
+                recommendedLoudnessTrimDb(loudMetrics, -14.0), -6.0),
             "Album loudness matching must retain the historical +/-6 dB limit");
     auto louderPreviewMetrics = masteringMetrics;
     louderPreviewMetrics.estimatedLufs = -8.0;
@@ -2485,8 +2526,14 @@ int main()
             "ALBUM PROJECT must preserve explicit bounded track order");
     auto quietAlbumMetrics = masteringMetrics;
     quietAlbumMetrics.estimatedLufs = -22.0;
+    // loudMetrics, not raw masteringMetrics: the fixture above is only 4
+    // frames, far short of one BS.1770 block, so masteringMetrics.
+    // estimatedLufs is now the defined "not enough data" sentinel
+    // (-120.691, see the BS.1770 note above) rather than a real loudness
+    // reading - using it here would flip which track this test expects to
+    // be trimmed down vs up.
     const std::array albumProjectAnalysis {
-        quietAlbumMetrics, masteringMetrics};
+        quietAlbumMetrics, loudMetrics};
     matchAlbumProjectRelativeLevels(
         albumProject, albumProjectAnalysis, -14.0);
     require(albumProject.tracks[0].hasAnalysis

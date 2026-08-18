@@ -154,16 +154,15 @@ void MasteringProcessor::prepare(double sampleRate,
     trimGain = dbGain(parameters.trimDb);
     widthDirect = (1.0 + parameters.width) * 0.5;
     widthCross = (1.0 - parameters.width) * 0.5;
+    saturationBypass = parameters.saturation <= 0.0;
     saturationDrive = 1.0 + parameters.saturation * 24.0;
     saturationNormalization = 1.0 / std::tanh(saturationDrive);
-    ceilingGain = dbGain(parameters.ceilingDb);
     compressorThreshold = parameters.compressorThresholdDb;
     compressorRatio = parameters.compressorRatio;
-    limiterThreshold = parameters.ceilingDb - 2.0;
     compressorAttack = smoothingCoefficient(0.030, sampleRate);
     compressorRelease = smoothingCoefficient(0.220, sampleRate);
-    limiterAttack = smoothingCoefficient(0.003, sampleRate);
-    limiterRelease = smoothingCoefficient(0.080, sampleRate);
+    limiter.prepare(sampleRate, LookaheadLimiterParameters {
+        static_cast<float>(parameters.ceilingDb), 5.0F, 80.0F, 0.2F });
     reset();
 }
 
@@ -173,7 +172,8 @@ void MasteringProcessor::reset() noexcept
     lowShelf.reset();
     presence.reset();
     highShelf.reset();
-    compressorGain = limiterGain = 1.0;
+    compressorGain = 1.0;
+    limiter.reset();
 }
 
 double MasteringProcessor::linkedCompressorGain(
@@ -204,20 +204,19 @@ StereoSample MasteringProcessor::process(StereoSample input) noexcept
         compressorAttack, compressorRelease, compressorGain);
     sample.left = static_cast<float>(sample.left * compressor);
     sample.right = static_cast<float>(sample.right * compressor);
-    sample.left = static_cast<float>(
-        std::tanh(saturationDrive * sample.left) * saturationNormalization);
-    sample.right = static_cast<float>(
-        std::tanh(saturationDrive * sample.right) * saturationNormalization);
+    if (!saturationBypass)
+    {
+        sample.left = static_cast<float>(
+            std::tanh(saturationDrive * sample.left) * saturationNormalization);
+        sample.right = static_cast<float>(
+            std::tanh(saturationDrive * sample.right) * saturationNormalization);
+    }
 
     const StereoSample widened {
         static_cast<float>(sample.left * widthDirect + sample.right * widthCross),
         static_cast<float>(sample.left * widthCross + sample.right * widthDirect)
     };
-    const auto limiter = linkedCompressorGain(
-        widened, limiterThreshold, 20.0,
-        limiterAttack, limiterRelease, limiterGain);
-    return {static_cast<float>(widened.left * limiter * ceilingGain),
-            static_cast<float>(widened.right * limiter * ceilingGain)};
+    return limiter.process(widened);
 }
 
 MasteringRender renderMastering(const StereoAudioBuffer& audio,

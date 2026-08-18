@@ -87,12 +87,20 @@ int main()
 {
     constexpr std::uint64_t expectedRenderChecksum = 3440523282391997346ULL;
     constexpr std::uint64_t expectedWavChecksum = 5403870701564285649ULL;
-    constexpr std::uint64_t expectedMasteringChecksum = 6511280478809809579ULL;
+    // Regenerated 18 ago. 2026 after fixing AUDITORIA_ENGENHARIA_SAIDA_AUDIO.md
+    // 3.4 (real LookaheadLimiter instead of a no-lookahead ratio-20
+    // compressor) and 3.5 (saturation=0 is now a true bypass) in
+    // MasteringProcessor - the golden signature intentionally changed, this
+    // is not a regression. Value measured on this session's toolchain (GCC
+    // 13.3.0, Debug, local build) via navalha_golden_render_tests itself.
+    constexpr std::uint64_t expectedMasteringChecksum = 1536196086264323730ULL;
     // The mastering chain is intentionally float based. GCC 11 Release on
-    // Ubuntu 22.04 contracts one intermediate differently from the local
-    // Debug toolchain, producing this second bit-exact but audibly identical
-    // signature. Keep both known platform signatures strict; any third value
-    // still fails the regression.
+    // Ubuntu 22.04 contracted one intermediate differently from the local
+    // Debug toolchain under the OLD DSP (pre-18 ago. 2026 fix) - this second
+    // signature has NOT been regenerated for the new DSP above (no access to
+    // that exact toolchain/config from this session). Treat a mismatch
+    // against this specific constant on that platform as expected until it
+    // is re-measured there, not as a silent regression.
     constexpr std::uint64_t expectedUbuntu2204MasteringChecksum =
         12625143991486910343ULL;
     const auto render = renderFixture(127);

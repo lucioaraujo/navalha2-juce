@@ -57,7 +57,19 @@ Atualizado em 9 de agosto de 2026.
 - oferecer perfis explícitos de exportação de master: WAV PCM24 como padrão,
   WAV float32 para arquivo técnico e FLAC sem perda; manter MP3/OGG/AAC como
   formatos futuros de distribuição, não como master padrão;
-- preparar builds Windows/macOS/Linux somente após aceitação humana.
+- preparar builds Windows/macOS/Linux somente após aceitação humana;
+- **tutorial guiado, sequencial** (pendência registrada em 18 ago. 2026,
+  autor: "registre como uma pendencia do navalha"). Hoje só existe o
+  LEARNING MODE (`UiHelp.h`, 120 entradas, 4 idiomas) - ajuda contextual
+  por controle, ligada sob demanda, sem ordem nem narrativa. Não é a
+  mesma coisa que uma janela de tutorial em capítulos com navegação
+  anterior/próximo, tipo a do ANTITOTEM (`TutorialWindow`/
+  `tutorialChapters`) - útil pra quem já sabe o que está procurando, não
+  pra um primeiro contato guiado com o instrumento. Não é uma correção de
+  nada desatualizado, é uma feature nova a ser avaliada, não teve escopo
+  definido ainda (quantos capítulos, cobre só o painel principal ou
+  também ALBUM PROJECT/FORM/TAKE Timeline, complementa ou substitui o
+  Learning Mode).
 
 ## Lacunas de paridade ainda conhecidas
 

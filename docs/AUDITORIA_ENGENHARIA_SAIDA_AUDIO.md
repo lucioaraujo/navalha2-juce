@@ -2,6 +2,66 @@
 
 Data da auditoria: 9 de agosto de 2026.
 
+> **Nota de correção (18 ago. 2026).** Os achados 3.1, 3.2 e 3.3 abaixo
+> descrevem o estado *anterior* à correção que já estava no mesmo commit
+> que criou este arquivo (`34f8fd7`, "consolidar workflow JUCE e saída de
+> áudio segura", 9 ago. 2026 11:41) - o texto nunca foi revisado depois
+> disso pra refletir o que o próprio commit já corrigia. Verificado por
+> `git log`/leitura direta do código em 18 ago. 2026, não por suposição:
+> `AudioEngine.cpp` não mudou desde esse commit. Resumo do que já está
+> corrigido - detalhe em cada achado abaixo:
+> - **3.1** - `OutputStage` (finite guard + DC reject + limiter lookahead
+>   com true-peak) já roda em produção: `prepareToPlay()` seta
+>   `OutputProfile::liveSafe` incondicionalmente a cada início de áudio.
+> - **3.2** - Preview (`external` em `finalizeOutput()`) é somado *antes*
+>   de `outputStage.process()`, então passa pelo limiter, entra na
+>   gravação (`recordingFifo.push` roda depois da soma) e aparece no
+>   medidor.
+> - **3.3** - o medidor da GUI (`Main.cpp`, `timerCallback()`) já mostra
+>   dBFS, true peak in/out, RMS L/R, gain reduction e tem peak-hold +
+>   clip-latch (60 ticks, cor muda pra vermelho).
+>
+> **Atualização (18 ago. 2026, reverificação direta do código):** 3.7
+> (dither) **estava resolvido** desde antes desta sessão, mesma situação
+> de 3.1-3.3: `WavStreamWriter.cpp` já implementa TPDF real
+> (`tpdfDitherLsb()`, xorshift próprio), gated por `WavDitherMode` - o
+> `README.md` já documentava isso ("dither TPDF determinístico por
+> padrão").
+>
+> **3.4, 3.5 e 3.6 corrigidos nesta sessão (18 ago. 2026), autor:
+> "resolva o navalha primeiro":**
+> - **3.4** - o "limiter" ratio-20/sem lookahead foi trocado pelo mesmo
+>   `LookaheadLimiter` (true-peak, lookahead de 5ms) já usado no motor ao
+>   vivo (`OutputStage`), em vez de uma segunda implementação mais fraca.
+> - **3.5** - `saturation = 0` agora é bypass real (branch explícito,
+>   `saturationBypass`), não mais `tanh` com drive=1 renormalizado.
+> - **3.6** - `estimatedLufs` agora é loudness integrada com gate real
+>   (K-weighting de 2 estágios + blocos de 400ms com 75% de sobreposição
+>   + gate absoluto -70 LUFS + gate relativo -10 LU, ITU-R BS.1770-4),
+>   coeficientes recalculados por sample rate (não fixos a 48kHz),
+>   analisado de forma contígua (não mais decimado/com saltos) até
+>   `maximumInspectedFrames` - resolve de quebra a queixa secundária do
+>   achado original sobre arquivos longos "perderem o pico real".
+>   **Validado contra referência externa** (mesma metodologia da
+>   `VALIDACAO_TRUE_PEAK_FFMPEG.md`, não confiança cega na própria
+>   implementação): tom de teste estéreo de -18dB/1kHz/5s, `ffmpeg -af
+>   ebur128` mediu -39,1 LUFS, `navalha_analyze_master` mediu -39,110601
+>   LUFS - diferença de 0,01 dB.
+>
+> `docs/DITHER_TPDF.md` cobre 3.7 em detalhe (pré-existente). Suite de
+> testes completa (`ctest`, 9 alvos) passa depois das três correções;
+> `GoldenRenderTests.cpp`/`SessionModelTests.cpp` tiveram checksums e
+> fixtures atualizados onde o comportamento mudou de propósito (não uma
+> regressão silenciosa - ver comentários nesses arquivos, datados).
+>
+> Resultado final: dos 7 achados originais, **todos os 7 resolvidos**
+> (3.1-3.3 e 3.7 já estavam; 3.4-3.6 corrigidos agora). Nenhum achado
+> bloqueador permanece aberto nesta auditoria.
+>
+> Ver [`FLUXO_DE_SINAL.md`](FLUXO_DE_SINAL.md) para a topologia completa
+> e atualizada, incluindo por que "desligar algo" nem sempre significa
+> "esse sinal some" - o mesmo tipo de achado desta seção, generalizado.
+
 ## 1. Veredito e escopo
 
 O Navalha 2 JUCE possui uma fundação realtime consistente, gravação assíncrona
@@ -47,7 +107,7 @@ trim -> HPF/EQ -> compressor -> tanh -> width -> compressor 20:1
 
 ## 3. Achados bloqueadores
 
-### 3.1 Saída ao vivo sem proteção final
+### 3.1 Saída ao vivo sem proteção final — RESOLVIDO (ver nota de correção acima)
 
 Depois do `masterLevel` não existem proteção DC, limiter, hard ceiling ou
 controle true peak. Sources A/B, sobreposição de players e virtual voices podem
@@ -56,19 +116,19 @@ somar acima de 0 dBFS antes de chegar ao dispositivo e ao writer.
 O master padrão `0.8` equivale a aproximadamente -1,94 dB, insuficiente para
 garantir headroom quando duas fontes full-scale em fase são somadas.
 
-### 3.2 Preview fora do MASTER
+### 3.2 Preview fora do MASTER — RESOLVIDO (ver nota de correção acima)
 
 A Library Preview é adicionada ao buffer depois de `engine.processBlock`.
 Portanto não passa pelo master, não entra na gravação, não aparece no medidor do
 motor e pode clipar ao ser somada à performance.
 
-### 3.3 Medidor oculta overs
+### 3.3 Medidor oculta overs — RESOLVIDO (ver nota de correção acima)
 
 O medidor publica apenas pico por amostra e a GUI limita a indicação a `0..1`.
 Não há escala dBFS, true peak, RMS, gain reduction, peak hold ou clip latch. Um
 pico pouco acima de 0 dBFS e um overs severo têm a mesma aparência visual.
 
-### 3.4 TRACK MASTER não garante o ceiling
+### 3.4 TRACK MASTER não garante o ceiling — RESOLVIDO (ver nota de correção acima)
 
 O estágio chamado limiter é um compressor 20:1, sem lookahead, com ataque de
 3 ms, seguido de ganho correspondente ao ceiling. Uma prova com os parâmetros
@@ -83,21 +143,21 @@ padrão e ceiling de -1 dBFS produziu:
 O writer PCM16/24 então limita silenciosamente amostras a `[-1, 1]`; isso é
 clipping na codificação, não proteção de master.
 
-### 3.5 Saturation zero não é neutra
+### 3.5 Saturation zero não é neutra — RESOLVIDO (ver nota de correção acima)
 
 Com `saturation = 0`, o drive interno ainda é 1 e o sinal atravessa `tanh`
 normalizada por `1/tanh(1)`. Isso pode ser necessário para paridade histórica,
 mas deve ser nomeado como modo legado; não é bypass neutro. Não há oversampling
 nesse estágio não linear.
 
-### 3.6 Loudness não padronizada
+### 3.6 Loudness não padronizada — RESOLVIDO (ver nota de correção acima)
 
 O valor chamado `estimatedLufs` é RMS global com offset, sem K-weighting,
 blocos/gating e pesos definidos pelo BS.1770. A análise de arquivos longos pode
 saltar frames e perder o pico real. Ela deve continuar rotulada como estimativa
 até ser substituída ou acompanhada por medição de conformidade.
 
-### 3.7 Exportação sem dither
+### 3.7 Exportação sem dither — RESOLVIDO (ver nota de correção acima)
 
 PCM16 e PCM24 usam arredondamento direto. Falta dither TPDF na redução para
 ponto fixo. Float32 deve permanecer sem dither e preservar headroom quando o tap

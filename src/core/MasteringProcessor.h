@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <vector>
 
+#include "core/LookaheadLimiter.h"
 #include "core/SlicePlayer.h"
 
 namespace navalha
@@ -65,16 +66,24 @@ private:
     double widthCross = 0.0;
     double saturationDrive = 1.0;
     double saturationNormalization = 1.0;
-    double ceilingGain = 1.0;
+    // saturation == 0 must be a true bypass (no tanh at all), not tanh at
+    // drive=1 renormalized - see TAREFAS/AUDITORIA_ENGENHARIA_SAIDA_AUDIO.md
+    // 3.5. tanh(d*x)/tanh(d) -> x as d -> 0 mathematically, but tanh(0)=0
+    // makes that limit a 0/0 division in floating point, so this is an
+    // explicit branch instead of relying on the limit.
+    bool saturationBypass = true;
     double compressorGain = 1.0;
-    double limiterGain = 1.0;
     double compressorThreshold = -10.0;
     double compressorRatio = 2.0;
-    double limiterThreshold = -3.0;
     double compressorAttack = 0.0;
     double compressorRelease = 0.0;
-    double limiterAttack = 0.0;
-    double limiterRelease = 0.0;
+    // Replaces the old ratio-20/no-lookahead "limiter" (linkedCompressorGain
+    // reused with a steep ratio) - that stage could not guarantee the ceiling
+    // on fast transients (measured overshooting +1.33 dBFS at a -1 dBFS
+    // ceiling - see AUDITORIA_ENGENHARIA_SAIDA_AUDIO.md 3.4). Reuses the same
+    // true-peak lookahead limiter already trusted for the live OutputStage
+    // instead of a second, weaker implementation.
+    LookaheadLimiter limiter;
 };
 
 [[nodiscard]] MasteringRender renderMastering(
