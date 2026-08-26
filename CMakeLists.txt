@@ -197,6 +197,22 @@ if (NAVALHA_BUILD_JUCE_APP AND JUCE_FOUND)
         set(CPACK_NSIS_CONTACT "rasgo.instruments@gmail.com")
         set(CPACK_NSIS_MODIFY_PATH OFF)
         set(CPACK_NSIS_ENABLE_UNINSTALL_BEFORE_INSTALL ON)
+        # Real root cause of the missing Start Menu entry (found live,
+        # 26 ago. 2026): NSIS's CPack template only registers the uninstall
+        # entry in "Programs and Features" by default - it has no notion of
+        # which installed files are launchable applications unless told, so
+        # it silently created zero shortcuts. CPACK_PACKAGE_EXECUTABLES is
+        # that missing link: (exe name without extension, shortcut label)
+        # pairs, used to generate the actual Start Menu (and, with
+        # CPACK_CREATE_DESKTOP_LINKS, Desktop) .lnk files during install and
+        # remove them during uninstall. The exe's own embedded icon (see
+        # ICON_BIG/ICON_SMALL on juce_add_gui_app) carries over to the
+        # shortcut automatically.
+        set(CPACK_PACKAGE_EXECUTABLES "Navalha 2" "Navalha 2")
+        set(CPACK_CREATE_DESKTOP_LINKS "Navalha 2")
+        set(CPACK_NSIS_MUI_ICON "${CMAKE_CURRENT_SOURCE_DIR}/packaging/windows/navalha2.ico")
+        set(CPACK_NSIS_MUI_UNIICON "${CMAKE_CURRENT_SOURCE_DIR}/packaging/windows/navalha2.ico")
+        set(CPACK_NSIS_INSTALLED_ICON_NAME "Navalha 2.exe")
     elseif (CMAKE_SYSTEM_NAME STREQUAL "Darwin")
         # DragNDrop (.dmg): no extra tooling beyond macOS's own hdiutil.
         set(CPACK_GENERATOR "DragNDrop")

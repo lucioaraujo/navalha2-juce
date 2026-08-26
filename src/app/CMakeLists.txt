@@ -1,8 +1,15 @@
+# ICON_BIG/ICON_SMALL: JUCE's own juceaide tool converts these PNGs into a
+# real platform icon resource (.ico on Windows, .icns on macOS) embedded in
+# the executable - without this the exe/app carries no icon at all, so
+# Explorer/Finder, the taskbar, and any shortcut pointing at it (including
+# the Start Menu shortcut CPack creates below) fall back to a generic icon.
 juce_add_gui_app(Navalha2Juce
     PRODUCT_NAME "Navalha 2"
     COMPANY_NAME "Navalha 2"
     BUNDLE_ID "org.navalha.arcade"
     NEEDS_WEB_BROWSER ${NAVALHA_ENABLE_WEBVIEW}
+    ICON_BIG "${NAVALHA_PD_PATH}/app/assets/brand/navalha2-app-icon-512.png"
+    ICON_SMALL "${NAVALHA_PD_PATH}/app/assets/brand/navalha2-app-icon-32.png"
 )
 
 juce_add_binary_data(Navalha2ArcadeAssets
