@@ -285,14 +285,16 @@ limited build and the tests can be repeated with:
 
 #### Multiplatform packages (Linux/Windows/macOS)
 
-Build and packaging (`.deb` via CPack/DEB on Linux, `.exe` via NSIS on
-Windows, `.dmg` via DragNDrop on macOS) run on GitHub's own hosted
-runners — no Windows or macOS machine is needed to build these. Open
-**Actions** on GitHub and run the **Package (Linux/Windows/macOS)**
-workflow (`.github/workflows/package.yml`); it also runs automatically on
-any `v*` tag push. Each platform's installer is uploaded as a workflow
-artifact, downloadable from the run page by anyone with access to the
-repository.
+Downloads: [**Navalha 2 JUCE v0.1.0** release](https://github.com/lucioaraujo/navalha2-juce/releases/tag/v0.1.0)
+— Linux `.deb`, Windows `.exe` (NSIS) and macOS `.dmg` (DragNDrop), all
+built and tested via CI on GitHub's own hosted runners; no Windows or
+macOS machine is needed to build these.
+
+To build a fresh set yourself, open **Actions** on GitHub and run the
+**Package (Linux/Windows/macOS)** workflow (`.github/workflows/
+package.yml`); it also runs automatically on any `v*` tag push. Each
+platform's installer is uploaded as a workflow artifact, downloadable
+from the run page.
 
 The locally-generated Linux package reflects the build machine's own
 library versions. For the most compatible internal `.deb`, use the same
@@ -724,14 +726,16 @@ dois processos e os testes podem ser repetidos com:
 
 #### Pacotes multiplataforma (Linux/Windows/macOS)
 
-Build e empacotamento (`.deb` via CPack/DEB no Linux, `.exe` via NSIS no
-Windows, `.dmg` via DragNDrop no macOS) rodam nos runners hospedados pelo
-próprio GitHub — não precisa de máquina Windows nem macOS pra gerar esses
-builds. Abra **Actions** no GitHub e rode o workflow **Package (Linux/
-Windows/macOS)** (`.github/workflows/package.yml`); ele também roda
-automaticamente a cada push de tag `v*`. O instalador de cada plataforma é
-disponibilizado como artefato do workflow, baixável pela página do run por
-quem tem acesso ao repositório.
+Downloads: [**release Navalha 2 JUCE v0.1.0**](https://github.com/lucioaraujo/navalha2-juce/releases/tag/v0.1.0)
+— `.deb` Linux, `.exe` Windows (NSIS) e `.dmg` macOS (DragNDrop), todos
+gerados e testados via CI nos runners hospedados pelo próprio GitHub; não
+precisa de máquina Windows nem macOS pra gerar esses builds.
+
+Pra gerar um conjunto novo você mesmo, abra **Actions** no GitHub e rode o
+workflow **Package (Linux/Windows/macOS)** (`.github/workflows/
+package.yml`); ele também roda automaticamente a cada push de tag `v*`. O
+instalador de cada plataforma é disponibilizado como artefato do
+workflow, baixável pela página do run.
 
 O pacote Debian gerado localmente reflete a versão das bibliotecas da
 máquina de build. Para o `.deb` interno mais compatível, use o mesmo
@@ -1223,15 +1227,16 @@ limité à deux processus et les tests peuvent être relancés avec :
 
 #### Paquets multiplateformes (Linux/Windows/macOS)
 
-Le build et l'empaquetage (`.deb` via CPack/DEB sur Linux, `.exe` via
-NSIS sur Windows, `.dmg` via DragNDrop sur macOS) tournent sur les
-runners hébergés par GitHub lui-même — aucune machine Windows ou macOS
-n'est nécessaire pour générer ces builds. Ouvrez **Actions** sur GitHub et
+Téléchargements : [**release Navalha 2 JUCE v0.1.0**](https://github.com/lucioaraujo/navalha2-juce/releases/tag/v0.1.0)
+— `.deb` Linux, `.exe` Windows (NSIS) et `.dmg` macOS (DragNDrop), tous
+générés et testés via CI sur les runners hébergés par GitHub lui-même ;
+aucune machine Windows ou macOS n'est nécessaire pour générer ces builds.
+
+Pour générer un nouveau jeu vous-même, ouvrez **Actions** sur GitHub et
 lancez le workflow **Package (Linux/Windows/macOS)**
 (`.github/workflows/package.yml`) ; il tourne aussi automatiquement à
 chaque push d'un tag `v*`. L'installateur de chaque plateforme est publié
-comme artefact du workflow, téléchargeable depuis la page du run par
-quiconque a accès au dépôt.
+comme artefact du workflow, téléchargeable depuis la page du run.
 
 Le paquet Debian généré localement reflète les versions des bibliothèques
 de la machine de build. Pour le `.deb` interne le plus compatible,
@@ -1744,15 +1749,17 @@ limitado a dos procesos y las pruebas pueden repetirse con:
 
 #### Paquetes multiplataforma (Linux/Windows/macOS)
 
-El build y el empaquetado (`.deb` vía CPack/DEB en Linux, `.exe` vía NSIS
-en Windows, `.dmg` vía DragNDrop en macOS) corren en los runners
-alojados por el propio GitHub — no se necesita una máquina Windows ni
-macOS para generar estos builds. Abra **Actions** en GitHub y ejecute el
-workflow **Package (Linux/Windows/macOS)**
+Descargas: [**release Navalha 2 JUCE v0.1.0**](https://github.com/lucioaraujo/navalha2-juce/releases/tag/v0.1.0)
+— `.deb` Linux, `.exe` Windows (NSIS) y `.dmg` macOS (DragNDrop), todos
+generados y probados vía CI en los runners alojados por el propio
+GitHub; no se necesita una máquina Windows ni macOS para generar estos
+builds.
+
+Para generar un nuevo conjunto usted mismo, abra **Actions** en GitHub y
+ejecute el workflow **Package (Linux/Windows/macOS)**
 (`.github/workflows/package.yml`); también corre automáticamente en cada
 push de un tag `v*`. El instalador de cada plataforma se publica como
-artefacto del workflow, descargable desde la página del run por quien
-tenga acceso al repositorio.
+artefacto del workflow, descargable desde la página del run.
 
 El paquete Debian generado localmente refleja las versiones de las
 bibliotecas de la máquina de build. Para el `.deb` interno más
