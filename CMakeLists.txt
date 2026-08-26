@@ -1,5 +1,24 @@
 cmake_minimum_required(VERSION 3.22)
 
+# Must be set before project() to take effect (CMake/Apple requirement for
+# cross-arch and deployment-target selection). Found live, 26 ago. 2026: the
+# macOS .dmg refused to open at all on the author's own Mac ("Impossible
+# d'utiliser cette version de l'application... avec cette version de
+# macOS") - neither variable was ever set, so Clang defaulted to whatever
+# the GitHub macos-latest runner's own SDK happened to be (confirmed via
+# the shipped binary's LC_BUILD_VERSION load command: minos 26.0, the
+# runner's own OS version) and to a single native architecture (arm64
+# only, since macos-latest runners are Apple Silicon) - neither is
+# suitable for end-user distribution. 10.13 (High Sierra, 2017) is a
+# broadly-supported JUCE deployment target that doesn't require dropping
+# any API this project actually uses (no WebView, no bleeding-edge
+# frameworks); x86_64;arm64 produces one Universal 2 binary instead of
+# choosing between two downloads.
+if (APPLE)
+    set(CMAKE_OSX_DEPLOYMENT_TARGET "10.13" CACHE STRING "Minimum macOS version" FORCE)
+    set(CMAKE_OSX_ARCHITECTURES "x86_64;arm64" CACHE STRING "Build a Universal 2 binary" FORCE)
+endif()
+
 project(Navalha2Juce VERSION 0.1.0 LANGUAGES C CXX)
 find_package(Threads REQUIRED)
 

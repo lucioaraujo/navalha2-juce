@@ -82,6 +82,48 @@ jobs:
         if: runner.os == 'Linux'
         run: ctest --test-dir build --output-on-failure
 
+      # No Mac available to test by hand (26 ago. 2026), so this replaces
+      # that: fails the build if the .app isn't actually distributable -
+      # catches the exact bug found live that day (single-arch arm64-only
+      # binary, deployment target silently defaulting to the runner's own
+      # macOS version) before it ever reaches a release asset again.
+      - name: Validate macOS app bundle
+        if: runner.os == 'macOS'
+        run: |
+          set -euo pipefail
+          APP=$(find build -maxdepth 4 -name "*.app" -print -quit)
+          if [ -z "$APP" ]; then echo "::error::No .app bundle found"; exit 1; fi
+          echo "App bundle: $APP"
+          EXE="$APP/Contents/MacOS/Navalha 2"
+
+          echo "--- file (architecture) ---"
+          file "$EXE"
+          if ! file "$EXE" | grep -q "Mach-O universal binary with 2 architectures"; then
+            echo "::error::Expected a Universal 2 (x86_64+arm64) binary"; exit 1
+          fi
+          if ! (lipo -info "$EXE" | grep -q "x86_64" && lipo -info "$EXE" | grep -q "arm64"); then
+            echo "::error::Missing x86_64 or arm64 slice"; exit 1
+          fi
+
+          echo "--- otool -l (deployment target) ---"
+          otool -l "$EXE" | grep -A4 "LC_BUILD_VERSION\|LC_VERSION_MIN_MACOSX"
+          MINOS=$(otool -l "$EXE" | awk '/LC_BUILD_VERSION/{f=1} f && /minos/{print $2; exit}')
+          echo "minos=$MINOS"
+          case "$MINOS" in
+            10.13*|10.1[4-9]*|10.[2-9]*|1[1-9].*|[2-9][0-9].*) ;;
+            *) echo "::error::Unexpected minos $MINOS (expected >= 10.13)"; exit 1 ;;
+          esac
+          if [[ "$MINOS" == 2[0-9].* ]]; then
+            echo "::error::minos $MINOS looks like it defaulted to the runner's own macOS version, not the project's deployment target"
+            exit 1
+          fi
+
+          echo "--- plutil (Info.plist) ---"
+          plutil -p "$APP/Contents/Info.plist"
+
+          echo "--- codesign (ad-hoc; no Developer ID/notarization in CI) ---"
+          codesign -dv "$APP" 2>&1 || echo "::warning::Not signed - fine for local testing, but real distribution needs a Developer ID + notarization or Gatekeeper will show an unidentified-developer warning on first launch"
+
       - name: Package
         working-directory: build
         run: cpack -G ${{ matrix.generator }} -C Release -B ../dist
