@@ -76,7 +76,7 @@ jobs:
           -DNAVALHA_ENABLE_WEBVIEW=OFF
 
       - name: Build
-        run: cmake --build build --target Navalha2Juce --config Release --parallel 2
+        run: cmake --build build --config Release --parallel 2
 
       - name: Test (Linux only - the headless guard test only runs there)
         if: runner.os == 'Linux'

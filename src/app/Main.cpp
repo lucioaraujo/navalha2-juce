@@ -301,7 +301,7 @@ struct AudioFileLayout
 std::filesystem::path nativeFilesystemPath(const juce::File& file)
 {
 #if JUCE_WINDOWS
-    return std::filesystem::path(file.getFullPathName().toStdWString());
+    return std::filesystem::path(file.getFullPathName().toWideCharPointer());
 #else
     return std::filesystem::path(file.getFullPathName().toStdString());
 #endif
