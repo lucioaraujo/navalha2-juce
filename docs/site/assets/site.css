@@ -68,10 +68,37 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .skip-link { position: fixed; z-index: 1000; top: 8px; left: 8px; padding: 10px 14px; background: var(--yellow); color: var(--ink); transform: translateY(-150%); }
 .skip-link:focus { transform: none; }
 
+/* Persistent umbrella strip above the instrument's own header (RASGO family
+   rule, 27 ago. 2026, "sempre haja um cabeçalho do portal rasgo, que ele
+   nunca deixe de existir, fixo") - the instrument's own header sits right
+   below as a sub-header, keeping its own identity untouched. Deliberately
+   neutral/minimal so it reads as a shared meta-layer, not a second brand
+   competing with Navalha 2's own palette. Same pattern as the Antitotem
+   site's .rasgo-strip. */
+.rasgo-strip {
+  position: sticky;
+  top: 0;
+  z-index: 101;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 16px;
+  background: var(--ink);
+  border-bottom: 1px solid var(--line);
+}
+.rasgo-strip a {
+  color: var(--steel);
+  text-decoration: none;
+  font: 700 .62rem var(--mono);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+.rasgo-strip a:hover { color: var(--yellow); }
+
 .site-header {
   position: sticky;
   z-index: 100;
-  top: 0;
+  top: 30px;
   min-height: 68px;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;

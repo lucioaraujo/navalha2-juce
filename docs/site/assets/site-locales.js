@@ -3,6 +3,7 @@
 
   window.NavalhaSiteLocales = {
     pt: {
+      "RASGO — family of instruments and sound research": "RASGO — família de instrumentos e pesquisa sonora",
       "Skip to content": "Ir para o conteúdo",
       "Navalha 2 home": "Início do Navalha 2",
       "Open navigation": "Abrir navegação",
@@ -66,6 +67,7 @@
       "Slice · recombine · perform": "Recortar · recombinar · tocar", "CONTACT": "CONTATO", "Project documentation · 2026": "Documentação do projeto · 2026", "Repository links": "Links dos repositórios", "Close contact window": "Fechar janela de contato", "Copy the email address:": "Copie o endereço de e-mail:", "Copy email": "Copiar e-mail"
     },
     fr: {
+      "RASGO — family of instruments and sound research": "RASGO — famille d'instruments et de recherche sonore",
       "Skip to content": "Passer au contenu",
       "Navalha 2 home": "Maison Navalha 2",
       "Open navigation": "Ouvrir la navigation",
@@ -227,6 +229,7 @@
       "Copy email": "Copier l'e-mail"
     },
     es: {
+      "RASGO — family of instruments and sound research": "RASGO — familia de instrumentos e investigación sonora",
       "Skip to content": "Saltar al contenido",
       "Navalha 2 home": "Navalha 2 casa",
       "Open navigation": "Abrir navegación",
