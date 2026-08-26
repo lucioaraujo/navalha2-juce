@@ -173,17 +173,35 @@ if (NAVALHA_BUILD_JUCE_APP)
     endif()
 endif()
 
-if (UNIX AND NOT APPLE)
-    set(CPACK_GENERATOR "DEB")
+if (NAVALHA_BUILD_JUCE_APP AND JUCE_FOUND)
     set(CPACK_PACKAGE_NAME "navalha2")
+    set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
     set(CPACK_PACKAGE_VENDOR "Navalha 2")
-    set(CPACK_PACKAGE_CONTACT "Navalha 2")
+    set(CPACK_PACKAGE_CONTACT "Navalha 2 <rasgo.instruments@gmail.com>")
     set(CPACK_PACKAGE_DESCRIPTION_SUMMARY
         "Navalha 2 — live sample slicing and performance instrument")
-    set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Navalha 2")
-    set(CPACK_DEBIAN_PACKAGE_SECTION "sound")
-    set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
-    set(CPACK_PACKAGE_FILE_NAME
-        "navalha2_${PROJECT_VERSION}_${CMAKE_SYSTEM_PROCESSOR}")
+
+    if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
+        set(CPACK_GENERATOR "DEB")
+        set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Navalha 2 <rasgo.instruments@gmail.com>")
+        set(CPACK_DEBIAN_PACKAGE_SECTION "sound")
+        set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
+        set(CPACK_PACKAGE_FILE_NAME
+            "navalha2_${PROJECT_VERSION}_${CMAKE_SYSTEM_PROCESSOR}")
+    elseif (CMAKE_SYSTEM_NAME STREQUAL "Windows")
+        # NSIS: ships preinstalled on GitHub's windows-latest runner (via
+        # Chocolatey in CI), no extra toolchain needed beyond that.
+        set(CPACK_GENERATOR "NSIS")
+        set(CPACK_NSIS_PACKAGE_NAME "Navalha 2")
+        set(CPACK_NSIS_DISPLAY_NAME "Navalha 2")
+        set(CPACK_NSIS_CONTACT "rasgo.instruments@gmail.com")
+        set(CPACK_NSIS_MODIFY_PATH OFF)
+        set(CPACK_NSIS_ENABLE_UNINSTALL_BEFORE_INSTALL ON)
+    elseif (CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+        # DragNDrop (.dmg): no extra tooling beyond macOS's own hdiutil.
+        set(CPACK_GENERATOR "DragNDrop")
+        set(CPACK_DMG_VOLUME_NAME "Navalha 2")
+    endif()
+
     include(CPack)
 endif()

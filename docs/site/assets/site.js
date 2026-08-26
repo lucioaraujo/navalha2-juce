@@ -59,7 +59,7 @@ const contactAddress = document.querySelector('[data-contact-address]');
 const contactCopy = document.querySelector('[data-contact-copy]');
 const contactClose = document.querySelector('[data-contact-close]');
 const contactFeedback = document.querySelector('[data-contact-feedback]');
-const contactEmail = String.fromCharCode(108, 117, 99, 105, 111, 46, 109, 97, 116, 101, 109, 97, 64, 103, 109, 97, 105, 108, 46, 99, 111, 109);
+const contactEmail = String.fromCharCode(114, 97, 115, 103, 111, 46, 105, 110, 115, 116, 114, 117, 109, 101, 110, 116, 115, 64, 103, 109, 97, 105, 108, 46, 99, 111, 109);
 
 if (contactTrigger && contactDialog && contactAddress) {
   contactTrigger.addEventListener('click', (event) => {

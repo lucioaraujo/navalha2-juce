@@ -1,0 +1,94 @@
+name: Package (Linux/Windows/macOS)
+
+# Builds the Navalha 2 JUCE shell and packages it on each of GitHub's own
+# hosted runners - real Windows and macOS toolchains, no Windows or macOS
+# machine needed by the author or by whoever runs this. Linux (.deb) was
+# already validated by this workflow's previous single-platform version;
+# Windows (NSIS/.exe) and macOS (DragNDrop/.dmg) are new here.
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            generator: DEB
+            artifact-glob: dist/*.deb
+          - os: windows-latest
+            generator: NSIS
+            artifact-glob: dist/*.exe
+          - os: macos-latest
+            generator: DragNDrop
+            artifact-glob: dist/*.dmg
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Check out Navalha 2 JUCE
+        uses: actions/checkout@v5
+
+      - name: Check out Pure Data reference assets
+        uses: actions/checkout@v5
+        with:
+          repository: lucioaraujo/navalha2-pd
+          path: navalha2-pd
+
+      - name: Check out JUCE 8.0.13
+        uses: actions/checkout@v5
+        with:
+          repository: juce-framework/JUCE
+          ref: 8.0.13
+          path: JUCE
+
+      # Windows (MSVC) and macOS (Xcode) runners already ship everything
+      # JUCE needs; only Linux requires explicit dev packages.
+      - name: Install Linux build dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes \
+            cmake g++ ninja-build pkg-config dpkg-dev \
+            libasound2-dev libfontconfig1-dev libfreetype6-dev \
+            libgl1-mesa-dev libx11-dev libxcursor-dev libxext-dev \
+            libxinerama-dev libxrandr-dev libxi-dev
+
+      # makensis is not on the Windows runner's PATH by default; Chocolatey
+      # is preinstalled there, so this is a one-line fix (same fix already
+      # proven on the Antitotem instrument's own multiplatform workflow).
+      - name: Install NSIS (Windows)
+        if: runner.os == 'Windows'
+        run: choco install nsis -y
+
+      - name: Configure
+        run: >
+          cmake -S . -B build
+          -DCMAKE_BUILD_TYPE=Release
+          -DNAVALHA_JUCE_PATH=${{ github.workspace }}/JUCE
+          -DNAVALHA_PD_PATH=${{ github.workspace }}/navalha2-pd
+          -DNAVALHA_ENABLE_WEBVIEW=OFF
+
+      - name: Build
+        run: cmake --build build --target Navalha2Juce --config Release --parallel 2
+
+      - name: Test (Linux only - the headless guard test only runs there)
+        if: runner.os == 'Linux'
+        run: ctest --test-dir build --output-on-failure
+
+      - name: Package
+        working-directory: build
+        run: cpack -G ${{ matrix.generator }} -C Release -B ../dist
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v5
+        with:
+          name: navalha2-${{ matrix.os }}
+          path: ${{ matrix.artifact-glob }}
+          if-no-files-found: error

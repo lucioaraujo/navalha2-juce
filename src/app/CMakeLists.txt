@@ -50,6 +50,10 @@ if (UNIX AND NOT APPLE)
         RENAME navalha2.png)
     install(FILES "${CMAKE_CURRENT_BINARY_DIR}/navalha2.desktop"
         DESTINATION share/applications)
+elseif (CMAKE_SYSTEM_NAME STREQUAL "Windows")
+    install(TARGETS Navalha2Juce RUNTIME DESTINATION .)
+elseif (CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+    install(TARGETS Navalha2Juce BUNDLE DESTINATION .)
 endif()
 
 if (NAVALHA_BUILD_TESTS AND UNIX AND NOT APPLE)
