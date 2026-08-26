@@ -1,8 +1,10 @@
 #include "core/Json.h"
 
+#include <cerrno>
 #include <charconv>
 #include <cmath>
 #include <cstdio>
+#include <cstdlib>
 #include <stdexcept>
 
 namespace navalha
@@ -187,10 +189,19 @@ private:
                && std::string_view("-+0123456789.eE").find(text[position])
                     != std::string_view::npos)
             ++position;
-        double value = 0.0;
-        const auto conversion = std::from_chars(
-            text.data() + start, text.data() + position, value);
-        if (conversion.ec != std::errc {} || conversion.ptr != text.data() + position
+        // std::from_chars for double isn't available in Apple's libc++ until
+        // macOS 26.0 (found live, 26 ago. 2026, trying to keep the
+        // deployment target broadly compatible at 10.13) - std::strtod on a
+        // null-terminated copy of just this token is the portable
+        // equivalent, available everywhere. Copying (rather than reading
+        // text.data() + start directly) also avoids relying on whatever
+        // follows position in the buffer, which is not guaranteed
+        // null-terminated JSON content.
+        const std::string numberText(text.substr(start, position - start));
+        char* endPointer = nullptr;
+        errno = 0;
+        const double value = std::strtod(numberText.c_str(), &endPointer);
+        if (endPointer != numberText.c_str() + numberText.size() || errno == ERANGE
             || !std::isfinite(value))
             fail("Invalid JSON number");
         return Json(value);
@@ -240,9 +251,14 @@ void serialize(const Json& json, std::string& output)
         output += *value ? "true" : "false";
     else if (const auto* value = std::get_if<double>(&json.value()))
     {
+        // std::to_chars for double isn't available in Apple's libc++ until
+        // macOS 13.3 - same portability reasoning as parseNumber's
+        // std::strtod fallback above. %.17g is round-trip safe for double
+        // (every value written here parses back to the exact same double),
+        // just not shortest-form like to_chars.
         char number[32] {};
-        const auto result = std::to_chars(number, number + sizeof(number), *value);
-        output.append(number, result.ptr);
+        const auto written = std::snprintf(number, sizeof(number), "%.17g", *value);
+        output.append(number, static_cast<std::size_t>(written));
     }
     else if (const auto* value = std::get_if<std::string>(&json.value()))
     {
