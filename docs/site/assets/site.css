@@ -1,3 +1,33 @@
+/* Self-hosted, not named-system-font: "Impact"/"Haettenschweiler" are
+   Windows-only, so relying on those names alone rendered a completely
+   different (generic sans-serif) header on Linux/macOS - the author found
+   this live, opening the site on a Windows machine and seeing the header
+   render drastically differently from every other system. Anton (OFL,
+   Google Fonts) is the standard free substitute for that bold/condensed
+   "Impact" look, and IBM Plex Mono was already the intended mono face but
+   was never actually embedded, only named and hoped-for. */
+@font-face {
+  font-family: "Anton";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("fonts/anton-latin-400.woff2") format("woff2");
+}
+@font-face {
+  font-family: "IBM Plex Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("fonts/ibm-plex-mono-latin-400.woff2") format("woff2");
+}
+@font-face {
+  font-family: "IBM Plex Mono";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("fonts/ibm-plex-mono-latin-700.woff2") format("woff2");
+}
+
 :root {
   color-scheme: dark;
   --ink: #070909;
@@ -12,7 +42,7 @@
   --red-dark: #4b1015;
   --max: 1440px;
   --mono: "IBM Plex Mono", "DejaVu Sans Mono", Consolas, monospace;
-  --display: Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif;
+  --display: "Anton", Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif;
 }
 
 * { box-sizing: border-box; }

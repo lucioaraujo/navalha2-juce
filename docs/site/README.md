@@ -41,6 +41,18 @@ The editions are currently `draft/review`: their routes, navigation, assets and
 responsive rendering are implemented and tested, while final linguistic review
 remains an editorial approval step.
 
+## Fonts
+
+`assets/fonts/` self-hosts Anton (display) and IBM Plex Mono (body/mono),
+both SIL Open Font License 1.1, loaded via `@font-face` in `site.css`. Found
+live, 26 ago. 2026: the previous `--display` stack (`Impact, Haettenschweiler,
+"Arial Narrow Bold", sans-serif`) named only Windows-bundled proprietary
+fonts with no embedded fallback, so the header rendered as intended-looking
+bold/condensed on Windows but fell through to plain `sans-serif` on Linux/
+macOS - a completely different look depending on the visitor's OS. Self-
+hosting removes that OS dependency entirely; the site stays otherwise
+dependency-free (no external font CDN call at runtime).
+
 ## Custom subdomain
 
 After the exact subdomain is created at the DNS provider, add it in
