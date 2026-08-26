@@ -87,7 +87,8 @@ h3 { font-size: .9rem; letter-spacing: .04em; text-transform: uppercase; }
 .hero-branding { display: flex; justify-content: flex-end; margin: 0 0 16px; }
 .hero-wordmark { width: min(500px, 100%); margin: 0; }
 .hero-lead { max-width: 720px; color: #cbd0cf; font-size: clamp(1rem, 1.35vw, 1.24rem); }
-.hero-actions { display: flex; flex-wrap: wrap; gap: 12px; margin: 34px 0 46px; }
+.hero-actions { display: flex; flex-wrap: wrap; gap: 12px; margin: 34px 0 12px; }
+.hero-download-note { margin: 0 0 22px; color: var(--steel); font-size: .68rem; letter-spacing: .04em; }
 .button { display: inline-block; padding: 13px 17px; border: 1px solid var(--line); background: var(--panel); color: var(--white); font-size: .72rem; font-weight: 700; letter-spacing: .08em; text-decoration: none; text-transform: uppercase; }
 .button:hover { border-color: var(--yellow); }
 .button-primary { background: var(--yellow); border-color: var(--yellow); color: var(--ink); }
