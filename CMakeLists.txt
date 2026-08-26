@@ -9,13 +9,17 @@ cmake_minimum_required(VERSION 3.22)
 # the shipped binary's LC_BUILD_VERSION load command: minos 26.0, the
 # runner's own OS version) and to a single native architecture (arm64
 # only, since macos-latest runners are Apple Silicon) - neither is
-# suitable for end-user distribution. 10.13 (High Sierra, 2017) is a
-# broadly-supported JUCE deployment target that doesn't require dropping
-# any API this project actually uses (no WebView, no bleeding-edge
-# frameworks); x86_64;arm64 produces one Universal 2 binary instead of
-# choosing between two downloads.
+# suitable for end-user distribution. 10.13 was tried first (broadly-
+# supported JUCE baseline) but std::filesystem::path (used throughout
+# RecordingWriterService) is only available in Apple's libc++ starting
+# 10.15 - a real API-availability gap, not a config choice, so 10.15
+# (Catalina, 2019) is the actual floor this codebase supports without a
+# filesystem-API rewrite; the arm64 slice further clamps up to 11.0 on
+# its own regardless (Apple Silicon Macs never shipped older than Big
+# Sur), confirmed live on Antitotem's build. x86_64;arm64 produces one
+# Universal 2 binary instead of choosing between two downloads.
 if (APPLE)
-    set(CMAKE_OSX_DEPLOYMENT_TARGET "10.13" CACHE STRING "Minimum macOS version" FORCE)
+    set(CMAKE_OSX_DEPLOYMENT_TARGET "10.15" CACHE STRING "Minimum macOS version" FORCE)
     set(CMAKE_OSX_ARCHITECTURES "x86_64;arm64" CACHE STRING "Build a Universal 2 binary" FORCE)
 endif()
 
