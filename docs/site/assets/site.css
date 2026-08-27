@@ -3,15 +3,26 @@
    different (generic sans-serif) header on Linux/macOS - the author found
    this live, opening the site on a Windows machine and seeing the header
    render drastically differently from every other system. Anton (OFL,
-   Google Fonts) is the standard free substitute for that bold/condensed
-   "Impact" look, and IBM Plex Mono was already the intended mono face but
+   Google Fonts) was the first free substitute tried for that bold/condensed
+   "Impact" look, but the author's own memory of the header was actually
+   the broken cross-platform fallback (a plain sans-serif), not the intended
+   heavy Impact look - so the display face was changed again, 28 ago. 2026,
+   to DejaVu Sans Mono, matching the RASGO portal and Antitotem header
+   typography instead. IBM Plex Mono was already the intended mono face but
    was never actually embedded, only named and hoped-for. */
 @font-face {
-  font-family: "Anton";
+  font-family: "DejaVu Sans Mono";
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url("fonts/anton-latin-400.woff2") format("woff2");
+  src: url("fonts/dejavu-sans-mono-400.woff2") format("woff2");
+}
+@font-face {
+  font-family: "DejaVu Sans Mono";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("fonts/dejavu-sans-mono-700.woff2") format("woff2");
 }
 @font-face {
   font-family: "IBM Plex Mono";
@@ -42,7 +53,7 @@
   --red-dark: #4b1015;
   --max: 1440px;
   --mono: "IBM Plex Mono", "DejaVu Sans Mono", Consolas, monospace;
-  --display: "Anton", Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif;
+  --display: "DejaVu Sans Mono", "IBM Plex Mono", monospace;
 }
 
 * { box-sizing: border-box; }
@@ -132,7 +143,7 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .wide-copy { grid-column: 2; }
 .eyebrow { margin: 0 0 18px; color: var(--yellow); font-size: .72rem; font-weight: 700; letter-spacing: .19em; text-transform: uppercase; }
 h1, h2, h3, p { margin-top: 0; }
-h1, h2 { font-family: var(--display); font-weight: 900; line-height: 1.08; text-transform: uppercase; letter-spacing: .018em; }
+h1, h2 { font-family: var(--display); font-weight: 700; line-height: 1.08; text-transform: uppercase; letter-spacing: .018em; }
 h1 { font-size: clamp(2.35rem, 3.9vw, 4.35rem); margin-bottom: 26px; }
 h2 { font-size: clamp(1.8rem, 2.7vw, 3.1rem); margin-bottom: 22px; }
 h3 { font-size: .9rem; letter-spacing: .04em; text-transform: uppercase; }
