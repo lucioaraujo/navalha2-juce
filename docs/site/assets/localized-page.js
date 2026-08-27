@@ -38,6 +38,23 @@
     });
 
     applyTranslations(body);
+
+    // <base href="../"> (needed above so bare "assets/..." src/href attributes
+    // cloned from the canonical body still resolve from this subdirectory)
+    // has a side effect: an in-page anchor like href="#workflow" no longer
+    // targets this document, it targets ../#workflow - the canonical English
+    // page - so clicking it navigated away from the localized edition instead
+    // of scrolling. Intercept same-page hash links and scroll manually
+    // instead of letting the browser resolve/navigate them against the base.
+    body.addEventListener("click", (event) => {
+      const link = event.target.closest('a[href^="#"]');
+      if (!link || link.hasAttribute("data-contact-trigger")) return;
+      const id = link.getAttribute("href").slice(1);
+      event.preventDefault();
+      if (!id) { window.scrollTo({ top: 0, behavior: "smooth" }); return; }
+      document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+
     document.body.replaceWith(body);
 
     const script = document.createElement("script");
