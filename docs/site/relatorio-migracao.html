@@ -1,0 +1,424 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Navalha 2 — Relatório geral e migração JUCE/C++</title>
+<style>
+@page {
+  size: A4;
+  margin: 18mm 17mm 19mm;
+  @bottom-right { content: "Navalha 2 · " counter(page); font: 8pt sans-serif; color: #657070; }
+}
+* { box-sizing: border-box; }
+html { font-family: "DejaVu Sans", sans-serif; color: #1b2222; font-size: 10.2pt; line-height: 1.48; }
+body { margin: 0; }
+h1, h2, h3 { color: #111818; page-break-after: avoid; }
+h1 { font-size: 24pt; line-height: 1.08; margin: 0 0 10mm; }
+h2 { font-size: 15pt; margin: 9mm 0 3mm; padding-bottom: 2mm; border-bottom: 1px solid #c9ceca; }
+h3 { font-size: 11.5pt; margin: 5mm 0 1.5mm; }
+p { margin: 0 0 3mm; orphans: 3; widows: 3; }
+ul, ol { margin: 1.5mm 0 3.5mm 6mm; padding-left: 5mm; }
+li { margin: 0 0 1.2mm; }
+code, pre { font-family: "DejaVu Sans Mono", monospace; }
+pre { white-space: pre-wrap; padding: 4mm; background: #101414; color: #f3f4ef; border-left: 3px solid #ffd84a; }
+table { width: 100%; border-collapse: collapse; margin: 3mm 0 5mm; font-size: 9pt; }
+th, td { border: 1px solid #cbd0cd; padding: 2.2mm; vertical-align: top; }
+th { background: #172020; color: #fff; text-align: left; }
+tr:nth-child(even) td { background: #f4f6f4; }
+.cover { height: 252mm; display: flex; flex-direction: column; justify-content: space-between; page-break-after: always; }
+.brand { display: flex; align-items: center; gap: 7mm; padding-bottom: 5mm; border-bottom: 3px solid #ffd84a; }
+.brand img { width: 64mm; max-height: 28mm; object-fit: contain; object-position: left center; }
+.kicker { font-family: "DejaVu Sans Mono", monospace; letter-spacing: .12em; color: #6e5a00; font-weight: bold; }
+.subtitle { max-width: 155mm; font-size: 13pt; color: #3f4948; }
+.meta { padding: 5mm; background: #101414; color: #e9ece8; border-left: 4px solid #ffd84a; }
+.meta strong { color: #fff08a; }
+.notice { padding: 3.5mm; border-left: 3px solid #d7b72d; background: #fff9dc; margin: 4mm 0; }
+.ok { color: #176b49; font-weight: bold; }
+.pending { color: #975313; font-weight: bold; }
+.small { font-size: 8.8pt; color: #56605f; }
+.toc a { color: inherit; text-decoration: none; }
+.page-break { page-break-before: always; }
+.flow { font-family: "DejaVu Sans Mono", monospace; background: #f2f4f2; padding: 4mm; border: 1px solid #cbd0cd; }
+.signature { margin-top: 10mm; border-top: 1px solid #aeb5b1; padding-top: 3mm; }
+</style>
+</head>
+<body>
+
+<section class="cover">
+  <div>
+    <div class="brand">
+      <img src="assets/navalha2-header.png" alt="Navalha 2">
+      <div class="kicker">RELATÓRIO GERAL</div>
+    </div>
+    <div style="margin-top:28mm">
+      <h1>Navalha 2<br>Migração paralela para JUCE/C++</h1>
+      <p class="subtitle">Conceitos, histórico, arquitetura, funcionalidades,
+      fluxo completo, procedimentos realizados, validações e direção de
+      interface.</p>
+    </div>
+  </div>
+  <div class="meta">
+    <p><strong>Referência funcional:</strong> Navalha 2 v0.28.1</p>
+    <p><strong>Referência técnica:</strong> workspace NAVALHA2 e
+    <code>navalha_app_project_v2_v0.28.1.zip</code></p>
+    <p><strong>Data do relatório:</strong> 30 de julho de 2026</p>
+    <p><strong>Estado estimado da transposição:</strong> 98,5%, sem substituir
+    o runtime original</p>
+  </div>
+</section>
+
+<h2>Sumário executivo</h2>
+
+<p>O Navalha 2 é um instrumento de performance e composição baseado em
+seleção, corte e recombinação de materiais sonoros. Seu fluxo enfatiza a
+relação entre preparação do áudio e decisão performática: carregar fontes,
+definir regiões, criar slices, organizar padrões, transformar o material,
+tocar, gravar e devolver a gravação ao próprio instrumento.</p>
+
+<p>A versão v0.28.1 distribui responsabilidades entre interface
+HTML/CSS/JavaScript, bridge Python, patches Pure Data e WebAudio. A migração
+paralela busca concentrar áudio, tempo musical, gravação, projeto e render
+offline em um núcleo C++ determinístico, mantendo a aplicação atual como
+referência até que a paridade esteja demonstrada.</p>
+
+<div class="notice"><strong>Princípio de segurança:</strong> durante toda a
+migração, as pastas <code>app</code>, <code>bridge</code> e <code>core</code>
+foram preservadas. O desenvolvimento ocorreu dentro de <code>juce</code>, com
+builds limitados a dois jobs, temporários removidos e auditorias periódicas de
+espaço em disco.</div>
+
+<table>
+  <tr><th>Dimensão</th><th>Estado</th></tr>
+  <tr><td>Núcleo musical e DSP C++</td><td class="ok">Implementado e coberto por regressões</td></tr>
+  <tr><td>Standalone JUCE Linux</td><td class="ok">Compila, abre e reproduz áudio real</td></tr>
+  <tr><td>Projetos v1/v2 e portable pack</td><td class="ok">Codec, migração, inspeção e render implementados</td></tr>
+  <tr><td>Gravação e MASTER</td><td class="ok">Implementados; validações objetivas e gravação real realizadas</td></tr>
+  <tr><td>Interface final</td><td class="pending">Em reavaliação conjunta; nenhum layout foi declarado definitivo</td></tr>
+  <tr><td>Aprovação de substituição</td><td class="pending">Depende de testes humanos finais, hardware, dois monitores e decisão de licença</td></tr>
+</table>
+
+<h2>1. Conceito do instrumento</h2>
+
+<h3>1.1 Material sonoro como matéria de performance</h3>
+
+<p>O Navalha não trata o áudio apenas como uma faixa linear. Cada fonte pode
+ser delimitada por uma região e repartida em unidades performáveis. Essas
+unidades podem ser selecionadas, alternadas entre SOURCE A e SOURCE B,
+reordenadas, protegidas em MEMORY e submetidas a transformações controladas.</p>
+
+<h3>1.2 Continuidade entre criação e registro</h3>
+
+<p>Um dos conceitos centrais é o ciclo:</p>
+
+<div class="flow">performar → gravar → recarregar → cortar → recombinar → performar novamente</div>
+
+<p>A gravação não é somente uma saída final. Ela pode tornar-se novo material,
+criando uma prática iterativa de composição e resample.</p>
+
+<h3>1.3 Agência humana e assistência</h3>
+
+<p>O Assisted Performer foi projetado como coparticipante limitado. O humano
+mantém autoridade sobre PLAY, STOP e REC. A automação toma decisões delimitadas
+por frase, seed, faixa de BPM, vocabulário permitido e intensidade, podendo
+atuar sobre padrões, região, cortes, pitch, fragmentos e mix. MEMORY, KEEP,
+RESTORE e locks preservam espaços de decisão humana.</p>
+
+<h3>1.4 Identidade Arcade</h3>
+
+<p>A identidade aprovada combina superfícies quase pretas, amarelo para ação e
+seleção, aço para controles neutros e vermelho reservado à gravação e erros. O
+mascote original, o wordmark pixelado branco/amarelo e os ícones aprovados
+permanecem ativos. A paleta documentada usa, entre outras, as cores
+<code>#080a0a</code>, <code>#101313</code>, <code>#171b1b</code>,
+<code>#ffd84a</code>, <code>#fff08a</code>, <code>#78828a</code> e
+<code>#e01820</code>.</p>
+
+<h2>2. Histórico resumido</h2>
+
+<table>
+  <tr><th>Período/versão</th><th>Evolução principal</th></tr>
+  <tr><td>Origem, 2009</td><td>NAVALHA Arcade, associado a Glerm Soares; instrumento baseado em Pure Data e performance com fragmentos.</td></tr>
+  <tr><td>Reestruturação 2026</td><td>Interface web, bridge Python, organização modular dos patches, projetos, biblioteca, tutorial e gravação.</td></tr>
+  <tr><td>v0.15–v0.16</td><td>Layout desktop fixo: biblioteca/log à esquerda; PREPARE, waveform e PERFORM no corpo; TIME/PITCH/OUTPUT/SLICES na base.</td></tr>
+  <tr><td>v0.17.0</td><td>Project v2 e Portable Pack v2 com SOURCE A/B independentes, slices, padrões, MEMORY, TRACE e estado performático.</td></tr>
+  <tr><td>v0.17.2–v0.17.3</td><td>REC simplificado, identidade aprovada, histórico de takes e ciclo TAKE → SOURCE A/B.</td></tr>
+  <tr><td>v0.17.4–v0.17.5</td><td>Identidade NAVALHA Arcade e STOP global, encerrando sequencer, players, tarefas e loops pendentes.</td></tr>
+  <tr><td>v0.17.6</td><td>Histórico persistente de gravações e reconstrução segura dos takes.</td></tr>
+  <tr><td>v0.18+</td><td>Assisted Performer, autonomia delimitada, FORM, TRACE, mixer, vozes e direção de álbum/masterização.</td></tr>
+  <tr><td>v0.28.1</td><td>Referência funcional mais recente, preservada no ZIP canônico indicado pelo usuário.</td></tr>
+  <tr><td>Migração JUCE/C++</td><td>Implementação paralela de motor, ferramentas, standalone e validações, sem apagar o sistema anterior.</td></tr>
+</table>
+
+<h2>3. Arquitetura de referência v0.28.1</h2>
+
+<div class="flow">HTML/CSS/JavaScript
+  ├─ interface, waveform, navegação e automação
+  ├─ WebAudio complementar/MASTER
+  └─ HTTP e eventos
+       ↓
+Bridge Python
+  ├─ arquivos, cache, projetos, metadados e histórico
+  └─ UDP/FUDI
+       ↓
+Pure Data Vanilla
+  └─ playback, slices, sequencer, pitch, mixer, vozes e REC</div>
+
+<p>Essa arquitetura tornou possível evoluir rapidamente, mas possui vários
+pontos de sincronização: navegador, servidor local, bridge, porta UDP, patches
+e dispositivo de áudio. A migração não é uma tradução mecânica; ela exige
+reproduzir regras musicais, temporais e sonoras.</p>
+
+<h2>4. Arquitetura JUCE/C++ proposta</h2>
+
+<div class="flow">Interface JUCE nativa
+       ↓ comandos SPSC sem locks
+SessionModel + AudioEngine C++
+  ├─ sequencer sample-accurate
+  ├─ players/slices A e B
+  ├─ gestos, FORM, TRACE e Assisted
+  ├─ mixer, Heritage Pitch e MASTER
+  ├─ telemetria atômica
+  └─ FIFO pós-MASTER
+       ↓
+dispositivo de áudio + writer WAV em thread separada
+
+O mesmo núcleo atende render offline, testes e ferramentas CLI.</div>
+
+<p>O callback não acessa disco, não processa JSON, não espera locks e não faz
+alocações por amostra. Estruturas de capacidade fixa, buffers imutáveis,
+comandos enfileirados e telemetria atômica protegem o caminho realtime.</p>
+
+<h2>5. Funcionalidades transpostas</h2>
+
+<h3>5.1 Fontes, regiões e slices</h3>
+<ul>
+  <li>duas fontes estéreo independentes, A e B;</li>
+  <li>bancos entre 1 e 128 slices;</li>
+  <li>divisão em 4, 8, 16, 32 ou 64;</li>
+  <li>START/END, BLADE, undo, MICRO e reverse;</li>
+  <li>arquivos originais imutáveis;</li>
+  <li>waveform estéreo com cache min/max e sobreposição dos limites.</li>
+</ul>
+
+<h3>5.2 Sequencer e performance</h3>
+<ul>
+  <li>dez padrões de oito células;</li>
+  <li>códigos A0–A127, B0–B127 e GAP;</li>
+  <li>GRID, FREE e JITTER com seed reproduzível;</li>
+  <li>STOP como fronteira global, invalidando agendamentos pendentes;</li>
+  <li>STUTTER ×4, BURST ×8, MICRO e REVERSE sample-accurate;</li>
+  <li>MEMORY e transformações MUTATION, EROSION e DECONSTRUCT reversíveis.</li>
+</ul>
+
+<h3>5.3 FORM, TRACE e Assisted</h3>
+<ul>
+  <li>FORM Director com cinco cenas padrão e até 16 cenas;</li>
+  <li>edição de transição, bancos, energia, densidade, tensão, estabilidade,
+  continuidade, contraste e movimento estéreo;</li>
+  <li>TRACE XY de até 512 pontos e reprodução em loop por amostras;</li>
+  <li>Assisted Performer determinístico, com RNG Mulberry32 compatível com
+  JavaScript;</li>
+  <li>decisões por frase sobre source, pattern, região, cortes, pitch,
+  fragmentos e mix;</li>
+  <li>AUTO MIX conservador, limitado a balance, pan e width.</li>
+</ul>
+
+<h3>5.4 Caminho de áudio</h3>
+
+<div class="flow">SOURCE A/B players → SOURCE MIX → Heritage Pitch → MASTER
+→ recorder/output</div>
+
+<ul>
+  <li>mixer A/B com level, pan, width, mute, solo e balance;</li>
+  <li>rampas de 15 ms e envelopes de declick;</li>
+  <li>duas vozes virtuais com source, divisão, padrão, foco, pitch, envelope,
+  level e pan;</li>
+  <li>Heritage Pitch com duas cabeças, interpolação de quatro pontos,
+  janelas cossenoidais e crossfade dry/processado;</li>
+  <li>MASTER suavizado compartilhado por realtime e offline.</li>
+</ul>
+
+<h3>5.5 Projeto, portable e gravação</h3>
+<ul>
+  <li>Project v1 legível e migração para o modelo v2;</li>
+  <li>Project v2 preservando sources, slices, patterns, mixer, FORM, TRACE,
+  MEMORY, Assisted e seeds;</li>
+  <li>portable pack ZIP com CRC32, allowlist, deduplicação e defesa contra
+  path traversal;</li>
+  <li>REC pós-MASTER em PCM16, PCM24 ou float32;</li>
+  <li>writer em thread separada, drenagem controlada e publicação atômica;</li>
+  <li>reserva mínima de 1 GiB, limite de uma hora e teto RIFF;</li>
+  <li>metadados RIFF LIST/INFO.</li>
+</ul>
+
+<h3>5.6 TRACK MASTER e ALBUM MASTER</h3>
+<ul>
+  <li>análise de peak, RMS, LUFS estimado, crest, correlação e headroom;</li>
+  <li>TRACK MASTER com EQ, dinâmica, saturação, width e ceiling;</li>
+  <li>receita JSON interoperável com a interface web;</li>
+  <li>ALBUM MASTER com trims, fades, gaps, manifesto e batch PCM24;</li>
+  <li>preflight, limites e publicação por arquivos parciais.</li>
+</ul>
+
+<h2>6. Fluxo completo do usuário</h2>
+
+<ol>
+  <li><strong>Preparar:</strong> abrir SOURCE A e/ou B, observar waveform,
+  escolher região, dividir ou criar cortes.</li>
+  <li><strong>Programar:</strong> selecionar pattern e preencher oito passos
+  com slices A/B ou GAP.</li>
+  <li><strong>Performar:</strong> escolher GRID/FREE/JITTER, ajustar BPM,
+  disparar gestos, pitch, TRACE e transformações.</li>
+  <li><strong>Dirigir:</strong> opcionalmente usar FORM e Assisted dentro de
+  limites definidos pelo músico.</li>
+  <li><strong>Misturar:</strong> ajustar level, pan, width, balance,
+  mute/solo, vozes e MASTER.</li>
+  <li><strong>Gravar:</strong> escolher formato, iniciar REC pós-MASTER,
+  acompanhar frames/drops e finalizar.</li>
+  <li><strong>Persistir:</strong> salvar Project v2 leve ou Portable Pack com
+  áudio associado.</li>
+  <li><strong>Reprocessar:</strong> carregar um take como nova fonte e reiniciar
+  o ciclo de corte e recombinação.</li>
+  <li><strong>Finalizar:</strong> analisar/renderizar TRACK MASTER e organizar
+  ALBUM MASTER quando aplicável.</li>
+</ol>
+
+<h2>7. Procedimentos realizados na migração</h2>
+
+<h3>7.1 Preservação e estratégia</h3>
+<ul>
+  <li>criação da árvore paralela <code>juce</code>;</li>
+  <li>nenhuma remoção ou renomeação do runtime v0.28.1;</li>
+  <li>JUCE 8.0.13 e CMake mantidos como dependências locais, fora das fontes;</li>
+  <li>builds limitados a dois processos;</li>
+  <li>artefatos temporários gerados em <code>/tmp</code> e removidos.</li>
+</ul>
+
+<h3>7.2 Construção incremental</h3>
+<p>A transposição começou pelas estruturas sem dependência gráfica: slices,
+padrões, sequencer, mixer, players e render offline. Em seguida foram
+integrados AudioEngine, filas realtime, gravação, projetos, portable packs,
+MASTER, FORM, TRACE, Assisted e, por último, o shell JUCE nativo.</p>
+
+<h3>7.3 Compatibilidade</h3>
+<p>Foram implementados codecs JSON próprios com limites de tamanho e
+profundidade, migração v1, modelo v2, referências de áudio, portable ZIP e
+ferramentas read-only. O inspetor de projetos prova que a serialização canônica
+v2 é idempotente e rejeita arquivos truncados ou versões futuras não
+suportadas.</p>
+
+<h3>7.4 Ferramentas criadas</h3>
+<table>
+  <tr><th>Ferramenta</th><th>Finalidade</th></tr>
+  <tr><td><code>navalha_compare_wav</code></td><td>RMS, erro, correlação, SNR e compensação de latência.</td></tr>
+  <tr><td><code>navalha_render_portable</code></td><td>Portable ZIP → PCM24 offline.</td></tr>
+  <tr><td><code>navalha_render_pitch_fixture</code></td><td>Fixture para Heritage Pitch.</td></tr>
+  <tr><td><code>navalha_analyze_master</code></td><td>Métricas objetivas de um WAV.</td></tr>
+  <tr><td><code>navalha_render_master</code></td><td>TRACK MASTER PCM24 atômico.</td></tr>
+  <tr><td><code>navalha_inspect_album</code></td><td>Validação e planejamento de manifesto.</td></tr>
+  <tr><td><code>navalha_render_album</code></td><td>Batch ALBUM MASTER.</td></tr>
+  <tr><td><code>navalha_inspect_project</code></td><td>Inspeção read-only de Project v1/v2.</td></tr>
+</table>
+
+<h2>8. Validações executadas</h2>
+
+<table>
+  <tr><th>Validação</th><th>Resultado</th></tr>
+  <tr><td>Build standalone JUCE Linux</td><td class="ok">Aprovado</td></tr>
+  <tr><td>CTest completo</td><td class="ok">9/9 testes aprovados</td></tr>
+  <tr><td>Stress DSP combinado</td><td class="ok">30 s recorrentes; soak virtual de 600 s em blocos 64/511, resultado idêntico</td></tr>
+  <tr><td>Sanitizers</td><td class="ok">AddressSanitizer e UndefinedBehaviorSanitizer sem achados</td></tr>
+  <tr><td>LeakSanitizer</td><td class="pending">Não contabilizado: incompatível com o supervisor ptrace atual</td></tr>
+  <tr><td>Gravação virtual</td><td class="ok">PCM24, 60 s, 2.880.000 frames, zero drops, WAV reaberto e removido</td></tr>
+  <tr><td>MASTER C++ × WebAudio</td><td class="ok">353.708 frames; 0,176 dB peak, 0,136 LUFS e 0,0009 de diferença de correlação</td></tr>
+  <tr><td>Project v1/v2</td><td class="ok">Fixtures, migração, idempotência e rejeição adversarial aprovadas</td></tr>
+  <tr><td>Teste gráfico real</td><td class="ok">Aplicativo abriu; SOURCE carregou; waveform e áudio funcionaram</td></tr>
+  <tr><td>Transporte/timing</td><td class="ok">PLAY/STOP, GRID/FREE/JITTER testados pelo usuário sem anomalia relatada</td></tr>
+  <tr><td>Mixer A/B</td><td class="ok">Balance, pan, width, mute e solo testados pelo usuário</td></tr>
+  <tr><td>Heritage Pitch operacional</td><td class="ok">Teste auditivo de operação relatado como normal</td></tr>
+  <tr><td>REC físico</td><td class="ok">PCM24 estéreo, 44,1 kHz, 61,2 s, 2.698.752 frames</td></tr>
+</table>
+
+<p>A gravação real analisada atingiu 0 dBFS repetidamente. O arquivo estava
+estruturalmente correto, mas indicou necessidade de novo passe com mais
+headroom. Isso não invalida o writer; permanece uma questão de ganho,
+monitoramento e decisão de proteção/limiter no fluxo performático.</p>
+
+<h2>9. Interface e layout</h2>
+
+<p>O layout ainda não é definitivo. A v0.28.1 é a referência funcional; a
+v0.17.5 é uma referência particularmente clara de hierarquia: biblioteca e log
+à esquerda, waveform grande, PREPARE, PERFORM, gestos e quatro cartões
+inferiores. O mockup mais recente mantém essa superfície principal e desloca
+MIX, FORM, ASSISTED e MASTER para navegação complementar.</p>
+
+<p>Diretrizes acordadas:</p>
+<ul>
+  <li>preservar mascote, favicon, wordmark e cabeçalho aprovados;</li>
+  <li>waveform como maior objeto visual;</li>
+  <li>PLAY, STOP e REC imediatamente reconhecíveis;</li>
+  <li>uma tela em 1920×1080; rolagem somente como fallback;</li>
+  <li>não declarar um protótipo como layout final sem avaliação conjunta;</li>
+  <li>evitar que funcionalidades avançadas escondam a prática básica.</li>
+</ul>
+
+<h2>10. Segurança, armazenamento e integridade</h2>
+
+<ul>
+  <li>reserva de 1 GiB durante REC;</li>
+  <li>limites de WAV, render e manifests;</li>
+  <li>publicação atômica e limpeza de <code>.partial</code>;</li>
+  <li>defesa contra traversal em ZIP e caminhos portáteis;</li>
+  <li>fontes originais nunca modificadas;</li>
+  <li>última auditoria: aproximadamente 453 MiB de build, 282 MiB de
+  dependências e 1,1 TiB livre no volume;</li>
+  <li>nenhum temporário pesado deixado pelas validações descritas.</li>
+</ul>
+
+<h2>11. Pendências e critérios de substituição</h2>
+
+<ol>
+  <li>concluir a reavaliação conjunta do layout;</li>
+  <li>comparação auditiva formal A/B do Heritage Pitch contra Pure Data;</li>
+  <li>comparação auditiva cega do MASTER contra WebAudio;</li>
+  <li>gravação física prolongada sem xruns e com headroom adequado;</li>
+  <li>abrir, salvar e reabrir projetos reais do usuário v1/v2;</li>
+  <li>teste real em dois monitores com uma única autoridade de áudio/estado;</li>
+  <li>decisão registrada sobre AGPLv3/licença comercial e distribuição JUCE;</li>
+  <li>empacotamento e instalação final para os sistemas alvo.</li>
+</ol>
+
+<div class="notice">A estimativa de 98,5% representa implementação técnica
+aproximada, não autorização para substituir a v0.28.1. A referência atual deve
+continuar disponível até que os critérios humanos, operacionais e jurídicos
+sejam concluídos.</div>
+
+<h2>12. Próxima etapa recomendada</h2>
+
+<p>Produzir duas ou três variações de layout de baixa ambiguidade, avaliá-las
+com o usuário em 1920×1080 e somente então consolidar a interface JUCE. Em
+paralelo, executar os testes auditivos formais e usar um projeto real do
+usuário para encerrar a validação de persistência.</p>
+
+<h2>13. Referências do workspace</h2>
+
+<ul class="small">
+  <li><code>ANALISE_MIGRACAO_JUCE_CPP.txt</code></li>
+  <li><code>navalha_app_project_v2_v0.28.1.zip</code></li>
+  <li><code>docs/DEVELOPMENT_LOG.md</code></li>
+  <li><code>docs/NAVALHA_ARCADE_v0.17.4.md</code></li>
+  <li><code>docs/FIXED_LAYOUT_v0.15.9.md</code></li>
+  <li><code>docs/STANDARD_LAYOUT_v0.16.0.md</code></li>
+  <li><code>docs/LAYOUT_PERFORMER_v0.19.0.md</code></li>
+  <li><code>juce/README.md</code></li>
+  <li><code>juce/docs/PARIDADE_V0281.md</code></li>
+  <li><code>juce/docs/MASTER_OBJECTIVE_COMPARISON.md</code></li>
+  <li><code>juce/docs/FINAL_ACCEPTANCE_CHECKLIST.md</code></li>
+</ul>
+
+<p class="signature"><strong>Documento vivo.</strong> Deve ser atualizado após
+cada decisão conjunta de layout e após os testes finais de hardware,
+persistência e audição.</p>
+
+</body>
+</html>
