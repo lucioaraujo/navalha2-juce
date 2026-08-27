@@ -40,9 +40,32 @@ tr:nth-child(even) td { background: #f4f6f4; }
 .page-break { page-break-before: always; }
 .flow { font-family: "DejaVu Sans Mono", monospace; background: #f2f4f2; padding: 4mm; border: 1px solid #cbd0cd; }
 .signature { margin-top: 10mm; border-top: 1px solid #aeb5b1; padding-top: 3mm; }
+/* Site nav bar: this document is styled as a formal print/PDF report
+   (see @page above), deliberately different from the site's dark theme -
+   but dropped into the site with zero navigation it read as a page with
+   no relation to Navalha 2 at all. Hidden on print/PDF export, since the
+   report itself is the deliverable there, not site chrome. */
+.site-back-bar {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px max(18px, calc((100vw - 210mm) / 2));
+  background: #070909; border-bottom: 1px solid #2d3839;
+  font-family: "DejaVu Sans", sans-serif;
+}
+.site-back-bar img { height: 28px; width: auto; }
+.site-back-bar a {
+  color: #9eaaac; text-decoration: none; font-size: .82rem; font-weight: 700;
+  letter-spacing: .04em;
+}
+.site-back-bar a:hover { color: #ffd82f; }
+@media print { .site-back-bar { display: none; } }
 </style>
 </head>
 <body>
+
+<div class="site-back-bar">
+  <img src="assets/navalha2-app-icon.png" alt="">
+  <a href="index.html">← Navalha 2</a>
+</div>
 
 <section class="cover">
   <div>
