@@ -210,7 +210,7 @@ h3 { font-size: .9rem; letter-spacing: .04em; text-transform: uppercase; }
 .workspace-map { display: grid; grid-template-columns: repeat(2, 1fr); margin-left: 230px; gap: 12px; }
 .workspace { min-height: 330px; padding: 30px; border: 1px solid var(--line); background: var(--panel); }
 .workspace > span { color: var(--yellow); font-size: .62rem; letter-spacing: .16em; }
-.workspace h3 { margin: 75px 0 24px; font-family: var(--display); font-size: clamp(1.8rem, 3vw, 3.2rem); line-height: 1.08; }
+.workspace h3 { margin: 44px 0 20px; font-family: var(--display); font-size: clamp(1.3rem, 1.8vw, 1.9rem); line-height: 1.15; }
 .workspace ul { list-style: none; padding: 0; margin: 0; color: var(--steel); font-size: .84rem; }
 .workspace li { padding: 6px 0; border-top: 1px solid #202728; }
 .workspace.prepare { border-top: 3px solid var(--yellow); }
@@ -335,7 +335,7 @@ h3 { font-size: .9rem; letter-spacing: .04em; text-transform: uppercase; }
   .timeline article { padding-bottom: 35px; }
   .timeline time { margin-bottom: 24px; }
   .workspace { min-height: 280px; }
-  .workspace h3 { margin-top: 50px; }
+  .workspace h3 { margin-top: 32px; }
   .steps li { grid-template-columns: 54px 1fr; gap: 10px; }
   .interface-frame { grid-template-columns: 1fr; grid-template-areas: "nav" "transport" "wave" "create" "library" "mix"; }
   .tech-grid { gap: 35px; }
