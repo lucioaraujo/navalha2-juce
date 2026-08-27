@@ -132,7 +132,7 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .wide-copy { grid-column: 2; }
 .eyebrow { margin: 0 0 18px; color: var(--yellow); font-size: .72rem; font-weight: 700; letter-spacing: .19em; text-transform: uppercase; }
 h1, h2, h3, p { margin-top: 0; }
-h1, h2 { font-family: var(--display); font-weight: 900; line-height: .94; text-transform: uppercase; letter-spacing: .018em; }
+h1, h2 { font-family: var(--display); font-weight: 900; line-height: 1.08; text-transform: uppercase; letter-spacing: .018em; }
 h1 { font-size: clamp(2.35rem, 3.9vw, 4.35rem); margin-bottom: 26px; }
 h2 { font-size: clamp(1.8rem, 2.7vw, 3.1rem); margin-bottom: 22px; }
 h3 { font-size: .9rem; letter-spacing: .04em; text-transform: uppercase; }
@@ -210,7 +210,7 @@ h3 { font-size: .9rem; letter-spacing: .04em; text-transform: uppercase; }
 .workspace-map { display: grid; grid-template-columns: repeat(2, 1fr); margin-left: 230px; gap: 12px; }
 .workspace { min-height: 330px; padding: 30px; border: 1px solid var(--line); background: var(--panel); }
 .workspace > span { color: var(--yellow); font-size: .62rem; letter-spacing: .16em; }
-.workspace h3 { margin: 75px 0 24px; font-family: var(--display); font-size: clamp(1.8rem, 3vw, 3.2rem); line-height: 1; }
+.workspace h3 { margin: 75px 0 24px; font-family: var(--display); font-size: clamp(1.8rem, 3vw, 3.2rem); line-height: 1.08; }
 .workspace ul { list-style: none; padding: 0; margin: 0; color: var(--steel); font-size: .84rem; }
 .workspace li { padding: 6px 0; border-top: 1px solid #202728; }
 .workspace.prepare { border-top: 3px solid var(--yellow); }
