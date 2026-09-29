@@ -32,3 +32,12 @@ REC remains stable where it identifies controls or concepts of the instrument.
 
 The translated copy remains marked `draft/review` until authorial and linguistic
 proofreading closes the editorial approval gate.
+
+## 2026-09-30 — static generation
+
+The dictionaries are now applied ahead of time by `gerar_idiomas.py` instead
+of `localized-page.js` in the browser, so `/pt/`, `/fr/` and `/es/` carry their
+translated text in the HTML itself (readable without JavaScript: AI readers,
+link previews, no-JS visitors). Same canonical sources, same rules; verified
+text- and attribute-identical to the runtime loader in Chromium. See
+`README.md → Localization architecture`.

@@ -31,11 +31,30 @@ Before public deployment:
 
 ## Localization architecture
 
-`index.html` is the canonical layout and English copy. Each localized route has
-a small entry page with localized metadata. `assets/localized-page.js` loads the
-canonical markup, applies the selected local dictionary and then initializes
-the regular site behavior. Layout and content therefore do not fork into four
-manually maintained HTML copies.
+`index.html` is the canonical layout and English copy; `assets/site-locales.js`
+holds the PT/FR/ES dictionaries. Layout and content do not fork into four
+manually maintained HTML copies: **`gerar_idiomas.py` generates the body of
+`pt/index.html`, `fr/index.html` and `es/index.html`** from those two sources.
+Each localized page keeps its own `<head>` (localized title and description,
+the `seo.py` block). After editing `index.html` or the dictionaries:
+
+```sh
+python3 gerar_idiomas.py && python3 seo.py
+python3 gerar_idiomas.py --check   # exit 1 if a localized page is stale
+```
+
+Until 30 Sep 2026 the same translation happened in the browser:
+`assets/localized-page.js` fetched `index.html` and applied the dictionary at
+runtime, so the three localized routes shipped an empty body. Google runs
+JavaScript; most AI readers, link previews and no-JS visitors do not, and saw
+those editions empty. The generator reproduces the loader's rules exactly
+(whole text node or `aria-label`/`title`/`alt` whose normalized value is a
+dictionary key; active language link), and was checked against it: rendered
+in Chromium, the loader output and the static pages have identical text and
+attributes in PT, FR and ES, and pixel-identical layout apart from the SVG
+animation frame. The static pages drop `<base href="../">` and prefix relative
+URLs with `../` instead, so in-page anchors work natively.
+`assets/localized-page.js` is no longer referenced and can be deleted.
 
 The editions are currently `draft/review`: their routes, navigation, assets and
 responsive rendering are implemented and tested, while final linguistic review
@@ -79,9 +98,3 @@ only checks). The share image is `assets/og-navalha2.jpg`, 1200×630, derived
 from `assets/navalha2-juce-interface.jpg`. The same `seo.py` exists on every
 RASGO family site; only the configuration differs. `relatorio-migracao.html`
 gained a `<meta name="description">` taken from its own subtitle.
-
-**Known limitation:** `pt/`, `fr/` and `es/` arrive almost empty in the HTML —
-the text is built by `localized-page.js` from the English page. Google runs
-JavaScript; most AI readers only read raw HTML and see those three versions
-empty. Fixing it means emitting the translated text in the HTML itself
-(author's decision, not done here).

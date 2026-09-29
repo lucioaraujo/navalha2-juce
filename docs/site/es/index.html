@@ -6,11 +6,9 @@
   <meta name="description" content="Navalha 2 es un instrumento de corte, recombinación y actuación en vivo en migración de Pure Data/web a JUCE/C++ nativo.">
   <meta name="theme-color" content="#0a0d0d">
   <title>Navalha 2 — cortar, recombinar, tocar</title>
-  <base href="../">
-  <link rel="icon" type="image/png" href="assets/favicon.png">
-  <link rel="stylesheet" href="assets/site.css?v=20260828-1">
-  <script src="assets/site-locales.js?v=20260827-2" defer></script>
-  <script src="assets/localized-page.js?v=20260827-1" defer></script>
+  <link rel="icon" type="image/png" href="../assets/favicon.png">
+  <link rel="stylesheet" href="../assets/site.css?v=20260828-1">
+  <script src="../assets/site.js?v=20260810-5" defer></script>
   <!-- SEO:INICIO — gerado por seo.py; editar lá, não aqui -->
   <link rel="canonical" href="https://navalha2.arquiviagem.net/es/">
   <link rel="alternate" hreflang="en" href="https://navalha2.arquiviagem.net/">
@@ -76,5 +74,344 @@
   </script>
   <!-- SEO:FIM -->
 </head>
-<body><p class="localized-loading">Cargando la edición en español…</p></body>
+<body>
+  <div class="rasgo-strip"><a href="https://rasgosound.arquiviagem.net/">RASGO — familia de instrumentos e investigación sonora</a></div>
+  <a class="skip-link" href="#main">Saltar al contenido</a>
+
+  <header class="site-header" data-site-header>
+    <a class="brand" href="#top" aria-label="Inicio de Navalha 2">
+      <img src="../assets/navalha2-app-icon.png" alt="" width="52" height="52">
+      <span class="brand-copy"><strong>NAVALHA <b class="brand-number" style="color: #ffd82f">2</b></strong></span>
+    </a>
+    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="main-nav">
+      <span class="sr-only">Abrir navegación</span>
+      <span aria-hidden="true">MENU</span>
+    </button>
+    <nav id="main-nav" class="main-nav" aria-label="Navegación principal">
+      <a href="#instrument">Instrumento</a>
+      <a href="#workflow">Flujo de trabajo</a>
+      <a href="#learn">Aprender</a>
+      <a href="#technology">Tecnología</a>
+      <a href="#status">Estado</a>
+    </nav>
+    <nav class="language-nav" aria-label="Idioma">
+      <a href="../" lang="en" hreflang="en">EN</a>
+      <a href="../pt/" lang="pt" hreflang="pt">PT</a>
+      <a href="../fr/" lang="fr" hreflang="fr">FR</a>
+      <a href="../es/" lang="es" hreflang="es" class="active" aria-current="page">ES</a>
+    </nav>
+  </header>
+
+  <main id="main">
+    <section id="top" class="hero section-grid">
+      <div class="hero-copy">
+        <p class="eyebrow">Un instrumento de interpretación para material grabado.</p>
+        <h1>Corta la fuente.<br>Mantén vivo el gesto.</h1>
+        <p class="hero-lead">Navalha 2 convierte dos fuentes de sonido en fragmentos, patrones, gestos y formas reproducibles. No es un deck doble ni un sampler convencional: el corte en sí se convierte en un instrumento.</p>
+        <div class="hero-actions">
+          <a class="button button-primary" href="https://github.com/lucioaraujo/navalha2-juce/releases/tag/v0.1.0">Descargar v0.1.0 ↓</a>
+          <a class="button" href="https://github.com/lucioaraujo/navalha2-juce">Fuente JUCE/C++ ↗</a>
+          <a class="button" href="https://github.com/lucioaraujo/navalha2-pd">PD/referencia web ↗</a>
+        </div>
+        <p class="hero-download-note">Builds de Linux, Windows y macOS, probados vía CI.</p>
+        <ul class="release-strip" aria-label="Current project status">
+          <li><span>JUCE</span><strong>v0.1.0</strong></li>
+          <li><span>REFERENCIA</span><strong>PD/web v0.28.1</strong></li>
+          <li><span>ESTADO</span><strong>Migración en validación</strong></li>
+        </ul>
+      </div>
+      <div class="hero-visual">
+        <div class="hero-branding">
+          <img class="hero-wordmark" src="../assets/navalha2-header.png" alt="Navalha 2">
+        </div>
+        <div class="hero-machine" aria-label="Abstract representation of the Navalha 2 signal flow">
+          <div class="machine-head">
+            <span>MAPA DE SEÑAL EN VIVO</span><span class="live-dot">MOTOR LISTO</span>
+          </div>
+          <div class="source source-a"><small>SOURCE A</small><b>MATERIA 01</b><svg class="source-wave" viewBox="0 0 420 34" preserveAspectRatio="none" aria-hidden="true"><path d="M0 18 L14 18 24 8 34 27 47 13 60 18 76 17 88 5 99 29 111 16 128 18 140 10 151 23 164 18 181 3 193 30 207 16 223 18 237 8 249 27 262 13 276 18 291 18 305 5 317 29 331 16 347 18 364 9 377 24 390 18 420 18" /><path class="wave-cut" d="M85 2V32 M171 2V32 M258 2V32 M342 2V32" /></svg></div>
+          <div class="source source-b"><small>SOURCE B</small><b>MATERIA 02</b><svg class="source-wave" viewBox="0 0 420 34" preserveAspectRatio="none" aria-hidden="true"><path d="M0 18 L13 18 23 27 35 7 48 22 61 18 76 18 91 30 104 4 117 20 132 18 146 25 159 11 173 18 187 31 201 3 215 19 230 18 244 27 257 7 270 22 284 18 299 18 313 30 327 4 341 20 356 18 371 25 384 11 398 18 420 18" /><path class="wave-cut" d="M72 2V32 M154 2V32 M247 2V32 M329 2V32" /></svg></div>
+          <div class="fragments" aria-hidden="true">
+            <span>A12</span><span>GAP</span><span>B07</span><span>A03</span><span>B19</span><span>A31</span>
+          </div>
+          <div class="gesture-map" aria-hidden="true">
+            <svg viewBox="0 0 500 150" role="img" aria-label="A changing gesture path across the performance field">
+              <path id="gesture-route" d="M8 119 C78 120, 72 20, 147 60 S243 148, 287 73 S378 16, 492 42" />
+              <circle r="7">
+                <animateMotion dur="9s" repeatCount="indefinite" rotate="auto">
+                  <mpath href="#gesture-route" />
+                </animatemotion>
+              </circle>
+            </svg>
+            <span>GESTO → FORMA → SALIDA</span>
+          </div>
+          <div class="safety"><span>MASTER CREATIVO</span><b>−1.0 dBTP</b><span>LIVE SAFE</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="instrument" class="section section-grid">
+      <div class="section-label">01 / INSTRUMENTO</div>
+      <div class="section-copy wide-copy">
+        <p class="eyebrow">Fuente → corte → patrón → gesto → forma</p>
+        <h2>Un sampler cuyo material real es la transformación.</h2>
+        <p class="large-copy">Navalha comenzó como un instrumento de Pure Data de Glerm Soares. Navalha 2 preserva ese linaje al tiempo que lo expande a un entorno escénico impulsado por gestos y de dos fuentes dirigido por Lúcio Araújo. La migración nativa JUCE/C++ mantiene el instrumento PD/web v0.28.1 como referencia funcional hasta que se complete la aceptación humana.</p>
+      </div>
+      <div class="principles">
+        <article>
+          <span class="card-number">A/B</span>
+          <h3>Dos materias primas</h3>
+          <p>Fuentes independientes alimentan una gramática compartida de corte y recombinación. Son materia, no decks.</p>
+        </article>
+        <article>
+          <span class="card-number">128</span>
+          <h3>Slices no destructivos</h3>
+          <p>Regiones, divisiones, BLADE y deshacer remodelan el acceso a la fuente dejando intacta la grabación original.</p>
+        </article>
+        <article>
+          <span class="card-number">XY</span>
+          <h3>Gesto como memoria</h3>
+          <p>TRACE registra un movimiento a través de BPM y tono. FORM organiza estados más amplios sin aplanar la intervención en vivo.</p>
+        </article>
+        <article>
+          <span class="card-number">∞</span>
+          <h3>Performance, no reproducción</h3>
+          <p>Los patrones, las voces virtuales y las decisiones asistidas siguen siendo reversibles y subordinadas a PLAY, STOP y REC.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section history-section">
+      <div class="section-label">02 / LINAJE</div>
+      <div class="timeline">
+        <article>
+          <time>2009</time>
+          <h3>Navalha original</h3>
+          <p>Glerm Soares crea el instrumento Pure Data y su característico flujo de trabajo de corte/secuenciación.</p>
+        </article>
+        <article>
+          <time>PD / WEB</time>
+          <h3>Instrumento de referencia</h3>
+          <p>La interfaz crece en torno a la edición de fuentes no destructivas, patrones, gestos, grabación y flujos de trabajo maestros.</p>
+        </article>
+        <article>
+          <time>v0.28.1</time>
+          <h3>Punto de referencia funcional</h3>
+          <p>La versión PD/web sigue siendo la base explícita para las decisiones sobre migración y paridad.</p>
+        </article>
+        <article>
+          <time>2026</time>
+          <h3>migración nativa</h3>
+          <p>JUCE/C++ v0.1.0 establece el núcleo en tiempo real, la interfaz nativa, los proyectos portátiles y la base de seguridad de salida.</p>
+        </article>
+      </div>
+    </section>
+
+    <section id="workflow" class="section workflow-section">
+      <div class="section-label">03 / FLUJO DE TRABAJO</div>
+      <div class="section-heading">
+        <p class="eyebrow">Un instrumento, cuatro espacios de trabajo</p>
+        <h2>Prepare la materia. Componga el comportamiento. Interprete las decisiones. Conserve las tomas.</h2>
+      </div>
+      <div class="workspace-map" aria-label="Navalha 2 workspace map">
+        <article class="workspace prepare">
+          <span>EDIT / PREPARE</span>
+          <h3>Haz que el corte sea jugable</h3>
+          <ul><li>Cargue SOURCE A/B</li><li>Seleccionar y dividir regiones</li><li>BLADE, WHOLE y UNDO</li><li>Vista previa sin reemplazar una fuente</li></ul>
+        </article>
+        <article class="workspace compose">
+          <span>COMPOSE / FORM</span>
+          <h3>construir una gramática</h3>
+          <ul><li>Relojes GRID, FREE y JITTER</li><li>Patrones de pasos A/B/GAP</li><li>Escenas FORM y TRACE XY</li><li>Memoria y transformaciones reversibles.</li></ul>
+        </article>
+        <article class="workspace perform">
+          <span>PLAY / PERFORM</span>
+          <h3>Actúa en tiempo real</h3>
+          <ul><li>Stutter, burst, micro y reverse</li><li>Performer asistido</li><li>Dos voces virtuales</li><li>Funcionamiento con monitor único o doble</li></ul>
+        </article>
+        <article class="workspace master">
+          <span>TAKES / MASTER</span>
+          <h3>preservar el trabajo</h3>
+          <ul><li>REC con límite de UI de cinco minutos</li><li>Cronograma de TOMA persistente</li><li>Exportación de metadatos y recetas</li><li>Herramientas de pista/álbum bajo validación</li></ul>
+        </article>
+      </div>
+    </section>
+
+    <section id="learn" class="section learn-section section-grid">
+      <div class="section-label">05 / INICIO RÁPIDO</div>
+      <div class="section-copy">
+        <p class="eyebrow">Una primera actuación en ocho movimientos</p>
+        <h2>Del silencio a una toma grabada.</h2>
+      </div>
+      <ol class="steps">
+        <li><span>01</span><div><h3>comprobar audio</h3><p>Abra AUDIO SETUP, elija el dispositivo de salida, la frecuencia de muestreo y el búfer. Comience con OUTPUT TRIM atenuado.</p></div></li>
+        <li><span>02</span><div><h3>Cargar las fuentes</h3><p>Coloque material WAV en las FUENTES A y B. Utilice la Vista previa para escuchar sin reemplazar ninguna de las fuentes.</p></div></li>
+        <li><span>03</span><div><h3>Definir la región</h3><p>Seleccione un intervalo útil en la forma de onda, divídalo y luego refine con BLADE. La edición sigue siendo no destructiva.</p></div></li>
+        <li><span>04</span><div><h3>escribir un patrón</h3><p>Coloque los eventos A, B o GAP en la cuadrícula de pasos. Elija GRID, FREE o JITTER como comportamiento de sincronización.</p></div></li>
+        <li><span>05</span><div><h3>Dale forma al gesto</h3><p>Utilice STUTTER, BURST, MICRO y REVERSE; grabe un XY TRACE u organice escenas FORM más amplias.</p></div></li>
+        <li><span>06</span><div><h3>Invitar asistencia</h3><p>Habilite sólo los vocabularios del intérprete asistido que desee. Sus ediciones siguen siendo limitadas y reversibles.</p></div></li>
+        <li><span>07</span><div><h3>Interpretar</h3><p>PLAY inicia el instrumento; STOP invalida los gestos pendientes. MASTER CREATIVE y OUTPUT TRIM cumplen funciones distintas.</p></div></li>
+        <li><span>08</span><div><h3>Grabar y revisar</h3><p>Elija PCM16, PCM24 o float32, presione REC y luego revise el WAV finalizado en TAKE Timeline.</p></div></li>
+      </ol>
+      <p class="learn-note">La aplicación nativa trata el aprendizaje como una superficie de performance, no como una ayuda superpuesta. Diez capítulos recorren el camino de la materia a la toma, mientras el panel contextual LEARN mantiene disponible el sentido de cada control en el momento de uso — en EN/PT/FR/ES.</p>
+    </section>
+
+    <section id="takes" class="section takes-section section-grid">
+      <div class="section-label">04 / TOMAS / MASTER</div>
+      <div class="section-copy wide-copy">
+        <p class="eyebrow">Una toma es una decisión hecha audible</p>
+        <h2>Una toma no es un residuo. Es la obra haciéndose legible.</h2>
+        <p class="large-copy">REC captura la misma señal posterior a la seguridad que llega al dispositivo y al medidor: sin ruta de exportación oculta ni mezcla sustitutiva. Una toma preserva el momento en que corte, gesto y forma se convierten en una decisión musical que puede volver a oírse, describirse, compararse y llevarse adelante.</p>
+        <div class="takes-grid">
+          <article>
+            <span class="card-number">01</span>
+            <h3>Capturar sin borrar</h3>
+            <p>Cada WAV finalizado conserva su identidad técnica y sus metadatos opcionales. Puede volver a SOURCE A o B sin reemplazar el material original ni ocultar el recorrido que lo produjo.</p>
+          </article>
+          <article>
+            <span class="card-number">02</span>
+            <h3>La revisión es parte de la performance</h3>
+            <p>TAKE Timeline convierte la grabación en un espacio editorial: escuchar, anotar, valorar, comparar y conservar la receta de una decisión antes de que se convierta en memoria sin contexto.</p>
+          </article>
+          <article>
+            <span class="card-number">03</span>
+            <h3>El master como segunda escucha</h3>
+            <p>Las herramientas TRACK y ALBUM no prometen hacerlo todo más fuerte. Preparan una segunda pasada cuidadosa: nivel, secuencia, espacios, fundidos y evidencias permanecen visibles antes de que una toma se convierta en una edición.</p>
+          </article>
+        </div>
+        <p class="takes-route" aria-label="Recorrido de performance">PERFORM <i>→</i> TAKE <i>→</i>REVISIÓN<i>→</i> MASTER <i>→</i>OBRA / EDICIÓN</p>
+      </div>
+    </section>
+
+    <section class="section interface-section">
+      <div class="section-label">06 / INTERFAZ</div>
+      <div class="section-heading">
+        <p class="eyebrow">Un shell nativo, no una imagen de la aplicación web</p>
+        <h2>La geometría sigue el trabajo.</h2>
+        <p>La versión actual de JUCE mantiene los controles de edición, interpretación, composición y mezcla visibles en un instrumento nativo.</p>
+      </div>
+      <figure class="interface-screenshot">
+        <img src="../assets/navalha2-juce-interface.jpg" alt="Interfaz nativa de Navalha 2 JUCE con formas de onda de origen, patrones, gestos, controles de formulario, biblioteca y mezclador de origen">
+        <figcaption>Navalha 2 JUCE/C++: superficie nativa de edición, interpretación, composición y mezcla.</figcaption>
+      </figure>
+    </section>
+
+    <section id="technology" class="section technology-section">
+      <div class="section-label">07 / TECNOLOGÍA</div>
+      <div class="tech-grid">
+        <div class="section-copy">
+          <p class="eyebrow">DSP nativo con límites explícitos</p>
+          <h2>El master creativo y la salida técnica son sistemas separados.</h2>
+          <p class="large-copy">La aplicación está construida en C++20 con JUCE 8. Su ruta en tiempo real evita la asignación y bloquea la devolución de llamada de audio. Se verifica la compilación actual de Linux; Windows y macOS siguen siendo objetivos de validación planificados.</p>
+        </div>
+        <dl class="spec-list">
+          <div><dt>Aplicación</dt><dd>Standalone JUCE/C++</dd></div>
+          <div><dt>Versión actual</dt><dd>JUCE migration v0.1.0</dd></div>
+          <div><dt>Fuentes de audio</dt><dd>WAV; safe AIFF conversion path</dd></div>
+          <div><dt>Grabación</dt><dd>PCM16 / PCM24 with TPDF · float32 clean</dd></div>
+          <div><dt>Proyectos</dt><dd>Project v2 + portable ZIP</dd></div>
+          <div><dt>Frecuencias verificadas</dt><dd>44.1 / 48 / 96 / 192 kHz safety tests</dd></div>
+          <div><dt>Techo para directo</dt><dd>−1 dBTP, stereo-linked lookahead</dd></div>
+          <div><dt>Licencia</dt><dd>GPL-3.0-or-later + JUCE AGPL-3.0-only</dd></div>
+        </dl>
+      </div>
+      <div class="signal-chain">
+        <div><span>01</span><b>Fuentes + voces</b><small>suma creativa</small></div>
+        <i>→</i>
+        <div><span>02</span><b>MASTER CREATIVO</b><small>decisión musical</small></div>
+        <i>→</i>
+        <div><span>03</span><b>OUTPUT TRIM</b><small>atenuación técnica</small></div>
+        <i>→</i>
+        <div><span>04</span><b>LIVE SAFE</b><small>DC · true peak · lookahead</small></div>
+        <i>→</i>
+        <div><span>05</span><b>Dispositivo + REC + medidor</b><small>misma señal post-seguridad</small></div>
+      </div>
+      <p class="evidence">Evidencia automatizada: contratos centrales, renderizado dorado, estrés, remoción de grabación, códecs de proyecto, protección sin cabeza y verificación cruzada independiente de pico verdadero de FFmpeg.<strong>10/10 pruebas aprobadas en GNU/Linux</strong>.</p>
+    </section>
+
+    <section id="status" class="section status-section">
+      <div class="section-label">08 / ESTADO</div>
+      <div class="section-heading">
+        <p class="eyebrow">Publicado como trabajo en progreso, medido sin inflación.</p>
+        <h2>Fundación nativa completa. La aceptación final aún está abierta.</h2>
+      </div>
+      <div class="status-columns">
+        <article>
+          <span class="status-tag done">IMPLEMENTADO</span>
+          <ul>
+            <li>Núcleo de C++ en tiempo real y espacios de trabajo nativos</li>
+            <li>Gramática de rendimiento y corte de dos fuentes</li>
+            <li>Cabezal de reproducción de forma de onda A/B de hilo de audio y lectura de tiempo</li>
+            <li>Proyecto v2, proyecto portátil y catálogo TAKE</li>
+            <li>Etapa técnica de salida segura para directo</li>
+            <li>Tramado determinista TPDF para PCM16/24</li>
+            <li>Regresión automatizada y evidencia de pico verdadero</li>
+            <li>Empaquetado multiplataforma: .deb de Linux, instalador NSIS de Windows, .dmg Universal 2 de macOS — versión v0.1.0</li>
+          </ul>
+        </article>
+        <article>
+          <span class="status-tag testing">EN VALIDACIÓN</span>
+          <ul>
+            <li>Paridad humana y pruebas de rendimiento de formato largo</li>
+            <li>Verificación cruzada WAV transitoria oficial de la EBU</li>
+            <li>Desconexión física, reconexión y comportamiento xrun</li>
+            <li>Ruta de masterización de calidad de PISTA/ÁLBUM</li>
+            <li>Galería de capturas de pantalla limpia final</li>
+            <li>Sonoridad BS.1770 frente a fixtures externas, reanálisis del WAV tras la codificación</li>
+          </ul>
+        </article>
+        <article>
+          <span class="status-tag next">SIGUIENTE</span>
+          <ul>
+            <li>Perfiles de masterización heredados/de calidad</li>
+            <li>Localización completa de la interfaz</li>
+            <li>Investigación sobre el rendimiento futuro de la consola</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <section class="section documentation-section">
+      <div class="section-label">09 / DOCUMENTACIÓN</div>
+      <div class="doc-grid">
+        <a href="https://github.com/lucioaraujo/navalha2-juce/blob/main/docs/AUDITORIA_PARIDADE_PD_V0281_JUCE.md"><span>PARITY</span><strong>PD/web → Auditoría JUCE</strong><i>↗</i></a>
+        <a href="https://github.com/lucioaraujo/navalha2-juce/blob/main/docs/AUDITORIA_ENGENHARIA_SAIDA_AUDIO.md"><span>AUDIO</span><strong>Auditoría de ingeniería de salida</strong><i>↗</i></a>
+        <a href="https://github.com/lucioaraujo/navalha2-juce/blob/main/docs/TAKE_TIMELINE_v0.1.0.md"><span>WORKFLOW</span><strong>TAKE Timeline v0.1.0</strong><i>↗</i></a>
+        <a href="https://github.com/lucioaraujo/navalha2-juce/blob/main/docs/FINAL_ACCEPTANCE_CHECKLIST.md"><span>TESTING</span><strong>Lista de verificación de aceptación final</strong><i>↗</i></a>
+        <a href="https://github.com/lucioaraujo/navalha2-juce/blob/main/docs/LICENSE_STATUS.md"><span>LEGAL</span><strong>Estado de la licencia</strong><i>↗</i></a>
+        <a href="../relatorio-migracao.html"><span>REPORT</span><strong>Informe general de migración</strong><i>↗</i></a>
+      </div>
+    </section>
+
+    <section class="section credits-section">
+      <div class="section-label">10 / CRÉDITOS</div>
+      <div class="credits-copy">
+        <h2>Un linaje mantenido visible.</h2>
+        <p><strong>Glerm Soares</strong> — author, developer and creator of the original Navalha Pure Data instrument.</p>
+        <p><strong>Lúcio Araújo</strong> — conception and direction of Navalha 2 upgrades, musician-facing workflow, interface decisions, testing and musical evaluation.</p>
+        <p><strong>OpenAI / ChatGPT</strong> — implementation assistance, migration tooling, documentation and test preparation under Lúcio Araújo’s direction.</p>
+        <p class="license-note">Código fuente de Navalha 2: GPL-3.0 o posterior. JUCE 8 se obtiene por separado bajo AGPL-3.0 únicamente o una licencia JUCE comercial. Consulte el estado de la licencia antes de distribuir archivos binarios.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <img src="../assets/navalha2-app-icon.png" alt="" width="52" height="52">
+    <div><strong>NAVALHA <b class="brand-number" style="color: #ffd82f">2</b></strong><span>Cortar · recombinar · interpretar</span></div>
+    <nav aria-label="Enlaces al repositorio">
+      <a href="https://github.com/lucioaraujo/navalha2-juce">JUCE/C++</a>
+      <a href="https://github.com/lucioaraujo/navalha2-pd">PD/web</a>
+      <a href="#contact" data-contact-trigger>CONTACTO</a>
+    </nav>
+    <small>Documentación del proyecto · 2026</small>
+  </footer>
+
+  <dialog class="contact-dialog" data-contact-dialog aria-labelledby="contact-title">
+    <button class="dialog-close" type="button" data-contact-close aria-label="Cerrar ventana de contacto">×</button>
+    <h2 id="contact-title">CONTACTO</h2>
+    <p>Copia la dirección de correo electrónico:</p>
+    <code data-contact-address></code>
+    <button class="button button-primary" type="button" data-contact-copy>Copiar correo electrónico</button>
+    <p class="contact-feedback" data-contact-feedback aria-live="polite"></p>
+  </dialog>
+</body>
 </html>

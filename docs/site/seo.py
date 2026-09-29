@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Metadados de busca e compartilhamento do site do Navalha 2.
 
-As páginas pt/, fr/ e es/ usam <base href="../">; por isso todo endereço
-gerado aqui é absoluto.
+Todo endereço gerado aqui é absoluto, então vale igual para a raiz e para
+pt/, fr/ e es/. Rodar depois de gerar_idiomas.py.
 """
 
 SITE = {
