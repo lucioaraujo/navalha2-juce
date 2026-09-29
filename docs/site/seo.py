@@ -19,6 +19,9 @@ SITE = {
     },
     # O site é a raiz do domínio navalha2.arquiviagem.net: robots.txt vale.
     "raiz_do_dominio": True,
+    # Google verifica pelo DNS do domínio arquiviagem.net; o Bing não
+    # importa propriedade de domínio, então verifica este site pela tag.
+    "bing_verificacao": "CF11609D6DCF239E35F913D512DC3267",
 }
 
 VERSAO = "0.1.0"
@@ -135,6 +138,14 @@ def bloco(pagina, grupo, titulo, descricao):
         if p is not pagina:
             L.append('<meta property="og:locale:alternate" content="%s">' % OG_LOCALE[p["lang"]])
     L.append('<meta name="twitter:card" content="summary_large_image">')
+    # Verificação do Google Search Console (propriedade "prefixo do URL"):
+    # o Google só procura a tag na página inicial.
+    if SITE.get("google_verificacao") and pagina["url"] == "":
+        L.append('<meta name="google-site-verification" content="%s">'
+                 % a(SITE["google_verificacao"]))
+    # Verificação do Bing Webmaster Tools, mesma regra.
+    if SITE.get("bing_verificacao") and pagina["url"] == "":
+        L.append('<meta name="msvalidate.01" content="%s">' % a(SITE["bing_verificacao"]))
     L.append(json_ld(dados_estruturados(pagina, descricao)))
     L.append(FIM)
     return L
