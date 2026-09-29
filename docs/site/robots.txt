@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://navalha2.arquiviagem.net/sitemap.xml

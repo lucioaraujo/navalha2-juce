@@ -65,3 +65,23 @@ setting.
 
 The page deliberately describes the JUCE application as a migration in
 validation and preserves PD/web v0.28.1 as the functional reference.
+
+## Search and sharing metadata — `seo.py`
+
+Since 29 Sep 2026. Every page carries a block between `<!-- SEO:INICIO -->`
+and `<!-- SEO:FIM -->` before `</head>`: canonical, hreflang across the four
+languages, Open Graph/Twitter (link previews) and schema.org JSON-LD (what the
+site is, for search engines and AI readers). Title and description are read
+from the page itself. It also writes `sitemap.xml` and `robots.txt` (this site
+is the domain root). **Do not edit the block by hand:** change the
+configuration at the top of `seo.py` and run `python3 seo.py` (`--verificar`
+only checks). The share image is `assets/og-navalha2.jpg`, 1200×630, derived
+from `assets/navalha2-juce-interface.jpg`. The same `seo.py` exists on every
+RASGO family site; only the configuration differs. `relatorio-migracao.html`
+gained a `<meta name="description">` taken from its own subtitle.
+
+**Known limitation:** `pt/`, `fr/` and `es/` arrive almost empty in the HTML —
+the text is built by `localized-page.js` from the English page. Google runs
+JavaScript; most AI readers only read raw HTML and see those three versions
+empty. Fixing it means emitting the translated text in the HTML itself
+(author's decision, not done here).
