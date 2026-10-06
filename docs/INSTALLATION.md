@@ -47,15 +47,32 @@ From v0.1.1 on, everything is inside the `.exe`.
 1. Download `navalha2-<version>-Darwin.dmg`. It works on both Intel and
    Apple Silicon Macs.
 2. Open it and **drag Navalha 2 into Applications**.
-3. Open it. The first time, macOS says it **cannot verify the developer**,
-   because the app is not notarised by Apple, which needs a paid account.
-   Click **"OK"** or **"Done"**, **not** "Move to Trash".
-4. Go to **System Settings → Privacy & Security**, scroll to the security
-   section, and click **"Open Anyway"** next to "Navalha 2 was blocked…".
-   Confirm with your password or Touch ID, then click **"Open"**. This is
-   needed only the first time.
-   - On **macOS 14 or earlier**, there is a shortcut: right-click the app
-     in Finder, then **Open → Open**.
+3. Open it. The first time, macOS **blocks** the app with a message saying
+   **Apple could not confirm it is free of malicious software**. In French,
+   for example: *« Navalha 2 ne peut pas être ouvert. Apple n'a pas pu confirmer
+   que Navalha 2 ne contenait pas de logiciel malveillant. »*
+   - This is **not a defect or a virus**. macOS does it for every downloaded
+     app that has not been notarised by Apple, which requires a paid account.
+   - Click **"OK"** or **"Done"**, **not** "Move to Trash".
+4. Allow the app in one of two ways. You only need to do this once.
+   - **In System Settings:** go to **System Settings → Privacy & Security**,
+     scroll to the security section, click **"Open Anyway"**, confirm with
+     your password or Touch ID, and click **"Open"**. On macOS 14 or
+     earlier: right-click the app in Finder → **Open → Open**.
+   - **In Terminal**, if the button does not appear or the block remains:
+     1. Open **Terminal**. It is in Applications → Utilities, or press
+        Cmd + Space and type "Terminal".
+     2. Paste this line and press **Enter**:
+
+        ```sh
+        xattr -dr com.apple.quarantine "/Applications/Navalha 2.app"
+        ```
+
+        If nothing is printed after Enter, it worked.
+     3. Close Terminal and open the app normally.
+
+     The command only removes the "quarantine mark" macOS puts on every
+     downloaded file. It does not change the app.
 5. The first time you record from the microphone or an audio interface,
    macOS asks for permission. Allow it.
 
@@ -130,16 +147,36 @@ do `.exe`.
 1. Baixe `navalha2-<versão>-Darwin.dmg`. O mesmo arquivo serve para Mac
    Intel e Apple Silicon.
 2. Abra o `.dmg` e **arraste o Navalha 2 para a pasta Aplicativos**.
-3. Abra o app. Na primeira vez, o macOS avisa que **não pode verificar o
-   desenvolvedor**. Isso acontece porque o app não passou pela notarização
-   da Apple, que exige uma conta paga. Clique em **"OK"** ou
-   **"Concluído"**. **Não** clique em "Mover para o Lixo".
-4. Abra **Ajustes do Sistema → Privacidade e Segurança** e desça até a parte
-   de segurança. Clique em **"Abrir Mesmo Assim"**, ao lado de "Navalha 2
-   foi bloqueado…". Confirme com a senha ou o Touch ID e clique em
-   **"Abrir"**. Isso só é preciso na primeira vez.
-   - No **macOS 14 ou anterior** há um atalho: no Finder, clique no app com
-     o botão direito e escolha **Abrir → Abrir**.
+3. Abra o app. Na primeira vez, o macOS **bloqueia** o app e mostra uma
+   mensagem dizendo que **a Apple não pôde confirmar que ele está livre de
+   software malicioso**. Em francês, por exemplo: *« Navalha 2 ne peut pas être
+   ouvert. Apple n'a pas pu confirmer que Navalha 2 ne contenait pas de logiciel
+   malveillant. »*
+   - Isso **não indica defeito nem vírus**. O macOS faz isso com todo app
+     baixado que não passou pela notarização da Apple, que exige uma conta
+     paga.
+   - Clique em **"OK"** ou **"Concluído"**. **Não** clique em "Mover para o
+     Lixo".
+4. Libere o app de um destes dois jeitos. Basta fazer uma vez.
+   - **Pelos Ajustes:** abra **Ajustes do Sistema → Privacidade e
+     Segurança**, desça até a parte de segurança e clique em **"Abrir Mesmo
+     Assim"**. Confirme com sua senha ou Touch ID e clique em **"Abrir"**.
+     No macOS 14 ou anterior: clique no app com o botão direito no Finder e
+     escolha **Abrir → Abrir**.
+   - **Pelo Terminal**, se o botão não aparecer ou o bloqueio continuar:
+     1. Abra o **Terminal**. Ele fica em Aplicativos → Utilitários, ou use
+        Cmd + Espaço e digite "Terminal".
+     2. Cole a linha abaixo e aperte **Enter**:
+
+        ```sh
+        xattr -dr com.apple.quarantine "/Applications/Navalha 2.app"
+        ```
+
+        Se nada aparecer depois do Enter, deu certo.
+     3. Feche o Terminal e abra o app normalmente.
+
+     O comando só retira a "marca de quarentena" que o macOS põe em todo
+     arquivo baixado. Ele não altera o app.
 5. Na primeira gravação pelo microfone ou por uma interface de áudio, o
    macOS pede permissão. Permita.
 
