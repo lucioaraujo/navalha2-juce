@@ -34,6 +34,8 @@ concurrency:
 
 jobs:
   package:
+    # explicit name: the default would include the Linux list of globs
+    name: package (${{ matrix.os }}, ${{ matrix.generator }})
     strategy:
       fail-fast: false
       matrix:
