@@ -75,3 +75,47 @@ Atualizado em 9 de agosto de 2026.
 
 - validação humana da compatibilidade histórica `.nvl`/`.ptn`;
 - tradução global de controles, mensagens e tooltips.
+
+## 6 out. 2026 — distribuição multiplataforma (v0.1.1)
+
+Aplica o padrão RASGO (`RASGO_DOCUMENTATION/PADRAO_DISTRIBUICAO_MULTIPLATAFORMA.md`).
+O pedido do autor foi: "faça a mesma coisa no navalha 2 e no antitotem".
+
+**Defeitos da v0.1.0**, achados ao inspecionar os pacotes publicados:
+
+- o `.exe` dependia do Visual C++ Redistributable (`MSVCP140`, `VCRUNTIME140`)
+  e não abre num Windows sem ele;
+- o `.app` não era selado: só havia a assinatura do linker na fatia arm64.
+
+**Correções** (branch `v0.1.1-distribuicao`):
+
+- runtime estático, com uma guarda na CI;
+- "Executar" no fim do instalador;
+- `.zip` portátil;
+- `.app` selado ad-hoc, com as duas fatias conferidas;
+- AppImage e `.tar.gz` (`packaging/linux/`), com scripts genéricos idênticos
+  aos do Antitotem. O binário "Navalha 2" tem espaço no nome, e o linuxdeploy
+  não lia esse `Exec`; dentro do AppImage ele passa a se chamar `navalha2`;
+- teste de abertura em Debian 12, Ubuntu 24.04, Fedora e Arch, conferindo
+  que o processo está vivo e que a janela "Navalha 2" existe;
+- release automática a partir de tags.
+
+**Documentação:**
+
+- `docs/INSTALLATION.md` com passo a passo em EN e PT e os requisitos. Os
+  requisitos são valores de referência, não medidos;
+- os guias de requisitos do Linux, nas 4 línguas, apontam para o AppImage;
+- o site está pronto para a v0.1.1 e só vai ao ar com a versão final.
+
+**Validação:**
+
+- CI 37393157573 e a da release, todas verdes;
+- pacotes finais inspecionados: sem DLL do Visual C++, `.app` com
+  `_CodeSignature` e as duas fatias assinadas.
+
+**Publicado:** `v0.1.1-rc1`, como pré-release.
+
+**Pendente:**
+
+1. o autor testar em Windows e macOS reais;
+2. a v0.1.1 final: tag e merge no `main`, o que publica o site.
