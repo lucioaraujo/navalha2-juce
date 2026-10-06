@@ -35,7 +35,7 @@ if (APPLE)
     set(CMAKE_OSX_ARCHITECTURES "x86_64;arm64" CACHE STRING "Build a Universal 2 binary" FORCE)
 endif()
 
-project(Navalha2Juce VERSION 0.1.1 LANGUAGES C CXX)
+project(Navalha2Juce VERSION 0.1.2 LANGUAGES C CXX)
 find_package(Threads REQUIRED)
 
 option(NAVALHA_BUILD_JUCE_APP "Build the JUCE standalone migration shell" ON)

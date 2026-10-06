@@ -41,6 +41,11 @@ Redistributable". Install it from
 <https://aka.ms/vs/17/release/vc_redist.x64.exe> and open Navalha 2 again.
 From v0.1.1 on, everything is inside the `.exe`.
 
+**v0.1.0 or v0.1.1 and the Start menu shortcut does nothing:** install
+v0.1.2 over it. Those versions' shortcuts pointed to a file that does not
+exist; the program itself is fine and opens from its folder in
+`C:\Program Files`.
+
 ### macOS
 
 1. Download `navalha2-<version>-Darwin.dmg`. It works on both Intel and
@@ -134,6 +139,11 @@ vírus e só aparecem na primeira vez.
 (<https://aka.ms/vs/17/release/vc_redist.x64.exe>) e abra o Navalha 2 de
 novo. A partir da v0.1.1 isso não é mais necessário, porque tudo vai dentro
 do `.exe`.
+
+**Se você tem a v0.1.0 ou a v0.1.1 e o atalho do Menu Iniciar não abre
+nada:** instale a v0.1.2 por cima. O atalho dessas versões apontava para um
+arquivo que não existe; o programa em si está bom e abre pela pasta dele em
+`C:\Program Files`.
 
 ### macOS
 
