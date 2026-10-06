@@ -244,6 +244,13 @@ if (NAVALHA_BUILD_JUCE_APP AND JUCE_FOUND)
         # ICON_BIG/ICON_SMALL on juce_add_gui_app) carries over to the
         # shortcut automatically.
         set(CPACK_PACKAGE_EXECUTABLES "Navalha 2" "Navalha 2")
+        # O .exe fica na RAIZ da pasta instalada (DESTINATION .), mas o CPack
+        # cria os atalhos do Menu Iniciar e da área de trabalho (e o
+        # "Executar" da última tela) apontando para $INSTDIR\bin\ — o
+        # padrão dele quando esta variável falta. Resultado, visto num
+        # Windows 10 real em 7 out. 2026: o programa abria pela pasta e
+        # NÃO abria pelo menu. A CI agora confere o alvo de cada atalho.
+        set(CPACK_NSIS_EXECUTABLES_DIRECTORY ".")
         set(CPACK_CREATE_DESKTOP_LINKS "Navalha 2")
         set(CPACK_NSIS_MUI_ICON "${CMAKE_CURRENT_SOURCE_DIR}/packaging/windows/navalha2.ico")
         set(CPACK_NSIS_MUI_UNIICON "${CMAKE_CURRENT_SOURCE_DIR}/packaging/windows/navalha2.ico")
