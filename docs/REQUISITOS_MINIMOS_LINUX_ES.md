@@ -9,6 +9,11 @@ Linux Mint basado en esas versiones y sistemas Debian/Ubuntu compatibles.
 No es un paquete para ARM, Fedora, Arch u openSUSE. Use una futura distribución
 específica para la plataforma o compile desde el código fuente.
 
+**Desde la v0.1.1:** Fedora, Arch, openSUSE y otras distribuciones x86-64
+tienen un **AppImage** y un **`.tar.gz`** (con `install.sh`, sin root),
+probados al abrir en Debian 12, Ubuntu 24.04, Fedora y Arch. Ver
+[INSTALLATION.md](INSTALLATION.md#instalar-passo-a-passo).
+
 ## Ordenador
 
 | Recurso | Mínimo práctico | Recomendado para uso musical |

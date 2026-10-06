@@ -1,5 +1,17 @@
 cmake_minimum_required(VERSION 3.22)
 
+# Windows: static Visual C++ runtime (/MT), built into the executable.
+# Without it `Navalha 2.exe` (v0.1.0) required MSVCP140.dll /
+# VCRUNTIME140.dll / VCRUNTIME140_1.dll - the "Visual C++ Redistributable" -
+# which the NSIS installer does not ship: on a Windows without that package
+# the app does not open at all. CI never noticed because the GitHub runner
+# has it installed. Found 6 Oct. 2026 by listing the PE imports of the
+# published .exe (same defect as Rasgo Modular v0.1.3 and Antitotem
+# v0.1.0). Global variable, set before any target (JUCE included); CI now
+# fails if those DLLs come back (package.yml). RASGO standard:
+# RASGO_DOCUMENTATION/PADRAO_DISTRIBUICAO_MULTIPLATAFORMA.md.
+set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+
 # Must be set before project() to take effect (CMake/Apple requirement for
 # cross-arch and deployment-target selection). Found live, 26 ago. 2026: the
 # macOS .dmg refused to open at all on the author's own Mac ("Impossible
@@ -23,7 +35,7 @@ if (APPLE)
     set(CMAKE_OSX_ARCHITECTURES "x86_64;arm64" CACHE STRING "Build a Universal 2 binary" FORCE)
 endif()
 
-project(Navalha2Juce VERSION 0.1.0 LANGUAGES C CXX)
+project(Navalha2Juce VERSION 0.1.1 LANGUAGES C CXX)
 find_package(Threads REQUIRED)
 
 option(NAVALHA_BUILD_JUCE_APP "Build the JUCE standalone migration shell" ON)
@@ -236,6 +248,8 @@ if (NAVALHA_BUILD_JUCE_APP AND JUCE_FOUND)
         set(CPACK_NSIS_MUI_ICON "${CMAKE_CURRENT_SOURCE_DIR}/packaging/windows/navalha2.ico")
         set(CPACK_NSIS_MUI_UNIICON "${CMAKE_CURRENT_SOURCE_DIR}/packaging/windows/navalha2.ico")
         set(CPACK_NSIS_INSTALLED_ICON_NAME "Navalha 2.exe")
+        # last installer page: "Run Navalha 2", already ticked
+        set(CPACK_NSIS_MUI_FINISHPAGE_RUN "Navalha 2.exe")
     elseif (CMAKE_SYSTEM_NAME STREQUAL "Darwin")
         # DragNDrop (.dmg): no extra tooling beyond macOS's own hdiutil.
         set(CPACK_GENERATOR "DragNDrop")

@@ -5,6 +5,19 @@ name: Package (Linux/Windows/macOS)
 # machine needed by the author or by whoever runs this. Linux (.deb) was
 # already validated by this workflow's previous single-platform version;
 # Windows (NSIS/.exe) and macOS (DragNDrop/.dmg) are new here.
+#
+# Since 6 Oct. 2026 it follows the RASGO multiplatform distribution
+# standard (RASGO_DOCUMENTATION/PADRAO_DISTRIBUICAO_MULTIPLATAFORMA.md in
+# the monorepo), born from Rasgo Modular v0.1.4:
+#   - Windows: static VC++ runtime (CMakeLists.txt) + a step that FAILS if
+#     the .exe depends on the VC++ Redistributable again (v0.1.0 did, and
+#     does not open on a Windows without it); NSIS installer + portable .zip.
+#   - macOS: the whole .app sealed ad-hoc, both slices checked (v0.1.0 was
+#     unsealed, only the linker's arm64 signature).
+#   - Linux: AppImage and .tar.gz besides the .deb, all launch-tested in
+#     containers of Debian 12, Ubuntu 24.04, Fedora and Arch.
+#   - A GitHub release is created from `v*` tags (hyphen = pre-release),
+#     only after the launch tests pass.
 
 on:
   workflow_dispatch:
@@ -15,6 +28,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   package:
     strategy:
@@ -23,10 +40,15 @@ jobs:
         include:
           - os: ubuntu-22.04
             generator: DEB
-            artifact-glob: dist/*.deb
+            artifact-glob: |
+              dist/*.deb
+              dist/*.AppImage
+              dist/*.tar.gz
           - os: windows-latest
             generator: NSIS
-            artifact-glob: dist/*.exe
+            artifact-glob: |
+              dist/*.exe
+              dist/*.zip
           - os: macos-latest
             generator: DragNDrop
             artifact-glob: dist/*.dmg
@@ -122,11 +144,50 @@ jobs:
           plutil -p "$APP/Contents/Info.plist"
 
           echo "--- codesign (ad-hoc; no Developer ID/notarization in CI) ---"
-          codesign -dv "$APP" 2>&1 || echo "::warning::Not signed - fine for local testing, but real distribution needs a Developer ID + notarization or Gatekeeper will show an unidentified-developer warning on first launch"
+          # Seal the WHOLE bundle ad-hoc, both slices. Unsealed (v0.1.0: only
+          # the linker's arm64 signature) an Apple Silicon Mac tends to say
+          # "is damaged and can't be opened"; sealed, it is the ordinary
+          # unidentified-developer warning, which the user can clear in
+          # System Settings -> Privacy & Security -> "Open Anyway".
+          codesign --force --deep --sign - "$APP"
+          codesign --verify --deep --strict --verbose=2 "$APP"
+          for arch in x86_64 arm64; do
+            codesign -dv --arch "$arch" "$APP" 2>&1 | grep -q "Signature=adhoc" \
+              || { echo "::error::$arch slice without ad-hoc signature"; exit 1; }
+          done
+          test -d "$APP/Contents/_CodeSignature" || { echo "::error::bundle not sealed"; exit 1; }
+          echo "ok: bundle sealed, both slices signed (ad-hoc)"
+
+      # The .exe must not depend on the Visual C++ Redistributable (v0.1.0
+      # did; this runner has the package, so a launch here never notices).
+      - name: Validate Windows runtime (static CRT)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem -Recurse -Path build -Filter 'Navalha 2.exe' |
+                 Where-Object { $_.FullName -match 'Release' } | Select-Object -First 1
+          if (-not $exe) { throw 'Navalha 2.exe not found' }
+          $vs = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath
+          $dumpbin = Get-ChildItem "$vs\VC\Tools\MSVC\*\bin\Hostx64\x64\dumpbin.exe" | Select-Object -First 1
+          if (-not $dumpbin) { throw 'dumpbin not found' }
+          $deps = & $dumpbin.FullName /dependents $exe.FullName
+          $deps
+          $bad = $deps | Select-String -Pattern 'VCRUNTIME|MSVCP|api-ms-win-crt'
+          if ($bad) { Write-Error "the .exe depends on the dynamic Visual C++ runtime: $bad"; exit 1 }
+          "ok: no dependency on the Visual C++ Redistributable"
 
       - name: Package
         working-directory: build
         run: cpack -G ${{ matrix.generator }} -C Release -B ../dist
+
+      - name: Portable .zip (Windows)
+        if: runner.os == 'Windows'
+        working-directory: build
+        run: cpack -G ZIP -C Release -B ../dist
+
+      - name: AppImage and .tar.gz (Linux)
+        if: runner.os == 'Linux'
+        run: packaging/linux/empacotar.sh build dist navalha2
 
       - name: Upload artifact
         uses: actions/upload-artifact@v5
@@ -134,3 +195,104 @@ jobs:
           name: navalha2-${{ matrix.os }}
           path: ${{ matrix.artifact-glob }}
           if-no-files-found: error
+
+  # ---- launch test: do the Linux packages open on other distributions? ----
+  # Each container installs only what an ordinary desktop already has, opens
+  # the app on a virtual screen without a sound card, and checks that it is
+  # still running after 20 s and that its window exists.
+  arranque-linux:
+    needs: package
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        image: ['debian:12', 'ubuntu:24.04', 'fedora:latest', 'archlinux:latest']
+    container: ${{ matrix.image }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Download the Linux packages
+        uses: actions/download-artifact@v5
+        with:
+          name: navalha2-ubuntu-22.04
+          path: pkgs
+
+      - name: Install an ordinary desktop's basics (and the .deb where it fits)
+        run: |
+          set -eux
+          case "${{ matrix.image }}" in
+            debian:*|ubuntu:*)
+              export DEBIAN_FRONTEND=noninteractive
+              apt-get update
+              apt-get install -y ./pkgs/*.deb
+              apt-get install -y xvfb x11-utils libx11-6 libxext6 libxrandr2 \
+                libxcursor1 libxinerama1 libxrender1 libgl1 fonts-dejavu-core ;;
+            fedora:*)
+              dnf install -y xorg-x11-server-Xvfb xwininfo alsa-lib freetype fontconfig \
+                libX11 libXext libXrandr libXcursor libXinerama libXrender mesa-libGL dejavu-sans-fonts ;;
+            archlinux:*)
+              pacman -Syu --noconfirm xorg-server-xvfb xorg-xwininfo alsa-lib freetype2 fontconfig \
+                libx11 libxext libxrandr libxcursor libxinerama libxrender mesa ttf-dejavu ;;
+          esac
+
+      - name: Open the installed .deb
+        if: startsWith(matrix.image, 'debian') || startsWith(matrix.image, 'ubuntu')
+        run: packaging/linux/testar-arranque.sh "/usr/bin/Navalha 2" "Navalha 2"
+
+      - name: Open the AppImage
+        run: |
+          chmod +x pkgs/*.AppImage
+          packaging/linux/testar-arranque.sh "$(ls pkgs/*.AppImage)" "Navalha 2"
+
+      - name: Open the .tar.gz
+        run: |
+          mkdir tgz && tar -xzf pkgs/*.tar.gz -C tgz
+          packaging/linux/testar-arranque.sh "$(ls tgz/*/bin/*)" "Navalha 2"
+
+  # ---- release: where a tag becomes something a musician can download ----
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [package, arranque-linux]
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Download all packages
+        uses: actions/download-artifact@v5
+        with:
+          path: pkgs
+
+      - name: Check what arrived
+        run: |
+          find pkgs -type f -print
+          for ext in deb AppImage tar.gz dmg exe zip; do
+            if ! find pkgs -type f -name "*.$ext" | grep -q .; then
+              echo "::error::no .$ext package among the artifacts"
+              exit 1
+            fi
+          done
+
+      - name: Create the release with the packages
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          PRE=""
+          case "${GITHUB_REF_NAME}" in *-*) PRE="--prerelease" ;; esac
+          gh release create "${GITHUB_REF_NAME}" ${PRE} \
+            --repo "${GITHUB_REPOSITORY}" \
+            --title "Navalha 2 JUCE ${GITHUB_REF_NAME}" \
+            --verify-tag \
+            --notes "**Install:** step by step for Windows, macOS and each Linux distribution in [docs/INSTALLATION.md](https://github.com/${GITHUB_REPOSITORY}/blob/${GITHUB_REF_NAME}/docs/INSTALLATION.md#installing-step-by-step) — on first launch Windows and macOS show a security warning; it is expected and the guide says where to click. Linux: \`.deb\` for Ubuntu/Debian/Mint, AppImage or \`.tar.gz\` for other distributions (launch-tested on Debian 12, Ubuntu 24.04, Fedora and Arch).
+
+          **Stated limitation:** the Windows and macOS packages were built, packaged and checked by continuous integration (no dependency on the Visual C++ Redistributable; macOS bundle sealed, Universal 2) — not yet opened by the author on real Windows/macOS machines. The macOS package is ad-hoc signed, without Developer ID or notarisation.
+
+          ---
+
+          **Instalação:** passo a passo para Windows, macOS e cada distribuição Linux em [docs/INSTALLATION.md](https://github.com/${GITHUB_REPOSITORY}/blob/${GITHUB_REF_NAME}/docs/INSTALLATION.md#instalar-passo-a-passo) — na primeira abertura, Windows e macOS mostram um aviso de segurança; é esperado, e o guia diz onde clicar.
+
+          **Limitação declarada:** os pacotes de Windows e macOS foram construídos, empacotados e conferidos pela integração contínua — ainda não abertos pelo autor em máquinas reais." \
+            $(find pkgs -type f \( -name '*.deb' -o -name '*.AppImage' -o -name '*.tar.gz' -o -name '*.dmg' -o -name '*.exe' -o -name '*.zip' \))

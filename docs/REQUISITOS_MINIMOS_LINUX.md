@@ -10,6 +10,11 @@ Debian/Ubuntu compatíveis com as dependências informadas pelo `apt`.
 Não é um pacote para ARM, Fedora, Arch ou openSUSE. Nessas plataformas, usar
 uma futura distribuição específica ou compilar a partir do código-fonte.
 
+**A partir da v0.1.1:** para Fedora, Arch, openSUSE e outras distribuições
+x86-64 há um **AppImage** e um **`.tar.gz`** (com `install.sh`, sem root),
+testados na abertura em Debian 12, Ubuntu 24.04, Fedora e Arch. Ver
+[INSTALLATION.md](INSTALLATION.md#instalar-passo-a-passo).
+
 ## Computador
 
 | Recurso | Mínimo prático | Recomendado para uso musical |

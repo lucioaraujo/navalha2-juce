@@ -10,6 +10,11 @@ compatibles.
 Ce n’est pas un paquet ARM, Fedora, Arch ou openSUSE. Utilisez une future
 distribution spécifique à la plateforme ou compilez depuis le code source.
 
+**À partir de la v0.1.1 :** Fedora, Arch, openSUSE et les autres
+distributions x86-64 disposent d’un **AppImage** et d’un **`.tar.gz`** (avec
+`install.sh`, sans root), testés au lancement sur Debian 12, Ubuntu 24.04,
+Fedora et Arch. Voir [INSTALLATION.md](INSTALLATION.md#installing-step-by-step).
+
 ## Ordinateur
 
 | Ressource | Minimum pratique | Recommandé pour la musique |
