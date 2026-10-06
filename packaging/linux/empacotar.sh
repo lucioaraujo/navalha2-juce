@@ -61,6 +61,16 @@ chmod +x "$T/install.sh"
 tar -C "$WORK" --owner=0 --group=0 -czf "$OUT/$NAME.tar.gz" "$NAME"
 
 # ---- AppImage ------------------------------------------------------------
+# linuxdeploy cannot parse an Exec line with a space ("Exec=Navalha\ 2":
+# "could not find suitable executable for Exec entry"). Inside the AppDir
+# only — the .deb and the .tar.gz keep the original name — the binary takes
+# the .desktop file's name and Exec points at it.
+if [[ "$(basename "$BIN")" == *" "* ]]; then
+    PLAIN=$(basename "$DESKTOP" .desktop)
+    mv "$BIN" "$WORK/AppDir/usr/bin/$PLAIN"
+    BIN="$WORK/AppDir/usr/bin/$PLAIN"
+    sed -i "s|^Exec=.*|Exec=$PLAIN|" "$DESKTOP"
+fi
 LD="$WORK/linuxdeploy-${ARCH}.AppImage"
 if [ -n "${LINUXDEPLOY:-}" ]; then
     cp "$LINUXDEPLOY" "$LD"
