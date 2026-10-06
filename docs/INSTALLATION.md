@@ -19,9 +19,8 @@ com a mais nova no topo.
 
 ## Installing, step by step
 
-The security warnings below **are expected**: Navalha 2 is free software
-published without a paid code-signing certificate. They do not mean anything
-is wrong, and they only appear the first time.
+The security warnings below **are expected**: they do not mean anything is
+wrong, and they only appear the first time.
 
 ### Windows
 
@@ -51,8 +50,10 @@ From v0.1.1 on, everything is inside the `.exe`.
    **Apple could not confirm it is free of malicious software**. In French,
    for example: *« Navalha 2 ne peut pas être ouvert. Apple n'a pas pu confirmer
    que Navalha 2 ne contenait pas de logiciel malveillant. »*
-   - This is **not a defect or a virus**. macOS does it for every downloaded
-     app that has not been notarised by Apple, which requires a paid account.
+   A similar message may appear instead, such as \"cannot verify the
+   developer\" or \"is damaged and can't be opened\". In every case, do the
+   same:
+   - This is **not a defect or a virus**.
    - Click **"OK"** or **"Done"**, **not** "Move to Trash".
 4. Allow the app in one of two ways. You only need to do this once.
    - **In System Settings:** go to **System Settings → Privacy & Security**,
@@ -75,14 +76,6 @@ From v0.1.1 on, everything is inside the `.exe`.
      downloaded file. It does not change the app.
 5. The first time you record from the microphone or an audio interface,
    macOS asks for permission. Allow it.
-
-**"Navalha 2 is damaged and can't be opened"** (v0.1.0, Apple Silicon): the
-file is not damaged. That version was not fully signed. Run this in
-Terminal, then open the app normally:
-
-```sh
-xattr -dr com.apple.quarantine "/Applications/Navalha 2.app"
-```
 
 ### Linux
 
@@ -117,15 +110,15 @@ Rasgo Modular and Antitotem.
 
 ## Instalar, passo a passo
 
-Os avisos de segurança abaixo **são esperados**. O Navalha 2 é software
-livre, publicado sem certificado pago de assinatura digital. Os avisos não
-indicam defeito e só aparecem na primeira vez.
+Os avisos de segurança abaixo **são esperados**: não indicam defeito nem
+vírus e só aparecem na primeira vez.
 
 ### Windows
 
 1. Baixe `navalha2-<versão>-win64.exe`.
 2. Abra o arquivo. O Windows mostra a janela azul **"O Windows protegeu o
-   computador"**. Clique em **"Mais informações"** e depois em
+   computador"** (ou outra mensagem dizendo que o programa não é
+   reconhecido). Clique em **"Mais informações"** e depois em
    **"Executar assim mesmo"**.
 3. Se o Windows pedir permissão de administrador, clique em **"Sim"**.
 4. Clique em **"Avançar"** até o fim. A partir da v0.1.1, a última tela já
@@ -152,9 +145,10 @@ do `.exe`.
    software malicioso**. Em francês, por exemplo: *« Navalha 2 ne peut pas être
    ouvert. Apple n'a pas pu confirmer que Navalha 2 ne contenait pas de logiciel
    malveillant. »*
-   - Isso **não indica defeito nem vírus**. O macOS faz isso com todo app
-     baixado que não passou pela notarização da Apple, que exige uma conta
-     paga.
+   Também pode aparecer uma mensagem parecida, como \"não é possível
+   verificar o desenvolvedor\" ou \"está danificado e não pode ser aberto\". Em
+   todos esses casos, faça o mesmo:
+   - Isso **não indica defeito nem vírus**.
    - Clique em **"OK"** ou **"Concluído"**. **Não** clique em "Mover para o
      Lixo".
 4. Libere o app de um destes dois jeitos. Basta fazer uma vez.
@@ -179,15 +173,6 @@ do `.exe`.
      arquivo baixado. Ele não altera o app.
 5. Na primeira gravação pelo microfone ou por uma interface de áudio, o
    macOS pede permissão. Permita.
-
-**"Navalha 2 está danificado e não pode ser aberto"** (v0.1.0, Apple
-Silicon): o arquivo não está danificado. Essa versão não tinha o pacote
-assinado por inteiro. Rode o comando abaixo no Terminal e depois abra o app
-normalmente:
-
-```sh
-xattr -dr com.apple.quarantine "/Applications/Navalha 2.app"
-```
 
 ### Linux
 
