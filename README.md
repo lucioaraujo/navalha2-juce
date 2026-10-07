@@ -22,7 +22,7 @@ Languages:
 
 ## English
 
-Current version of the JUCE migration: **v0.1.2**. The **v0.28.1** version
+Current version of the JUCE migration: **v0.1.3**. The **v0.28.1** version
 mentioned throughout this documentation is the functional Pure Data/web
 reference used to measure parity; it is not the JUCE application's own
 version number.
@@ -285,14 +285,15 @@ limited build and the tests can be repeated with:
 
 #### Multiplatform packages (Linux/Windows/macOS)
 
-Downloads: [**Navalha 2 JUCE v0.1.2** release](https://github.com/lucioaraujo/navalha2-juce/releases/tag/v0.1.2)
+Downloads: [**Navalha 2 JUCE v0.1.3** release](https://github.com/lucioaraujo/navalha2-juce/releases/tag/v0.1.3)
 — Linux `.deb`, AppImage and `.tar.gz`; Windows installer `.exe` and
 portable `.zip`; macOS Universal 2 `.dmg`. All are built by CI, which also
 checks that the Windows `.exe` needs no Visual C++ runtime, that every
 installer shortcut points to an installed file, that the macOS app is
 sealed, and that the Linux packages open on Debian 12, Ubuntu 24.04, Fedora
-and Arch. On real hardware it has been installed on a Windows 10 (8 GB);
-macOS has not been tried on a real machine yet. Step by step:
+and Arch. On real hardware it has been installed on a Windows 10 (8 GB), and
+installed and opened on a Mac on 7 Oct. 2026 (after allowing it — see the
+installation guide). Step by step:
 [`docs/INSTALLATION.md`](docs/INSTALLATION.md).
 
 To build a fresh set yourself, open **Actions** on GitHub and run the
@@ -508,7 +509,7 @@ See also:
 
 Contato: **rasgo.instruments@gmail.com**
 
-Versão atual da migração JUCE: **v0.1.2**. A versão **v0.28.1** mencionada
+Versão atual da migração JUCE: **v0.1.3**. A versão **v0.28.1** mencionada
 nesta documentação é a referência funcional Pure Data/web usada para medir
 paridade; não é o número de versão do aplicativo JUCE.
 
@@ -731,14 +732,15 @@ dois processos e os testes podem ser repetidos com:
 
 #### Pacotes multiplataforma (Linux/Windows/macOS)
 
-Downloads: [**release Navalha 2 JUCE v0.1.2**](https://github.com/lucioaraujo/navalha2-juce/releases/tag/v0.1.2)
+Downloads: [**release Navalha 2 JUCE v0.1.3**](https://github.com/lucioaraujo/navalha2-juce/releases/tag/v0.1.3)
 — Linux `.deb`, AppImage e `.tar.gz`; instalador `.exe` e `.zip` portátil
 para Windows; `.dmg` Universal 2 para macOS. Tudo é gerado pela CI, que
 também confere que o `.exe` do Windows não depende do runtime do Visual C++,
 que cada atalho do instalador aponta para um arquivo instalado, que o app
 do macOS está selado e que os pacotes Linux abrem em Debian 12, Ubuntu
 24.04, Fedora e Arch. Em máquina real, já foi instalado num Windows 10
-(8 GB); o macOS ainda não foi testado numa máquina real. Passo a passo:
+(8 GB) e instalado e aberto num Mac em 7 out. 2026 (depois de liberado — ver
+o guia de instalação). Passo a passo:
 [`docs/INSTALLATION.md`](docs/INSTALLATION.md).
 
 Pra gerar um conjunto novo você mesmo, abra **Actions** no GitHub e rode o
@@ -942,7 +944,7 @@ Consulte também:
 
 Contact : **rasgo.instruments@gmail.com**
 
-Version actuelle de la migration JUCE : **v0.1.2**. La version **v0.28.1**
+Version actuelle de la migration JUCE : **v0.1.3**. La version **v0.28.1**
 mentionnée dans cette documentation est la référence fonctionnelle Pure
 Data/web utilisée pour mesurer la parité ; ce n'est pas le numéro de
 version de l'application JUCE elle-même.
@@ -1237,15 +1239,15 @@ limité à deux processus et les tests peuvent être relancés avec :
 
 #### Paquets multiplateformes (Linux/Windows/macOS)
 
-Téléchargements : [**release Navalha 2 JUCE v0.1.2**](https://github.com/lucioaraujo/navalha2-juce/releases/tag/v0.1.2)
+Téléchargements : [**release Navalha 2 JUCE v0.1.3**](https://github.com/lucioaraujo/navalha2-juce/releases/tag/v0.1.3)
 — Linux `.deb`, AppImage et `.tar.gz` ; installeur `.exe` et `.zip`
 portable pour Windows ; `.dmg` Universal 2 pour macOS. Tout est produit par
 la CI, qui vérifie aussi que le `.exe` Windows ne dépend pas du runtime
 Visual C++, que chaque raccourci de l'installeur pointe vers un fichier
 installé, que l'app macOS est scellée et que les paquets Linux s'ouvrent sur
 Debian 12, Ubuntu 24.04, Fedora et Arch. Sur machine réelle, il a été
-installé sur un Windows 10 (8 Go) ; macOS n'a pas encore été essayé sur une
-vraie machine. Pas à pas : [`docs/INSTALLATION.md`](docs/INSTALLATION.md).
+installé sur un Windows 10 (8 Go), puis installé et ouvert sur un Mac le
+7 oct. 2026 (après l'avoir autorisé — voir le guide d'installation). Pas à pas : [`docs/INSTALLATION.md`](docs/INSTALLATION.md).
 
 Pour générer un nouveau jeu vous-même, ouvrez **Actions** sur GitHub et
 lancez le workflow **Package (Linux/Windows/macOS)**
@@ -1466,7 +1468,7 @@ Voir aussi :
 
 Contacto: **rasgo.instruments@gmail.com**
 
-Versión actual de la migración JUCE: **v0.1.2**. La versión **v0.28.1**
+Versión actual de la migración JUCE: **v0.1.3**. La versión **v0.28.1**
 mencionada en esta documentación es la referencia funcional Pure Data/web
 usada para medir la paridad; no es el número de versión de la aplicación
 JUCE en sí.
@@ -1764,14 +1766,15 @@ limitado a dos procesos y las pruebas pueden repetirse con:
 
 #### Paquetes multiplataforma (Linux/Windows/macOS)
 
-Descargas: [**release Navalha 2 JUCE v0.1.2**](https://github.com/lucioaraujo/navalha2-juce/releases/tag/v0.1.2)
+Descargas: [**release Navalha 2 JUCE v0.1.3**](https://github.com/lucioaraujo/navalha2-juce/releases/tag/v0.1.3)
 — Linux `.deb`, AppImage y `.tar.gz`; instalador `.exe` y `.zip` portátil
 para Windows; `.dmg` Universal 2 para macOS. Todo lo genera la CI, que
 además comprueba que el `.exe` de Windows no depende del runtime de Visual
 C++, que cada acceso directo del instalador apunta a un archivo instalado,
 que la app de macOS está sellada y que los paquetes Linux abren en Debian
 12, Ubuntu 24.04, Fedora y Arch. En máquina real, ya se instaló en un
-Windows 10 (8 GB); macOS aún no se probó en una máquina real. Paso a paso:
+Windows 10 (8 GB) y se instaló y abrió en un Mac el 7 oct. 2026 (tras
+autorizarlo — ver la guía de instalación). Paso a paso:
 [`docs/INSTALLATION.md`](docs/INSTALLATION.md).
 
 Para generar un nuevo conjunto usted mismo, abra **Actions** en GitHub y

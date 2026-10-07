@@ -24,7 +24,7 @@ SITE = {
     "bing_verificacao": "CF11609D6DCF239E35F913D512DC3267",
 }
 
-VERSAO = "0.1.2"
+VERSAO = "0.1.3"
 
 GRUPOS = [
     [

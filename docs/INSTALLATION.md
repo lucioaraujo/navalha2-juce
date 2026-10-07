@@ -42,9 +42,14 @@ Redistributable". Install it from
 From v0.1.1 on, everything is inside the `.exe`.
 
 **v0.1.0 or v0.1.1 and the Start menu shortcut does nothing:** install
-v0.1.2 over it. Those versions' shortcuts pointed to a file that does not
+the newest version over it. Those versions' shortcuts pointed to a file that does not
 exist; the program itself is fine and opens from its folder in
 `C:\Program Files`.
+
+**Several Navalha 2 versions installed** (in Settings → Apps, or folders like
+`navalha2 0.1.x` inside `C:\Program Files`): uninstall the
+old ones from Settings → Apps. From v0.1.3 on, each new version replaces the
+previous one by itself.
 
 ### macOS
 
@@ -79,6 +84,9 @@ exist; the program itself is fine and opens from its folder in
 
      The command only removes the "quarantine mark" macOS puts on every
      downloaded file. It does not change the app.
+
+     If it still does not open, write to **rasgo.instruments@gmail.com** with
+     your macOS version, your Mac model and the message you see.
 5. The first time you record from the microphone or an audio interface,
    macOS asks for permission. Allow it.
 
@@ -141,9 +149,14 @@ novo. A partir da v0.1.1 isso não é mais necessário, porque tudo vai dentro
 do `.exe`.
 
 **Se você tem a v0.1.0 ou a v0.1.1 e o atalho do Menu Iniciar não abre
-nada:** instale a v0.1.2 por cima. O atalho dessas versões apontava para um
+nada:** instale a versão mais nova por cima. O atalho dessas versões apontava para um
 arquivo que não existe; o programa em si está bom e abre pela pasta dele em
 `C:\Program Files`.
+
+**Se aparecerem várias versões do Navalha 2 instaladas** (em Configurações →
+Aplicativos, ou em pastas como `navalha2 0.1.x` dentro de
+`C:\Program Files`): desinstale as antigas por Configurações → Aplicativos.
+A partir da v0.1.3, cada versão nova substitui a anterior sozinha.
 
 ### macOS
 
@@ -181,6 +194,9 @@ arquivo que não existe; o programa em si está bom e abre pela pasta dele em
 
      O comando só retira a "marca de quarentena" que o macOS põe em todo
      arquivo baixado. Ele não altera o app.
+
+     Se ainda assim não abrir, escreva para **rasgo.instruments@gmail.com**
+     com a versão do macOS, o modelo do Mac e a mensagem que aparece.
 5. Na primeira gravação pelo microfone ou por uma interface de áudio, o
    macOS pede permissão. Permita.
 

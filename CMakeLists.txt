@@ -35,7 +35,7 @@ if (APPLE)
     set(CMAKE_OSX_ARCHITECTURES "x86_64;arm64" CACHE STRING "Build a Universal 2 binary" FORCE)
 endif()
 
-project(Navalha2Juce VERSION 0.1.2 LANGUAGES C CXX)
+project(Navalha2Juce VERSION 0.1.3 LANGUAGES C CXX)
 find_package(Threads REQUIRED)
 
 option(NAVALHA_BUILD_JUCE_APP "Build the JUCE standalone migration shell" ON)
@@ -231,6 +231,14 @@ if (NAVALHA_BUILD_JUCE_APP AND JUCE_FOUND)
         set(CPACK_NSIS_DISPLAY_NAME "Navalha 2")
         set(CPACK_NSIS_CONTACT "rasgo.instruments@gmail.com")
         set(CPACK_NSIS_MODIFY_PATH OFF)
+        # Pasta e chave de registro SEM a versão. O padrão do CPack é
+        # "<nome> <versão>" nas duas: cada versão procurava a anterior pela
+        # própria chave, nunca a achava, e as duas ficavam instaladas lado a
+        # lado (visto num Windows 10 real em 7 out. 2026: "rasgo-modular
+        # 0.1.4" e "rasgo-modular 0.1.5" em C:\Program Files). Com nome fixo,
+        # o UNINSTALL_BEFORE_INSTALL abaixo encontra e remove a anterior.
+        set(CPACK_PACKAGE_INSTALL_DIRECTORY "Navalha 2")
+        set(CPACK_PACKAGE_INSTALL_REGISTRY_KEY "Navalha 2")
         set(CPACK_NSIS_ENABLE_UNINSTALL_BEFORE_INSTALL ON)
         # Real root cause of the missing Start Menu entry (found live,
         # 26 ago. 2026): NSIS's CPack template only registers the uninstall
