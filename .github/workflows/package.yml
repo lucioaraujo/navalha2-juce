@@ -59,12 +59,6 @@ jobs:
       - name: Check out Navalha 2 JUCE
         uses: actions/checkout@v5
 
-      - name: Check out Pure Data reference assets
-        uses: actions/checkout@v5
-        with:
-          repository: lucioaraujo/navalha2-pd
-          path: navalha2-pd
-
       - name: Check out JUCE 8.0.13
         uses: actions/checkout@v5
         with:
@@ -96,7 +90,6 @@ jobs:
           cmake -S . -B build
           -DCMAKE_BUILD_TYPE=Release
           -DNAVALHA_JUCE_PATH=${{ github.workspace }}/JUCE
-          -DNAVALHA_PD_PATH=${{ github.workspace }}/navalha2-pd
           -DNAVALHA_ENABLE_WEBVIEW=OFF
 
       - name: Build

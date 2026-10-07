@@ -43,8 +43,10 @@ option(NAVALHA_BUILD_TESTS "Build migration contract tests" ON)
 option(NAVALHA_BUILD_TOOLS "Build migration validation tools" ON)
 option(NAVALHA_ENABLE_WEBVIEW "Enable JUCE WebBrowserComponent integration" OFF)
 set(NAVALHA_JUCE_PATH "" CACHE PATH "Path to a JUCE source checkout")
-set(NAVALHA_PD_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../NAVALHA2_PD" CACHE PATH
-    "Path to the sibling Navalha 2 Pure Data/web repository")
+# Brand assets (app icon, arcade header) live in assets/brand/, copied from
+# the Navalha 2 PD repository with provenance in assets/brand/PROVENANCE.md.
+# RASGO rule (GOVERNANCA §7.0): instruments are autonomous; this build no
+# longer reads the sibling ../NAVALHA2_PD folder.
 
 add_library(navalha_core STATIC
     src/core/AlbumProject.cpp

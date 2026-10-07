@@ -3,8 +3,10 @@ set -eu
 
 juce_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 workspace_dir=$(dirname -- "$juce_dir")
-pd_dir=${NAVALHA_PD_PATH:-"$workspace_dir/NAVALHA2_PD"}
-dependency_dir=${NAVALHA_DEPENDENCY_DIR:-"$pd_dir/.local-deps"}
+# Dependências locais (CMake 3.28.3, JUCE 8.0.13, sysroot) numa pasta neutra
+# do workspace, fora de qualquer instrumento: regra RASGO de instrumentos
+# autônomos (GOVERNANCA §7.0). Antes ficavam dentro de ../NAVALHA2_PD.
+dependency_dir=${NAVALHA_DEPENDENCY_DIR:-"$workspace_dir/third_party/navalha2-deps"}
 build_dir=${NAVALHA_BUILD_DIR:-"$juce_dir/.local-build/juce-app-native"}
 cmake_bin="$dependency_dir/cmake-3.28.3/bin/cmake"
 ctest_bin="$dependency_dir/cmake-3.28.3/bin/ctest"
@@ -23,7 +25,6 @@ export PKG_CONFIG_PATH="$sysroot/usr/lib/x86_64-linux-gnu/pkgconfig${PKG_CONFIG_
 
 "$cmake_bin" -S "$juce_dir" -B "$build_dir" \
     -DNAVALHA_JUCE_PATH="$juce_sdk" \
-    -DNAVALHA_PD_PATH="$pd_dir" \
     -DNAVALHA_BUILD_JUCE_APP=ON \
     -DNAVALHA_ENABLE_WEBVIEW=OFF \
     -DNAVALHA_BUILD_TESTS=ON \

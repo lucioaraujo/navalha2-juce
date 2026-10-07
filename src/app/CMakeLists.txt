@@ -8,14 +8,14 @@ juce_add_gui_app(Navalha2Juce
     COMPANY_NAME "Navalha 2"
     BUNDLE_ID "org.navalha.arcade"
     NEEDS_WEB_BROWSER ${NAVALHA_ENABLE_WEBVIEW}
-    ICON_BIG "${NAVALHA_PD_PATH}/app/assets/brand/navalha2-app-icon-512.png"
-    ICON_SMALL "${NAVALHA_PD_PATH}/app/assets/brand/navalha2-app-icon-32.png"
+    ICON_BIG "${CMAKE_SOURCE_DIR}/assets/brand/navalha2-app-icon-512.png"
+    ICON_SMALL "${CMAKE_SOURCE_DIR}/assets/brand/navalha2-app-icon-32.png"
 )
 
 juce_add_binary_data(Navalha2ArcadeAssets
     SOURCES
-        "${NAVALHA_PD_PATH}/app/assets/brand/navalha2-header-arcade.svg"
-        "${NAVALHA_PD_PATH}/app/assets/brand/navalha2-app-icon-128.png"
+        "${CMAKE_SOURCE_DIR}/assets/brand/navalha2-header-arcade.svg"
+        "${CMAKE_SOURCE_DIR}/assets/brand/navalha2-app-icon-128.png"
 )
 
 target_sources(Navalha2Juce PRIVATE Main.cpp)
@@ -52,7 +52,7 @@ if (UNIX AND NOT APPLE)
         @ONLY)
     install(TARGETS Navalha2Juce RUNTIME DESTINATION bin)
     install(FILES
-        "${NAVALHA_PD_PATH}/app/assets/brand/navalha2-app-icon-128.png"
+        "${CMAKE_SOURCE_DIR}/assets/brand/navalha2-app-icon-128.png"
         DESTINATION share/icons/hicolor/128x128/apps
         RENAME navalha2.png)
     install(FILES "${CMAKE_CURRENT_BINARY_DIR}/navalha2.desktop"
