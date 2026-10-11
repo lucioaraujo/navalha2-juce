@@ -2,7 +2,7 @@
 
 Mapa do motor ao vivo (`src/core/AudioEngine.cpp` + módulos que ele orquestra),
 nos mesmos três eixos definidos em
-[`RASGO_DOCUMENTATION/GOVERNANCA_E_TRANSVERSALIDADE.md`](../../RASGO_DOCUMENTATION/GOVERNANCA_E_TRANSVERSALIDADE.md#3-responsabilidades)
+[`RASGO_DOCUMENTATION/GOVERNANCA_E_TRANSVERSALIDADE.md`](../../../RASGO_DOCUMENTATION/GOVERNANCA_E_TRANSVERSALIDADE.md#3-responsabilidades)
 e já usados em `ANTITOTEM/docs/FLUXO_DE_SINAL.md`. Escrito em 18 ago. 2026
 depois de encontrar que `docs/AUDITORIA_ENGENHARIA_SAIDA_AUDIO.md` tinha três
 achados (3.1-3.3) desatualizados desde o próprio commit que a criou - ver a

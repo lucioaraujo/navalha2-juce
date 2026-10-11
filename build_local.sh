@@ -1,8 +1,8 @@
 #!/bin/sh
 set -eu
 
-juce_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
-workspace_dir=$(dirname -- "$juce_dir")
+juce_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
+workspace_dir=$(CDPATH= cd -- "$juce_dir/../.." && pwd -P)
 # Dependências locais (CMake 3.28.3, JUCE 8.0.13, sysroot) numa pasta neutra
 # do workspace, fora de qualquer instrumento: regra RASGO de instrumentos
 # autônomos (GOVERNANCA §7.0). Antes ficavam dentro de ../NAVALHA2_PD.

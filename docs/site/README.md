@@ -52,7 +52,7 @@ those editions empty. The generator reproduces the loader's rules exactly
 dictionary key; active language link), and was checked against it: rendered
 in Chromium, the loader output and the static pages have identical text and
 attributes in PT, FR and ES, and pixel-identical layout apart from the SVG
-animation frame. The static pages drop `<base href="../">` and prefix relative
+animation frame. The static pages drop `<base href="..">` and prefix relative
 URLs with `../` instead, so in-page anchors work natively.
 `assets/localized-page.js` is no longer referenced and can be deleted.
 

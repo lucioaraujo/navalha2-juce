@@ -67,7 +67,7 @@ Data da auditoria: 9 de agosto de 2026.
 O Navalha 2 JUCE possui uma fundação realtime consistente, gravação assíncrona
 e uma cadeia TRACK MASTER offline determinística. Ainda não atende, porém, à
 engenharia de saída definida para a família RASGO em
-`../../RASGO_DOCUMENTATION/architecture/SAIDA_AUDIO_COMUM.md`.
+`../../../RASGO_DOCUMENTATION/architecture/SAIDA_AUDIO_COMUM.md`.
 
 Paridade com o Pure Data/WebAudio e excelência de saída são critérios
 diferentes. Reproduzir o comportamento histórico não transforma um ganho
@@ -77,9 +77,9 @@ Esta auditoria é diagnóstica. Ela não registra a cadeia atual como aprovada p
 ceiling de palco, true peak ou master final.
 
 Quando a correção produzir componentes reutilizáveis, a promoção deve seguir
-[`MODULOS_DSP_COMPARTILHADOS.md`](../../RASGO_DOCUMENTATION/architecture/MODULOS_DSP_COMPARTILHADOS.md)
+[`MODULOS_DSP_COMPARTILHADOS.md`](../../../RASGO_DOCUMENTATION/architecture/MODULOS_DSP_COMPARTILHADOS.md)
 e ser registrada em
-[`HISTORICO_GLOBAL.md`](../../RASGO_DOCUMENTATION/HISTORICO_GLOBAL.md). O
+[`HISTORICO_GLOBAL.md`](../../../RASGO_DOCUMENTATION/HISTORICO_GLOBAL.md). O
 comportamento criativo, a genealogia e a compatibilidade do Navalha 2 permanecem
 locais.
 
