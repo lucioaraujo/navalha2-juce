@@ -1,6 +1,6 @@
 # License status — Navalha 2 JUCE
 
-**Status atual: código próprio GPL-3.0-or-later; JUCE 8.0.13 usado sob
+**Status atual: código próprio GPL-3.0-or-later; JUCE 9.0.3 usado sob
 AGPL-3.0-only. A combinação é permitida pela Seção 13 da GPLv3, sem licença
 comercial do JUCE.**
 
@@ -12,7 +12,7 @@ comercial do JUCE.**
   `CONTRIBUTORS.md` e a autorização de Glerm Soares registrada em julho de
   2026 (ver `../../NAVALHA2_PD/docs/LICENSE_STATUS.md` para o registro completo
   dessa autorização).
-- Este diretório também compila e liga contra o **JUCE 8.0.13**. A opção
+- Este diretório também compila e liga contra o **JUCE 9.0.3**. A opção
   open-source do JUCE é a **GNU Affero General Public License v3.0
   (AGPL-3.0-only)**, alternativa à licença comercial do fornecedor e não
   relacionada à autoria do Navalha 2.
@@ -55,5 +55,5 @@ código-fonte.
 - O texto integral da AGPLv3 está em `LICENSE-AGPLv3.txt`.
 
 SPDX identifiers: `GPL-3.0-or-later` (código próprio do Navalha 2) e
-`AGPL-3.0-only` (JUCE 8.0.13). Para descrever um pacote que contenha partes
+`AGPL-3.0-only` (JUCE 9.0.3). Para descrever um pacote que contenha partes
 sob ambas as licenças: `GPL-3.0-or-later AND AGPL-3.0-only`.

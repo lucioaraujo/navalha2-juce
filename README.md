@@ -31,7 +31,7 @@ Languages:
 
 ## English
 
-Current version of the JUCE migration: **v0.1.3**. The **v0.28.1** version
+Current version of the JUCE migration: **v0.2.0**. The **v0.28.1** version
 mentioned throughout this documentation is the functional Pure Data/web
 reference used to measure parity; it is not the JUCE application's own
 version number.
@@ -235,7 +235,7 @@ The current runtime still lives at:
 - device configuration persisted in local app preferences;
 - invariants compatible with Project v2;
 - tests that need neither JUCE nor an audio device;
-- standalone shell built with JUCE 8.0.13 on Linux;
+- standalone shell built with JUCE 9.0.3 on Linux;
 - no JUCE copy vendored into the repository;
 - no file from the current implementation removed or renamed.
 
@@ -294,7 +294,7 @@ limited build and the tests can be repeated with:
 
 #### Multiplatform packages (Linux/Windows/macOS)
 
-Downloads: [**Navalha 2 JUCE v0.1.3** release](https://github.com/lucioaraujo/navalha2-juce/releases/tag/v0.1.3)
+Downloads: [**Navalha 2 JUCE v0.2.0** release](https://github.com/lucioaraujo/navalha2-juce/releases/tag/v0.2.0)
 — Linux `.deb`, AppImage and `.tar.gz`; Windows installer `.exe` and
 portable `.zip`; macOS Universal 2 `.dmg`. All are built by CI, which also
 checks that the Windows `.exe` needs no Visual C++ runtime, that every
@@ -313,7 +313,7 @@ from the run page.
 
 The locally-generated Linux package reflects the build machine's own
 library versions. For the most compatible internal `.deb`, use the same
-CI workflow above (fixed to Ubuntu 22.04 and JUCE 8.0.13).
+CI workflow above (fixed to Ubuntu 22.04 and JUCE 9.0.3).
 
 Instructions for whoever installs the artifact are in
 [`docs/INSTALACAO_DEB_INTERNA.md`](docs/INSTALACAO_DEB_INTERNA.md).
@@ -518,7 +518,7 @@ See also:
 
 Contato: **rasgo.instruments@gmail.com**
 
-Versão atual da migração JUCE: **v0.1.3**. A versão **v0.28.1** mencionada
+Versão atual da migração JUCE: **v0.2.0**. A versão **v0.28.1** mencionada
 nesta documentação é a referência funcional Pure Data/web usada para medir
 paridade; não é o número de versão do aplicativo JUCE.
 
@@ -682,7 +682,7 @@ O runtime atual continua em:
 - configuração do dispositivo persistida nas preferências locais do aplicativo;
 - invariantes compatíveis com Project v2;
 - testes que não precisam de JUCE nem dispositivo de áudio;
-- shell standalone compilado com JUCE 8.0.13 no Linux;
+- shell standalone compilado com JUCE 9.0.3 no Linux;
 - nenhuma cópia do JUCE incorporada ao repositório;
 - nenhum arquivo da implementação atual removido ou renomeado.
 
@@ -741,7 +741,7 @@ dois processos e os testes podem ser repetidos com:
 
 #### Pacotes multiplataforma (Linux/Windows/macOS)
 
-Downloads: [**release Navalha 2 JUCE v0.1.3**](https://github.com/lucioaraujo/navalha2-juce/releases/tag/v0.1.3)
+Downloads: [**release Navalha 2 JUCE v0.2.0**](https://github.com/lucioaraujo/navalha2-juce/releases/tag/v0.2.0)
 — Linux `.deb`, AppImage e `.tar.gz`; instalador `.exe` e `.zip` portátil
 para Windows; `.dmg` Universal 2 para macOS. Tudo é gerado pela CI, que
 também confere que o `.exe` do Windows não depende do runtime do Visual C++,
@@ -760,7 +760,7 @@ workflow, baixável pela página do run.
 
 O pacote Debian gerado localmente reflete a versão das bibliotecas da
 máquina de build. Para o `.deb` interno mais compatível, use o mesmo
-workflow de CI acima (fixado em Ubuntu 22.04 e JUCE 8.0.13).
+workflow de CI acima (fixado em Ubuntu 22.04 e JUCE 9.0.3).
 
 As instruções para a pessoa que irá instalar o artefacto estão em
 [`docs/INSTALACAO_DEB_INTERNA.md`](docs/INSTALACAO_DEB_INTERNA.md).
@@ -953,7 +953,7 @@ Consulte também:
 
 Contact : **rasgo.instruments@gmail.com**
 
-Version actuelle de la migration JUCE : **v0.1.3**. La version **v0.28.1**
+Version actuelle de la migration JUCE : **v0.2.0**. La version **v0.28.1**
 mentionnée dans cette documentation est la référence fonctionnelle Pure
 Data/web utilisée pour mesurer la parité ; ce n'est pas le numéro de
 version de l'application JUCE elle-même.
@@ -1187,7 +1187,7 @@ Le runtime actuel reste dans :
   l'app ;
 - invariants compatibles avec Project v2 ;
 - tests ne nécessitant ni JUCE ni périphérique audio ;
-- shell standalone compilé avec JUCE 8.0.13 sur Linux ;
+- shell standalone compilé avec JUCE 9.0.3 sur Linux ;
 - aucune copie de JUCE intégrée au dépôt ;
 - aucun fichier de l'implémentation actuelle supprimé ou renommé.
 
@@ -1248,7 +1248,7 @@ limité à deux processus et les tests peuvent être relancés avec :
 
 #### Paquets multiplateformes (Linux/Windows/macOS)
 
-Téléchargements : [**release Navalha 2 JUCE v0.1.3**](https://github.com/lucioaraujo/navalha2-juce/releases/tag/v0.1.3)
+Téléchargements : [**release Navalha 2 JUCE v0.2.0**](https://github.com/lucioaraujo/navalha2-juce/releases/tag/v0.2.0)
 — Linux `.deb`, AppImage et `.tar.gz` ; installeur `.exe` et `.zip`
 portable pour Windows ; `.dmg` Universal 2 pour macOS. Tout est produit par
 la CI, qui vérifie aussi que le `.exe` Windows ne dépend pas du runtime
@@ -1267,7 +1267,7 @@ comme artefact du workflow, téléchargeable depuis la page du run.
 Le paquet Debian généré localement reflète les versions des bibliothèques
 de la machine de build. Pour le `.deb` interne le plus compatible,
 utilisez le même workflow CI ci-dessus (fixé sur Ubuntu 22.04 et
-JUCE 8.0.13).
+JUCE 9.0.3).
 
 Les instructions pour la personne qui installera l'artefact sont dans
 [`docs/INSTALACAO_DEB_INTERNA.md`](docs/INSTALACAO_DEB_INTERNA.md).
@@ -1477,7 +1477,7 @@ Voir aussi :
 
 Contacto: **rasgo.instruments@gmail.com**
 
-Versión actual de la migración JUCE: **v0.1.3**. La versión **v0.28.1**
+Versión actual de la migración JUCE: **v0.2.0**. La versión **v0.28.1**
 mencionada en esta documentación es la referencia funcional Pure Data/web
 usada para medir la paridad; no es el número de versión de la aplicación
 JUCE en sí.
@@ -1715,7 +1715,7 @@ El runtime actual sigue en:
   la app;
 - invariantes compatibles con Project v2;
 - pruebas que no necesitan ni JUCE ni dispositivo de audio;
-- shell standalone compilado con JUCE 8.0.13 en Linux;
+- shell standalone compilado con JUCE 9.0.3 en Linux;
 - ninguna copia de JUCE incorporada al repositorio;
 - ningún archivo de la implementación actual eliminado o renombrado.
 
@@ -1775,7 +1775,7 @@ limitado a dos procesos y las pruebas pueden repetirse con:
 
 #### Paquetes multiplataforma (Linux/Windows/macOS)
 
-Descargas: [**release Navalha 2 JUCE v0.1.3**](https://github.com/lucioaraujo/navalha2-juce/releases/tag/v0.1.3)
+Descargas: [**release Navalha 2 JUCE v0.2.0**](https://github.com/lucioaraujo/navalha2-juce/releases/tag/v0.2.0)
 — Linux `.deb`, AppImage y `.tar.gz`; instalador `.exe` y `.zip` portátil
 para Windows; `.dmg` Universal 2 para macOS. Todo lo genera la CI, que
 además comprueba que el `.exe` de Windows no depende del runtime de Visual
@@ -1795,7 +1795,7 @@ artefacto del workflow, descargable desde la página del run.
 El paquete Debian generado localmente refleja las versiones de las
 bibliotecas de la máquina de build. Para el `.deb` interno más
 compatible, use el mismo workflow de CI de arriba (fijado en Ubuntu 22.04
-y JUCE 8.0.13).
+y JUCE 9.0.3).
 
 Las instrucciones para quien instale el artefacto están en
 [`docs/INSTALACAO_DEB_INTERNA.md`](docs/INSTALACAO_DEB_INTERNA.md).

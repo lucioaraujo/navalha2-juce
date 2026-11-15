@@ -2,6 +2,7 @@
 #include <juce_gui_extra/juce_gui_extra.h>
 #include "BinaryData.h"
 #include "UiHelp.h"
+#include "MaestrucLink.h"   // regente da família (maestruc.link/1)
 
 #if JUCE_LINUX
 #include <X11/Xlib.h>
@@ -3027,6 +3028,19 @@ public:
         deviceManager.addChangeListener(this);
         refreshAudioConnectionStatus();
         startTimerHz(30);
+        // Maestruc (15/11/2026): `--abrir ARQUIVO` abre um projeto .navalha
+        // ou portátil .zip; `--maestruc` ou NAVALHA_MAESTRUC=1 liga o receptor.
+        const auto args = juce::JUCEApplicationBase::getCommandLineParameterArray();
+        if (const int i = args.indexOf("--abrir"); i >= 0 && i + 1 < args.size())
+        {
+            juce::String note;
+            if (!openProjectFromOutside(juce::File::isAbsolutePath(args[i + 1].unquoted())
+                                            ? juce::File(args[i + 1].unquoted()) : juce::File(), note))
+                std::fprintf(stderr, "Navalha 2: --abrir: %s\n", note.toRawUTF8());
+        }
+        if (args.contains("--maestruc")
+            || juce::SystemStats::getEnvironmentVariable("NAVALHA_MAESTRUC", {}) == "1")
+            enableMaestrucLink();
     }
 
     void paint(juce::Graphics& graphics) override
@@ -3171,6 +3185,8 @@ public:
 
     ~MainComponent() override
     {
+        maestrucPortao.fecharEsperar();   // o áudio deixa de usar a ponte do Maestruc
+        maestrucLink.reset();   // antes de tudo: nenhum comando chega a meio desmonte
         stopTimer();
         juce::Desktop::getInstance().removeFocusChangeListener(this);
         removeMouseListener(this);
@@ -3190,6 +3206,12 @@ public:
         engine.prepare(sampleRate);
         previewTransport.prepareToPlay(samplesPerBlockExpected, sampleRate);
         engine.resumeOutput();
+        // Ponte do Maestruc: reabre na taxa nova pelo fio de mensagens (até
+        // lá, o Navalha toca nas próprias caixas).
+        maestrucPortao.fecharEsperar();
+        juce::MessageManager::callAsync([safe = juce::Component::SafePointer<MainComponent>(this)] {
+            if (safe != nullptr) safe->openMaestrucBridge();
+        });
     }
 
     void getNextAudioBlock(const juce::AudioSourceChannelInfo& output) override
@@ -3216,6 +3238,13 @@ public:
                 output.buffer->getWritePointer(1, output.startSample),
                 static_cast<std::size_t>(output.numSamples),
                 previewLeft, previewRight);
+            // Maestruc: a mistura vai pela ponte (gravação e medidores do
+            // motor ficam iguais); enquanto ele lê, o Navalha cala a própria saída.
+            const float* const bridge[2] {
+                output.buffer->getReadPointer(0, output.startSample),
+                output.buffer->getReadPointer(1, output.startSample) };
+            if (maestrucPortao.escrever(bridge, 2, output.numSamples))
+                output.clearActiveBufferRegion();
         }
     }
 
@@ -8276,6 +8305,55 @@ private:
     juce::AudioTransportSource previewTransport;
     AudioPreviewOwner previewOwner = AudioPreviewOwner::none;
     juce::AudioBuffer<float> previewScratch {2, 8192};
+
+    // Projeto vindo de fora (Maestruc ou --abrir): o mesmo caminho do OPEN
+    // PROJECT. Só .navalha e .zip (Project v2 portátil).
+    bool openProjectFromOutside(const juce::File& file, juce::String& note)
+    {
+        if (!file.existsAsFile()) { note = "arquivo inexistente"; return false; }
+        if (!file.hasFileExtension("navalha;zip")) { note = "formato desconhecido (.navalha ou .zip)"; return false; }
+        openProjectFile(file);
+        return true;
+    }
+
+    // Maestruc (maestruc.link/1, 15/11/2026): o regente da família pode tocar
+    // e parar o sequenciador, mudar o BPM e abrir um projeto, pelos mesmos
+    // caminhos do controle remoto (PERFORM). LEVEL/MUTE/SOLO não entram:
+    // são só de quem toca. Desligado por padrão.
+    void enableMaestrucLink()
+    {
+        if (maestrucLink != nullptr) return;
+        maestrucLink = std::make_unique<rasgo::maestruc::Link>("Navalha 2", JUCE_APPLICATION_VERSION_STRING);
+        auto& h = maestrucLink->handlers;
+        h.play = [this](juce::int64) { remotePlay(); };
+        h.stop = [this] { remoteStop(); };
+        h.tempo = [this](float bpm)
+        {
+            if (bpm >= 20.0f && bpm <= 400.0f) remoteSetTempo(static_cast<double>(bpm));
+        };
+        h.open = [this](const juce::File& file, juce::String& note) { return openProjectFromOutside(file, note); };
+        h.state = [this](bool& playing, juce::String& seed, float& bpm)
+        {
+            playing = engine.transportTelemetry().running;
+            seed = {};   // o Navalha não tem seed
+            bpm = static_cast<float>(tempo.getValue());
+        };
+        if (!maestrucLink->start()) { maestrucLink.reset(); return; }
+        openMaestrucBridge();
+    }
+    // Fio de mensagens. A ponte leva a mistura (um par estéreo) na taxa da
+    // placa. Sem mixer pelo Maestruc: LEVEL/MUTE/SOLO do Navalha ficam só nas
+    // mãos de quem toca.
+    void openMaestrucBridge()
+    {
+        maestrucPortao.fecharEsperar();
+        const double rate = activeSampleRate.load(std::memory_order_acquire);
+        if (maestrucLink == nullptr || rate <= 0.0) return;
+        if (maestrucLink->openSoundBridge(1, rate, { "mix" }))
+            maestrucPortao.abrir(maestrucLink.get());
+    }
+    rasgo::maestruc::PortaoDeSom maestrucPortao;
+    std::unique_ptr<rasgo::maestruc::Link> maestrucLink;
 };
 
 class TakeTimelineComponent final : public juce::Component,

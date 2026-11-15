@@ -18,13 +18,14 @@ juce_add_binary_data(Navalha2ArcadeAssets
         "${CMAKE_SOURCE_DIR}/assets/brand/navalha2-app-icon-128.png"
 )
 
-target_sources(Navalha2Juce PRIVATE Main.cpp)
+target_sources(Navalha2Juce PRIVATE Main.cpp MaestrucLink.h PonteDeSom.h)
 target_compile_features(Navalha2Juce PRIVATE cxx_std_20)
 
 target_link_libraries(Navalha2Juce PRIVATE
     navalha_core
     Navalha2ArcadeAssets
     juce::juce_audio_utils
+    juce::juce_osc   # receptor do Maestruc (MaestrucLink.h), 15/11/2026
     juce::juce_recommended_config_flags
     juce::juce_recommended_warning_flags
 )

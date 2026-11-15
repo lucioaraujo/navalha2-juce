@@ -3,14 +3,15 @@ set -eu
 
 juce_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
 workspace_dir=$(CDPATH= cd -- "$juce_dir/../.." && pwd -P)
-# Dependências locais (CMake 3.28.3, JUCE 8.0.13, sysroot) numa pasta neutra
-# do workspace, fora de qualquer instrumento: regra RASGO de instrumentos
-# autônomos (GOVERNANCA §7.0). Antes ficavam dentro de ../NAVALHA2_PD.
+# Dependências locais (CMake 3.28.3, sysroot) numa pasta neutra do workspace,
+# fora de qualquer instrumento: regra RASGO de instrumentos autônomos
+# (GOVERNANCA §7.0). Antes ficavam dentro de ../NAVALHA2_PD. O JUCE é o 9.0.3
+# comum da família (RASGO/third_party/JUCE-9.0.3, desde 15/11/2026; antes 8.0.13).
 dependency_dir=${NAVALHA_DEPENDENCY_DIR:-"$workspace_dir/third_party/navalha2-deps"}
 build_dir=${NAVALHA_BUILD_DIR:-"$juce_dir/.local-build/juce-app-native"}
 cmake_bin="$dependency_dir/cmake-3.28.3/bin/cmake"
 ctest_bin="$dependency_dir/cmake-3.28.3/bin/ctest"
-juce_sdk="$dependency_dir/JUCE-8.0.13"
+juce_sdk=${NAVALHA_JUCE_DIR:-"$workspace_dir/third_party/JUCE-9.0.3"}
 sysroot="$dependency_dir/sysroot"
 navalha_jobs=${NAVALHA_JOBS:-2}
 
