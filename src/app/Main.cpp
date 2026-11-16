@@ -36,6 +36,7 @@
 #include "core/ProjectJson.h"
 #include "core/ProjectState.h"
 #include "core/RecordingWriterService.h"
+#include "app/StreamingVersion.h"
 #include "core/SessionModel.h"
 #include "core/TakeCatalog.h"
 #include "core/WavMemoryReader.h"
@@ -4542,6 +4543,9 @@ public:
             if (takeCatalog.entries().size()
                 >= navalha::maximumTakeCatalogEntries)
                 break;
+            // a versão de entrega (16/11/2026) é derivada da tomada, não outro take
+            if (file.getFileNameWithoutExtension().endsWith("_streaming"))
+                continue;
             const auto path = file.getFullPathName().toStdString();
             if (takeCatalog.findByAudioPath(path) != nullptr)
                 continue;
@@ -5708,6 +5712,10 @@ private:
             showStatus("RECORDING FAILED | " + juce::String(writerError));
         else
         {
+            // versão de entrega da tomada (16/11/2026, saida-ref 1.1), num fio
+            // próprio: a tela não espera
+            if (activeRecordingFile.existsAsFile())
+                streamingPool.addJob([take = activeRecordingFile] { navalha::writeStreamingVersion(take); });
             try
             {
                 registerFinalizedTake();
@@ -8002,6 +8010,9 @@ private:
     navalha::SessionModel session;
     navalha::AudioEngine engine;
     navalha::RecordingWriterService recorder {engine};
+    // a versão de entrega da última tomada (16/11/2026); o destrutor espera
+    juce::ThreadPool streamingPool {juce::ThreadPoolOptions {}
+        .withThreadName("Navalha streaming master").withNumberOfThreads(1)};
     navalha::TakeCatalog takeCatalog;
     navalha::AlbumProject albumProjectDraft;
     juce::File recordingDirectory;

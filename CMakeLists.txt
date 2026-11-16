@@ -81,6 +81,12 @@ add_library(navalha_core STATIC
     src/core/StereoMixer.cpp
     src/core/TakeCatalog.cpp
     src/core/TruePeakDetector.cpp
+    # saida-ref 1.1 (16/11/2026): o master de entrega da gravação
+    src/core/saida/DeliveryMaster.cpp
+    src/core/saida/OutputStage.cpp
+    src/core/saida/LoudnessMeter.cpp
+    src/core/saida/TruePeakDetector.cpp
+    src/core/saida/TakeAnalysis.cpp
     src/core/WavStreamWriter.cpp
     src/core/WavMemoryReader.cpp
     src/core/WavMetadataRewriter.cpp
