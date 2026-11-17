@@ -3192,12 +3192,39 @@ public:
         juce::Desktop::getInstance().removeFocusChangeListener(this);
         removeMouseListener(this);
         deviceManager.removeChangeListener(this);
+        // Fechar com o REC ligado (17/11/2026, v0.2.2): a tomada é finalizada
+        // como pelo botão REC - entra no catálogo e ganha a versão de entrega.
+        // Antes, o arquivo era fechado e só; a tomada ficava fora do catálogo
+        // e sem o _streaming.wav.
+        if (recorder.isRunning())
+        {
+            recorder.stop();
+            if (recorder.error().empty() && activeRecordingFile.existsAsFile())
+            {
+                streamingPool.addJob([take = activeRecordingFile] { navalha::writeStreamingVersion(take); });
+                try
+                {
+                    registerFinalizedTake();
+                }
+                catch (const std::exception&)
+                {
+                    // o catálogo falhou; a tomada e a versão de entrega seguem
+                }
+            }
+            clearActiveRecordingRegistration();
+        }
         saveTakeCatalog();
         saveAudioSettings();
         recorder.stop();
         stopAudioPreview(false);
         engine.suspendOutput();
         shutdownAudio();
+        // A versão de entrega em curso (ou na fila) termina antes de sair: o
+        // destrutor do ThreadPool pode interromper o trabalho e deixar só o
+        // .partial (ou sem arquivo). Uns 2 s para 1 min de tomada, até ~20 s
+        // no limite de 5 min.
+        while (streamingPool.getNumJobs() > 0)
+            juce::Thread::sleep(20);
     }
 
     void prepareToPlay(int samplesPerBlockExpected, double sampleRate) override
