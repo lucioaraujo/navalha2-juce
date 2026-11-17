@@ -93,7 +93,12 @@ int main()
     // MasteringProcessor - the golden signature intentionally changed, this
     // is not a regression. Value measured on this session's toolchain (GCC
     // 13.3.0, Debug, local build) via navalha_golden_render_tests itself.
-    constexpr std::uint64_t expectedMasteringChecksum = 1536196086264323730ULL;
+    // Regenerated 17 nov. 2026: the TruePeakDetector moved to 48 taps per
+    // phase (RASGO saida-ref 1.2) and the LookaheadLimiter's attack follows
+    // its 24-sample latency (was 8). Measured against the old render: peak
+    // -1.20 dBFS and RMS unchanged, difference -61 dB RMS under the signal
+    // (max -47.5 dBFS) - intentional, not a regression. Release, GCC 13.3.
+    constexpr std::uint64_t expectedMasteringChecksum = 10455438226630347362ULL;
     // The mastering chain is intentionally float based. GCC 11 Release on
     // Ubuntu 22.04 contracted one intermediate differently from the local
     // Debug toolchain under the OLD DSP (pre-18 ago. 2026 fix) - this second
