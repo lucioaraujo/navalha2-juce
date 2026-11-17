@@ -58,7 +58,7 @@ inline void writeStreamingVersion(const juce::File& take)
     WavMetadata metadata;
     metadata.title = "Navalha 2 (streaming)";
     metadata.artist = "Lucio de Araujo";
-    metadata.comment = "Versao de entrega: -14 LUFS, true peak <= -1 dBTP (saida-ref 1.1)";
+    metadata.comment = "Versao de entrega: -14 LUFS, true peak <= -1 dBTP (saida-ref 1.2)";
     struct WriterSink final : saida::DeliveryMaster::Sink
     {
         WavStreamWriter& out;
@@ -93,7 +93,7 @@ inline void writeStreamingVersion(const juce::File& take)
     if (error)
         return;
     std::ostringstream text;
-    text << "Navalha 2 - versao de entrega (streaming), saida-ref 1.1\n"
+    text << "Navalha 2 - versao de entrega (streaming), saida-ref 1.2\n"
          << "tomada: " << take.getFileName().toStdString() << "\n"
          << "alvo: -14 LUFS, true peak <= -1 dBTP; limitador no maximo 6 dB (guarda de dinamica)\n"
          << "entrada: " << report.inputLufs << " LUFS, " << report.inputTruePeakDb << " dBTP\n"
