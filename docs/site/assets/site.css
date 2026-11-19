@@ -310,6 +310,24 @@ h3 { font-size: .9rem; letter-spacing: .04em; text-transform: uppercase; }
 .dialog-close { position: absolute; top: 10px; right: 12px; border: 0; background: transparent; color: var(--steel); font-size: 2rem; line-height: 1; cursor: pointer; }
 .dialog-close:hover { color: var(--yellow); }
 
+/* Tutorial, Learn and Installation pages (RASGO site leveling, 19 Nov 2026) */
+.page-main { width: min(100% - 36px, 980px); margin-inline: auto; padding-block: clamp(48px, 7vw, 96px); }
+.page-hero h1 { margin: 0 0 .6rem; font-size: clamp(2.2rem, 5vw, 3.6rem); letter-spacing: -.02em; }
+.page-lead { max-width: 720px; color: var(--steel); font-size: 1.1rem; }
+.page-section { padding-block: 34px; border-top: 1px solid var(--line); }
+.page-section h2 { margin: 0 0 1rem; color: var(--yellow); font-family: var(--mono); font-size: 1rem; letter-spacing: .08em; }
+.page-section p, .page-section li, .page-section td { color: var(--steel); line-height: 1.6; max-width: 760px; }
+.page-section code { font-family: var(--mono); font-size: .88em; color: var(--white, #f3f1e8); }
+.page-section pre { padding: .8rem 1rem; overflow-x: auto; background: var(--panel); border: 1px solid var(--line); }
+.page-learn-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+.page-learn { padding: 14px 16px; background: var(--panel); border: 1px solid var(--line); }
+.page-learn h3 { margin: 0 0 .4rem; color: var(--yellow); font-family: var(--mono); font-size: .8rem; letter-spacing: .08em; }
+.page-learn p { margin: 0; font-size: .9rem; }
+.page-table { border-collapse: collapse; width: 100%; max-width: 900px; }
+.page-table th, .page-table td { text-align: left; vertical-align: top; padding: .55rem .7rem; border-bottom: 1px solid var(--line); }
+.page-table th { width: 28%; font-weight: 400; }
+.page-downloads { display: flex; flex-wrap: wrap; gap: 10px; }
+
 @media (max-width: 1120px) {
   .site-header { grid-template-columns: auto auto 1fr; }
   .nav-toggle { display: block; }

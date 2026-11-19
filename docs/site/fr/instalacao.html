@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Installer Navalha 2 sous Windows, macOS et Linux, pas à pas, avec les avertissements de sécurité et la configuration requise.">
+  <meta name="theme-color" content="#0a0d0d">
+  <title>Installation — Navalha 2</title>
+  <link rel="icon" type="image/png" href="../assets/favicon.png">
+  <link rel="stylesheet" href="../assets/site.css?v=20260828-1">
+  <script src="../assets/site.js?v=20260810-5" defer></script>
+  <!-- SEO:INICIO — gerado por seo.py; editar lá, não aqui -->
+  <link rel="canonical" href="https://navalha2.arquiviagem.net/fr/instalacao.html">
+  <link rel="alternate" hreflang="en" href="https://navalha2.arquiviagem.net/instalacao.html">
+  <link rel="alternate" hreflang="pt" href="https://navalha2.arquiviagem.net/pt/instalacao.html">
+  <link rel="alternate" hreflang="fr" href="https://navalha2.arquiviagem.net/fr/instalacao.html">
+  <link rel="alternate" hreflang="es" href="https://navalha2.arquiviagem.net/es/instalacao.html">
+  <link rel="alternate" hreflang="x-default" href="https://navalha2.arquiviagem.net/instalacao.html">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Navalha 2">
+  <meta property="og:title" content="Installation — Navalha 2">
+  <meta property="og:description" content="Installer Navalha 2 sous Windows, macOS et Linux, pas à pas, avec les avertissements de sécurité et la configuration requise.">
+  <meta property="og:url" content="https://navalha2.arquiviagem.net/fr/instalacao.html">
+  <meta property="og:image" content="https://navalha2.arquiviagem.net/assets/og-navalha2.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Interface de Navalha 2 : sources A/B, carte de signal et contrôles de performance.">
+  <meta property="og:locale" content="fr_FR">
+  <meta property="og:locale:alternate" content="en_US">
+  <meta property="og:locale:alternate" content="pt_BR">
+  <meta property="og:locale:alternate" content="es_ES">
+  <meta name="twitter:card" content="summary_large_image">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Navalha 2",
+    "description": "Installer Navalha 2 sous Windows, macOS et Linux, pas à pas, avec les avertissements de sécurité et la configuration requise.",
+    "url": "https://navalha2.arquiviagem.net/",
+    "inLanguage": "fr",
+    "image": "https://navalha2.arquiviagem.net/assets/og-navalha2.jpg",
+    "applicationCategory": "MultimediaApplication",
+    "applicationSubCategory": "Sampler / live slicing instrument",
+    "operatingSystem": "Linux, Windows, macOS",
+    "softwareVersion": "0.2.2",
+    "downloadUrl": "https://github.com/lucioaraujo/navalha2-juce/releases/tag/v0.2.2",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "EUR"
+    },
+    "license": "https://www.gnu.org/licenses/gpl-3.0.html",
+    "isAccessibleForFree": true,
+    "author": {
+      "@type": "Person",
+      "name": "Glerm Soares"
+    },
+    "contributor": {
+      "@type": "Person",
+      "name": "Lúcio Araújo"
+    },
+    "isBasedOn": {
+      "@type": "SoftwareApplication",
+      "name": "Navalha (Pure Data)",
+      "author": {
+        "@type": "Person",
+        "name": "Glerm Soares"
+      }
+    },
+    "sameAs": [
+      "https://github.com/lucioaraujo/navalha2-juce"
+    ]
+  }
+  </script>
+  <script>(function(){var K='rasgo-lingua',M={en:'',pt:'pt/',fr:'fr/',es:'es/'};function g(){try{return localStorage.getItem(K)}catch(e){return null}}function s(v){try{localStorage.setItem(K,v)}catch(e){}}var l=(document.documentElement.lang||'').slice(0,2).toLowerCase(),p=location.pathname,r=document.referrer||'';if(/^\/(index\.html)?$/.test(p)&&l==='en'&&r.indexOf(location.origin+'/')!==0&&!/[?&]lang=en/.test(location.search)&&!/bot|crawl|spider|slurp|lighthouse/i.test(navigator.userAgent)){var c=g();if(!c){var L=navigator.languages&&navigator.languages.length?navigator.languages:[navigator.language||''];c='en';for(var i=0;i<L.length;i++){var x=String(L[i]).slice(0,2).toLowerCase();if(x in M){c=x;break}}}if(c!=='en'&&M[c]){location.replace('/'+M[c]+location.hash);return}}if(l in M)s(l);})();</script>
+  <!-- SEO:FIM -->
+</head>
+<body>
+  <div class="rasgo-strip"><a href="https://rasgoinstruments.arquiviagem.net/">RASGO — famille d'instruments et de recherche sonore</a></div>
+  <a class="skip-link" href="#main">Passer au contenu</a>
+
+  <header class="site-header" data-site-header>
+    <a class="brand" href="#top" aria-label="Accueil de Navalha 2">
+      <img src="../assets/navalha2-app-icon.png" alt="" width="52" height="52">
+      <span class="brand-copy"><strong>NAVALHA <b class="brand-number" style="color: #ffd82f">2</b></strong></span>
+    </a>
+    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="main-nav">
+      <span class="sr-only">Ouvrir la navigation</span>
+      <span aria-hidden="true">MENU</span>
+    </button>
+    <nav id="main-nav" class="main-nav" aria-label="Navigation principale">
+      <a href="./#instrument">Instrument</a>
+      <a href="./#workflow">Flux de travail</a>
+      <a href="tutorial.html">Tutoriel</a>
+      <a href="aprender.html">Apprendre</a>
+      <a href="instalacao.html" aria-current="page">Installation</a>
+      <a href="./#technology">Technologie</a>
+      <a href="./#status">Statut</a>
+    </nav>
+    <nav class="language-nav" aria-label="Langue">
+      <a href="../instalacao.html" lang="en" hreflang="en">EN</a>
+      <a href="../pt/instalacao.html" lang="pt" hreflang="pt">PT</a>
+      <a href="../fr/instalacao.html" lang="fr" hreflang="fr" class="active" aria-current="page">FR</a>
+      <a href="../es/instalacao.html" lang="es" hreflang="es">ES</a>
+    </nav>
+  </header>
+
+  <main id="main" class="page-main">
+<section class="page-hero">
+  <h1>Installation</h1>
+  <p class="page-lead">Comment installer Navalha 2 sous Windows, macOS et Linux, et ce qu'il demande à l'ordinateur.</p>
+</section>
+<section class="page-section" id="download"><h2>Télécharger</h2><p>Version 0.2.2, l'actuelle. Les avertissements de sécurité de Windows et de macOS sont attendus et n'apparaissent que la première fois.</p>
+<p class="page-downloads"><a class="button" href="https://github.com/lucioaraujo/navalha2-juce/releases/download/v0.2.2/navalha2-0.2.2-win64.exe">Windows · .exe</a> <a class="button" href="https://github.com/lucioaraujo/navalha2-juce/releases/download/v0.2.2/navalha2-0.2.2-win64.zip">Windows · .zip</a> <a class="button" href="https://github.com/lucioaraujo/navalha2-juce/releases/download/v0.2.2/navalha2-0.2.2-Darwin.dmg">macOS · .dmg</a> <a class="button" href="https://github.com/lucioaraujo/navalha2-juce/releases/download/v0.2.2/navalha2_0.2.2_x86_64.deb">Linux · .deb</a> <a class="button" href="https://github.com/lucioaraujo/navalha2-juce/releases/download/v0.2.2/navalha2-0.2.2-linux-x86_64.AppImage">Linux · AppImage</a> <a class="button" href="https://github.com/lucioaraujo/navalha2-juce/releases/download/v0.2.2/navalha2-0.2.2-linux-x86_64.tar.gz">Linux · .tar.gz</a></p></section>
+<section class="page-section"><h2>Windows</h2><ol><li>Téléchargez <code>navalha2-&lt;version&gt;-win64.exe</code> et ouvrez-le.</li><li>Windows affiche <strong>« Windows a protégé votre ordinateur »</strong> : cliquez sur <strong>« Informations complémentaires »</strong>, puis sur <strong>« Exécuter quand même »</strong>.</li><li>Si Windows demande l'autorisation d'administrateur, cliquez sur <strong>« Oui »</strong>.</li><li>Cliquez sur <strong>« Suivant »</strong> jusqu'à la fin. Navalha 2 est alors dans le menu Démarrer et sur le bureau ; chaque nouvelle version remplace la précédente.</li></ol>
+<p><strong>Sans installer :</strong> décompressez <code>navalha2-&lt;version&gt;-win64.zip</code> et ouvrez <code>Navalha 2.exe</code>.</p></section>
+<section class="page-section"><h2>macOS</h2><ol><li>Téléchargez <code>navalha2-&lt;version&gt;-Darwin.dmg</code>. Il fonctionne sur les Mac Intel et Apple Silicon.</li><li>Ouvrez-le et glissez Navalha 2 dans <strong>Applications</strong>.</li><li>Ouvrez l'app. La première fois, macOS la bloque, car elle a une signature ad hoc, sans Developer ID Apple payant. Cliquez sur <strong>« OK »</strong>.</li><li>Autorisez l'app une fois : dans <strong>Réglages Système → Confidentialité et sécurité</strong>, cliquez sur <strong>« Ouvrir quand même »</strong> et confirmez. Sous macOS 14 ou antérieur : clic droit sur l'app dans le Finder → <strong>Ouvrir → Ouvrir</strong>.</li><li>Au premier enregistrement par le microphone ou une interface audio, macOS demande l'autorisation : acceptez.</li></ol>
+<p>Si le bouton n'apparaît pas, utilisez le Terminal. La commande retire la marque de quarantaine que macOS pose sur chaque fichier téléchargé :</p>
+<pre><code>xattr -dr com.apple.quarantine "/Applications/Navalha 2.app"</code></pre></section>
+<section class="page-section"><h2>Linux</h2><ul><li><strong>Ubuntu 22.04+, Debian 12+, Mint 21+ :</strong> double-cliquez sur le <code>.deb</code>, ou <code>sudo apt install ./navalha2_&lt;version&gt;_x86_64.deb</code>.</li><li><strong>Autres distributions, AppImage :</strong> rendez-le exécutable (Propriétés → autoriser l'exécution, ou <code>chmod +x</code>) et ouvrez-le.</li><li><strong>Autres distributions, <code>.tar.gz</code> :</strong> décompressez et lancez <code>./install.sh</code>, qui installe pour votre utilisateur, sans root ; <code>./install.sh --remove</code> annule.</li></ul></section>
+<section class="page-section"><h2>Configuration requise</h2><table class="page-table"><tr><th scope="row"><strong>Windows</strong></th><td>Windows 10 ou 11, 64 bits</td></tr><tr><th scope="row"><strong>macOS</strong></th><td>10.15 ou ultérieur (Intel), 11 ou ultérieur (Apple Silicon) ; un paquet Universal 2</td></tr><tr><th scope="row"><strong>Linux</strong></th><td>x86-64 avec glibc 2.35 ou plus récente ; testé au lancement sous Debian 12, Ubuntu 24.04, Fedora et Arch</td></tr><tr><th scope="row"><strong>Processeur</strong></th><td>2 cœurs à 2 GHz ; 4 cœurs modernes recommandés pour l'usage musical</td></tr><tr><th scope="row"><strong>Mémoire</strong></th><td>4 Go ; 8 Go ou plus recommandés (les WAV longs occupent une mémoire proportionnelle à leur taille)</td></tr><tr><th scope="row"><strong>Disque</strong></th><td>300 Mo pour l'app, plus vos enregistrements</td></tr><tr><th scope="row"><strong>Écran</strong></th><td>1480 × 900 pour l'interface principale</td></tr><tr><th scope="row"><strong>Audio</strong></th><td>toute sortie stéréo ; une interface USB est recommandée pour enregistrer</td></tr></table>
+<p>Ce sont des valeurs de référence des guides de configuration du projet, non mesurées sur une machine de référence. Pour autre chose, écrivez à <strong>rasgo.instruments@gmail.com</strong>.</p></section>
+</main>
+
+  <footer class="site-footer">
+    <img src="../assets/navalha2-app-icon.png" alt="" width="52" height="52">
+    <div><strong>NAVALHA <b class="brand-number" style="color: #ffd82f">2</b></strong><span>Découper · recombiner · jouer</span></div>
+    <nav aria-label="Liens vers le référentiel">
+      <a href="https://github.com/lucioaraujo/navalha2-juce">JUCE/C++</a>
+      <a href="https://github.com/lucioaraujo/navalha2-pd">PD/web</a>
+      <a href="#contact" data-contact-trigger>CONTACT</a>
+    </nav>
+    <small>Documentation du projet · 2026</small>
+  </footer>
+
+  <dialog class="contact-dialog" data-contact-dialog aria-labelledby="contact-title">
+    <button class="dialog-close" type="button" data-contact-close aria-label="Fermer la fenêtre de contact">×</button>
+    <h2 id="contact-title">CONTACT</h2>
+    <p>Copiez l'adresse e-mail :</p>
+    <code data-contact-address></code>
+    <button class="button button-primary" type="button" data-contact-copy>Copier l'e-mail</button>
+    <p class="contact-feedback" data-contact-feedback aria-live="polite"></p>
+  </dialog>
+</body>
+</html>

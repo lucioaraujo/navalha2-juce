@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Tutorial de Navalha 2: fuentes, biblioteca, región, slices, patrón, sonido, el performer asistido, proyectos, grabación y ayuda.">
+  <meta name="theme-color" content="#0a0d0d">
+  <title>Tutorial — Navalha 2</title>
+  <link rel="icon" type="image/png" href="../assets/favicon.png">
+  <link rel="stylesheet" href="../assets/site.css?v=20260828-1">
+  <script src="../assets/site.js?v=20260810-5" defer></script>
+  <!-- SEO:INICIO — gerado por seo.py; editar lá, não aqui -->
+  <link rel="canonical" href="https://navalha2.arquiviagem.net/es/tutorial.html">
+  <link rel="alternate" hreflang="en" href="https://navalha2.arquiviagem.net/tutorial.html">
+  <link rel="alternate" hreflang="pt" href="https://navalha2.arquiviagem.net/pt/tutorial.html">
+  <link rel="alternate" hreflang="fr" href="https://navalha2.arquiviagem.net/fr/tutorial.html">
+  <link rel="alternate" hreflang="es" href="https://navalha2.arquiviagem.net/es/tutorial.html">
+  <link rel="alternate" hreflang="x-default" href="https://navalha2.arquiviagem.net/tutorial.html">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Navalha 2">
+  <meta property="og:title" content="Tutorial — Navalha 2">
+  <meta property="og:description" content="Tutorial de Navalha 2: fuentes, biblioteca, región, slices, patrón, sonido, el performer asistido, proyectos, grabación y ayuda.">
+  <meta property="og:url" content="https://navalha2.arquiviagem.net/es/tutorial.html">
+  <meta property="og:image" content="https://navalha2.arquiviagem.net/assets/og-navalha2.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Interfaz de Navalha 2: fuentes A/B, mapa de señal y controles de performance.">
+  <meta property="og:locale" content="es_ES">
+  <meta property="og:locale:alternate" content="en_US">
+  <meta property="og:locale:alternate" content="pt_BR">
+  <meta property="og:locale:alternate" content="fr_FR">
+  <meta name="twitter:card" content="summary_large_image">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Navalha 2",
+    "description": "Tutorial de Navalha 2: fuentes, biblioteca, región, slices, patrón, sonido, el performer asistido, proyectos, grabación y ayuda.",
+    "url": "https://navalha2.arquiviagem.net/",
+    "inLanguage": "es",
+    "image": "https://navalha2.arquiviagem.net/assets/og-navalha2.jpg",
+    "applicationCategory": "MultimediaApplication",
+    "applicationSubCategory": "Sampler / live slicing instrument",
+    "operatingSystem": "Linux, Windows, macOS",
+    "softwareVersion": "0.2.2",
+    "downloadUrl": "https://github.com/lucioaraujo/navalha2-juce/releases/tag/v0.2.2",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "EUR"
+    },
+    "license": "https://www.gnu.org/licenses/gpl-3.0.html",
+    "isAccessibleForFree": true,
+    "author": {
+      "@type": "Person",
+      "name": "Glerm Soares"
+    },
+    "contributor": {
+      "@type": "Person",
+      "name": "Lúcio Araújo"
+    },
+    "isBasedOn": {
+      "@type": "SoftwareApplication",
+      "name": "Navalha (Pure Data)",
+      "author": {
+        "@type": "Person",
+        "name": "Glerm Soares"
+      }
+    },
+    "sameAs": [
+      "https://github.com/lucioaraujo/navalha2-juce"
+    ]
+  }
+  </script>
+  <script>(function(){var K='rasgo-lingua',M={en:'',pt:'pt/',fr:'fr/',es:'es/'};function g(){try{return localStorage.getItem(K)}catch(e){return null}}function s(v){try{localStorage.setItem(K,v)}catch(e){}}var l=(document.documentElement.lang||'').slice(0,2).toLowerCase(),p=location.pathname,r=document.referrer||'';if(/^\/(index\.html)?$/.test(p)&&l==='en'&&r.indexOf(location.origin+'/')!==0&&!/[?&]lang=en/.test(location.search)&&!/bot|crawl|spider|slurp|lighthouse/i.test(navigator.userAgent)){var c=g();if(!c){var L=navigator.languages&&navigator.languages.length?navigator.languages:[navigator.language||''];c='en';for(var i=0;i<L.length;i++){var x=String(L[i]).slice(0,2).toLowerCase();if(x in M){c=x;break}}}if(c!=='en'&&M[c]){location.replace('/'+M[c]+location.hash);return}}if(l in M)s(l);})();</script>
+  <!-- SEO:FIM -->
+</head>
+<body>
+  <div class="rasgo-strip"><a href="https://rasgoinstruments.arquiviagem.net/">RASGO — familia de instrumentos e investigación sonora</a></div>
+  <a class="skip-link" href="#main">Saltar al contenido</a>
+
+  <header class="site-header" data-site-header>
+    <a class="brand" href="#top" aria-label="Inicio de Navalha 2">
+      <img src="../assets/navalha2-app-icon.png" alt="" width="52" height="52">
+      <span class="brand-copy"><strong>NAVALHA <b class="brand-number" style="color: #ffd82f">2</b></strong></span>
+    </a>
+    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="main-nav">
+      <span class="sr-only">Abrir navegación</span>
+      <span aria-hidden="true">MENU</span>
+    </button>
+    <nav id="main-nav" class="main-nav" aria-label="Navegación principal">
+      <a href="./#instrument">Instrumento</a>
+      <a href="./#workflow">Flujo de trabajo</a>
+      <a href="tutorial.html" aria-current="page">Tutorial</a>
+      <a href="aprender.html">Aprender</a>
+      <a href="instalacao.html">Instalación</a>
+      <a href="./#technology">Tecnología</a>
+      <a href="./#status">Estado</a>
+    </nav>
+    <nav class="language-nav" aria-label="Idioma">
+      <a href="../tutorial.html" lang="en" hreflang="en">EN</a>
+      <a href="../pt/tutorial.html" lang="pt" hreflang="pt">PT</a>
+      <a href="../fr/tutorial.html" lang="fr" hreflang="fr">FR</a>
+      <a href="../es/tutorial.html" lang="es" hreflang="es" class="active" aria-current="page">ES</a>
+    </nav>
+  </header>
+
+  <main id="main" class="page-main">
+<section class="page-hero">
+  <h1>Tutorial</h1>
+  <p class="page-lead">Los diez capítulos del tutorial que Navalha 2 lleva en su botón TUTORIAL, de la primera fuente a la grabación y la ayuda.</p>
+</section>
+<section class="page-section" id="chapter-1"><h2>1 · INICIO</h2><p>Cargue o arrastre un WAV/AIFF a SOURCE A o B. Elija una región, divídala en slices y pulse PLAY. El original nunca se modifica.</p></section>
+<section class="page-section" id="chapter-2"><h2>2 · BIBLIOTECA</h2><p>Antes de iniciar un proyecto, cree una carpeta exclusiva (por ejemplo Nombre_del_Proyecto/Fuentes) y coloque allí solo el material que va a usar. La BIBLIOTECA DE AUDIO acepta WAV/WAVE y AIFF/AIF, y examina la carpeta elegida y sus subcarpetas, hasta 512 archivos; MP3, FLAC, OGG y M4A no son formatos de fuente en esta versión. Una carpeta limpia evita que aparezca material ajeno. Use LOAD A/B o arrastre un archivo a la pista deseada.</p></section>
+<section class="page-section" id="chapter-3"><h2>3 · REGIÓN</h2><p>SELECT REGION define el área de trabajo. WHOLE restaura toda la fuente. PLAY SLICE permite escuchar sin modificar el archivo.</p></section>
+<section class="page-section" id="chapter-4"><h2>4 · SLICES</h2><p>Divida la región en 4–64 slices, ajuste START/END en EDIT SLICE o añada cortes BLADE no destructivos.</p></section>
+<section class="page-section" id="chapter-5"><h2>5 · PATRÓN</h2><p>Las ocho celdas definen el orden de slices. RANDOM, INTERLEAVE, FORWARD, REVERSE, ZERO y GAP crean o transforman patrones.</p></section>
+<section class="page-section" id="chapter-6"><h2>6 · SONIDO</h2><p>TIME define BPM y comportamiento temporal. HERITAGE PITCH ofrece las 24 posiciones originales. SOURCE MIXER controla nivel, pan, width y balance antes de MASTER.</p></section>
+<section class="page-section" id="chapter-7"><h2>7 · PERFORMER AUTOMÁTICO</h2><p>ASSISTED PERFORMER toma decisiones limitadas según los vocabularios activos. Los bloqueos protegen elecciones. PLAY, STOP y REC siguen siendo humanos.</p></section>
+<section class="page-section" id="chapter-8"><h2>8 · PROYECTOS</h2><p>SAVE PROJECT guarda estado y referencias. SAVE PORTABLE crea un ZIP Project v2 con fuentes copiadas para otro ordenador.</p></section>
+<section class="page-section" id="chapter-9"><h2>9 · REC / REMUESTREO</h2><p>REC captura el MASTER estéreo real. Las tomas finalizadas entran en TAKE TIMELINE, donde se revisan metadatos y una toma puede volver como SOURCE A o B.</p></section>
+<section class="page-section" id="chapter-10"><h2>10 · AYUDA</h2><p>Active LEARN y pase el puntero sobre un control. Su explicación aparece en el panel fijo Activity Log sin cubrir el instrumento.</p></section>
+</main>
+
+  <footer class="site-footer">
+    <img src="../assets/navalha2-app-icon.png" alt="" width="52" height="52">
+    <div><strong>NAVALHA <b class="brand-number" style="color: #ffd82f">2</b></strong><span>Cortar · recombinar · interpretar</span></div>
+    <nav aria-label="Enlaces al repositorio">
+      <a href="https://github.com/lucioaraujo/navalha2-juce">JUCE/C++</a>
+      <a href="https://github.com/lucioaraujo/navalha2-pd">PD/web</a>
+      <a href="#contact" data-contact-trigger>CONTACTO</a>
+    </nav>
+    <small>Documentación del proyecto · 2026</small>
+  </footer>
+
+  <dialog class="contact-dialog" data-contact-dialog aria-labelledby="contact-title">
+    <button class="dialog-close" type="button" data-contact-close aria-label="Cerrar ventana de contacto">×</button>
+    <h2 id="contact-title">CONTACTO</h2>
+    <p>Copia la dirección de correo electrónico:</p>
+    <code data-contact-address></code>
+    <button class="button button-primary" type="button" data-contact-copy>Copiar correo electrónico</button>
+    <p class="contact-feedback" data-contact-feedback aria-live="polite"></p>
+  </dialog>
+</body>
+</html>

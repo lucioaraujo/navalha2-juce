@@ -73,6 +73,7 @@
     ]
   }
   </script>
+  <script>(function(){var K='rasgo-lingua',M={en:'',pt:'pt/',fr:'fr/',es:'es/'};function g(){try{return localStorage.getItem(K)}catch(e){return null}}function s(v){try{localStorage.setItem(K,v)}catch(e){}}var l=(document.documentElement.lang||'').slice(0,2).toLowerCase(),p=location.pathname,r=document.referrer||'';if(/^\/(index\.html)?$/.test(p)&&l==='en'&&r.indexOf(location.origin+'/')!==0&&!/[?&]lang=en/.test(location.search)&&!/bot|crawl|spider|slurp|lighthouse/i.test(navigator.userAgent)){var c=g();if(!c){var L=navigator.languages&&navigator.languages.length?navigator.languages:[navigator.language||''];c='en';for(var i=0;i<L.length;i++){var x=String(L[i]).slice(0,2).toLowerCase();if(x in M){c=x;break}}}if(c!=='en'&&M[c]){location.replace('/'+M[c]+location.hash);return}}if(l in M)s(l);})();</script>
   <!-- SEO:FIM -->
 </head>
 <body>
@@ -91,7 +92,9 @@
     <nav id="main-nav" class="main-nav" aria-label="Main navigation">
       <a href="#instrument">Instrument</a>
       <a href="#workflow">Workflow</a>
-      <a href="#learn">Learn</a>
+      <a href="tutorial.html">Tutorial</a>
+      <a href="aprender.html">Learn</a>
+      <a href="instalacao.html">Installation</a>
       <a href="#technology">Technology</a>
       <a href="#status">Status</a>
     </nav>

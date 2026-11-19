@@ -36,6 +36,24 @@ GRUPOS = [
     [
         {"arquivo": "relatorio-migracao.html", "url": "relatorio-migracao.html", "lang": "pt-BR"},
     ],
+    [
+        {"arquivo": "tutorial.html", "url": "tutorial.html", "lang": "en"},
+        {"arquivo": "pt/tutorial.html", "url": "pt/tutorial.html", "lang": "pt"},
+        {"arquivo": "fr/tutorial.html", "url": "fr/tutorial.html", "lang": "fr"},
+        {"arquivo": "es/tutorial.html", "url": "es/tutorial.html", "lang": "es"},
+    ],
+    [
+        {"arquivo": "aprender.html", "url": "aprender.html", "lang": "en"},
+        {"arquivo": "pt/aprender.html", "url": "pt/aprender.html", "lang": "pt"},
+        {"arquivo": "fr/aprender.html", "url": "fr/aprender.html", "lang": "fr"},
+        {"arquivo": "es/aprender.html", "url": "es/aprender.html", "lang": "es"},
+    ],
+    [
+        {"arquivo": "instalacao.html", "url": "instalacao.html", "lang": "en"},
+        {"arquivo": "pt/instalacao.html", "url": "pt/instalacao.html", "lang": "pt"},
+        {"arquivo": "fr/instalacao.html", "url": "fr/instalacao.html", "lang": "fr"},
+        {"arquivo": "es/instalacao.html", "url": "es/instalacao.html", "lang": "es"},
+    ],
 ]
 
 
@@ -91,6 +109,12 @@ import sys
 AQUI = pathlib.Path(__file__).parent
 INICIO = "<!-- SEO:INICIO — gerado por seo.py; editar lá, não aqui -->"
 FIM = "<!-- SEO:FIM -->"
+
+# Língua de abertura (autor, 19/11/2026: "detectar a língua do navegador").
+# Variante do script comum da família para este site, que abre em inglês na
+# raiz e tem pt/, fr/ e es/: na raiz, quem chega de fora vai para a língua do
+# navegador ou a última escolhida; navegação interna, ?lang=en e robôs ficam.
+LINGUA = r"<script>(function(){var K='rasgo-lingua',M={en:'',pt:'pt/',fr:'fr/',es:'es/'};function g(){try{return localStorage.getItem(K)}catch(e){return null}}function s(v){try{localStorage.setItem(K,v)}catch(e){}}var l=(document.documentElement.lang||'').slice(0,2).toLowerCase(),p=location.pathname,r=document.referrer||'';if(/^\/(index\.html)?$/.test(p)&&l==='en'&&r.indexOf(location.origin+'/')!==0&&!/[?&]lang=en/.test(location.search)&&!/bot|crawl|spider|slurp|lighthouse/i.test(navigator.userAgent)){var c=g();if(!c){var L=navigator.languages&&navigator.languages.length?navigator.languages:[navigator.language||''];c='en';for(var i=0;i<L.length;i++){var x=String(L[i]).slice(0,2).toLowerCase();if(x in M){c=x;break}}}if(c!=='en'&&M[c]){location.replace('/'+M[c]+location.hash);return}}if(l in M)s(l);})();</script>"
 BLOCO = re.compile(r"[ \t]*<!-- SEO:INICIO.*?<!-- SEO:FIM -->\n", re.S)
 OG_LOCALE = {"pt": "pt_BR", "pt-BR": "pt_BR", "en": "en_US", "fr": "fr_FR", "es": "es_ES"}
 
@@ -147,6 +171,7 @@ def bloco(pagina, grupo, titulo, descricao):
     if SITE.get("bing_verificacao") and pagina["url"] == "":
         L.append('<meta name="msvalidate.01" content="%s">' % a(SITE["bing_verificacao"]))
     L.append(json_ld(dados_estruturados(pagina, descricao)))
+    L.append(LINGUA)
     L.append(FIM)
     return L
 

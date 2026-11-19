@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Aprender Navalha 2: cada control explicado, de las fuentes y slices al mezclador, al performer, la grabación y los proyectos.">
+  <meta name="theme-color" content="#0a0d0d">
+  <title>Aprender — Navalha 2</title>
+  <link rel="icon" type="image/png" href="../assets/favicon.png">
+  <link rel="stylesheet" href="../assets/site.css?v=20260828-1">
+  <script src="../assets/site.js?v=20260810-5" defer></script>
+  <!-- SEO:INICIO — gerado por seo.py; editar lá, não aqui -->
+  <link rel="canonical" href="https://navalha2.arquiviagem.net/es/aprender.html">
+  <link rel="alternate" hreflang="en" href="https://navalha2.arquiviagem.net/aprender.html">
+  <link rel="alternate" hreflang="pt" href="https://navalha2.arquiviagem.net/pt/aprender.html">
+  <link rel="alternate" hreflang="fr" href="https://navalha2.arquiviagem.net/fr/aprender.html">
+  <link rel="alternate" hreflang="es" href="https://navalha2.arquiviagem.net/es/aprender.html">
+  <link rel="alternate" hreflang="x-default" href="https://navalha2.arquiviagem.net/aprender.html">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Navalha 2">
+  <meta property="og:title" content="Aprender — Navalha 2">
+  <meta property="og:description" content="Aprender Navalha 2: cada control explicado, de las fuentes y slices al mezclador, al performer, la grabación y los proyectos.">
+  <meta property="og:url" content="https://navalha2.arquiviagem.net/es/aprender.html">
+  <meta property="og:image" content="https://navalha2.arquiviagem.net/assets/og-navalha2.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Interfaz de Navalha 2: fuentes A/B, mapa de señal y controles de performance.">
+  <meta property="og:locale" content="es_ES">
+  <meta property="og:locale:alternate" content="en_US">
+  <meta property="og:locale:alternate" content="pt_BR">
+  <meta property="og:locale:alternate" content="fr_FR">
+  <meta name="twitter:card" content="summary_large_image">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Navalha 2",
+    "description": "Aprender Navalha 2: cada control explicado, de las fuentes y slices al mezclador, al performer, la grabación y los proyectos.",
+    "url": "https://navalha2.arquiviagem.net/",
+    "inLanguage": "es",
+    "image": "https://navalha2.arquiviagem.net/assets/og-navalha2.jpg",
+    "applicationCategory": "MultimediaApplication",
+    "applicationSubCategory": "Sampler / live slicing instrument",
+    "operatingSystem": "Linux, Windows, macOS",
+    "softwareVersion": "0.2.2",
+    "downloadUrl": "https://github.com/lucioaraujo/navalha2-juce/releases/tag/v0.2.2",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "EUR"
+    },
+    "license": "https://www.gnu.org/licenses/gpl-3.0.html",
+    "isAccessibleForFree": true,
+    "author": {
+      "@type": "Person",
+      "name": "Glerm Soares"
+    },
+    "contributor": {
+      "@type": "Person",
+      "name": "Lúcio Araújo"
+    },
+    "isBasedOn": {
+      "@type": "SoftwareApplication",
+      "name": "Navalha (Pure Data)",
+      "author": {
+        "@type": "Person",
+        "name": "Glerm Soares"
+      }
+    },
+    "sameAs": [
+      "https://github.com/lucioaraujo/navalha2-juce"
+    ]
+  }
+  </script>
+  <script>(function(){var K='rasgo-lingua',M={en:'',pt:'pt/',fr:'fr/',es:'es/'};function g(){try{return localStorage.getItem(K)}catch(e){return null}}function s(v){try{localStorage.setItem(K,v)}catch(e){}}var l=(document.documentElement.lang||'').slice(0,2).toLowerCase(),p=location.pathname,r=document.referrer||'';if(/^\/(index\.html)?$/.test(p)&&l==='en'&&r.indexOf(location.origin+'/')!==0&&!/[?&]lang=en/.test(location.search)&&!/bot|crawl|spider|slurp|lighthouse/i.test(navigator.userAgent)){var c=g();if(!c){var L=navigator.languages&&navigator.languages.length?navigator.languages:[navigator.language||''];c='en';for(var i=0;i<L.length;i++){var x=String(L[i]).slice(0,2).toLowerCase();if(x in M){c=x;break}}}if(c!=='en'&&M[c]){location.replace('/'+M[c]+location.hash);return}}if(l in M)s(l);})();</script>
+  <!-- SEO:FIM -->
+</head>
+<body>
+  <div class="rasgo-strip"><a href="https://rasgoinstruments.arquiviagem.net/">RASGO — familia de instrumentos e investigación sonora</a></div>
+  <a class="skip-link" href="#main">Saltar al contenido</a>
+
+  <header class="site-header" data-site-header>
+    <a class="brand" href="#top" aria-label="Inicio de Navalha 2">
+      <img src="../assets/navalha2-app-icon.png" alt="" width="52" height="52">
+      <span class="brand-copy"><strong>NAVALHA <b class="brand-number" style="color: #ffd82f">2</b></strong></span>
+    </a>
+    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="main-nav">
+      <span class="sr-only">Abrir navegación</span>
+      <span aria-hidden="true">MENU</span>
+    </button>
+    <nav id="main-nav" class="main-nav" aria-label="Navegación principal">
+      <a href="./#instrument">Instrumento</a>
+      <a href="./#workflow">Flujo de trabajo</a>
+      <a href="tutorial.html">Tutorial</a>
+      <a href="aprender.html" aria-current="page">Aprender</a>
+      <a href="instalacao.html">Instalación</a>
+      <a href="./#technology">Tecnología</a>
+      <a href="./#status">Estado</a>
+    </nav>
+    <nav class="language-nav" aria-label="Idioma">
+      <a href="../aprender.html" lang="en" hreflang="en">EN</a>
+      <a href="../pt/aprender.html" lang="pt" hreflang="pt">PT</a>
+      <a href="../fr/aprender.html" lang="fr" hreflang="fr">FR</a>
+      <a href="../es/aprender.html" lang="es" hreflang="es" class="active" aria-current="page">ES</a>
+    </nav>
+  </header>
+
+  <main id="main" class="page-main">
+<section class="page-hero">
+  <h1>Aprender</h1>
+  <p class="page-lead">Cada control de Navalha 2 y lo que hace: el texto LEARN que la app muestra en su Activity Log cuando apunta a un control.</p>
+</section>
+<section class="page-section"><div class="page-learn-grid"><div class="page-learn"><h3>MOTOR DE AUDIO</h3><p>Muestra la conexión real del dispositivo. Pulse para abrir los ajustes de audio.</p></div>
+<div class="page-learn"><h3>ABRIR PROYECTO</h3><p>Abre un proyecto Navalha sin modificar los audios fuente referenciados.</p></div>
+<div class="page-learn"><h3>GUARDAR PROYECTO</h3><p>Guarda el estado y las referencias de las fuentes; no renderiza audio.</p></div>
+<div class="page-learn"><h3>GUARDAR PORTÁTIL</h3><p>Crea un ZIP Project v2 autónomo con copias de SOURCE A y B.</p></div>
+<div class="page-learn"><h3>E/S LEGADA</h3><p>Importa o exporta los archivos históricos .nvl y .ptn. Un .nvl legado solo guarda el nombre del sample; cargue SOURCE A manualmente después de importar.</p></div>
+<div class="page-learn"><h3>PLAY</h3><p>Inicia el patrón y el secuenciador actuales.</p></div>
+<div class="page-learn"><h3>STOP</h3><p>Detiene la reproducción y finaliza con seguridad una grabación activa.</p></div>
+<div class="page-learn"><h3>RESET</h3><p>Devuelve el cursor y el reloj de transporte al primer paso.</p></div>
+<div class="page-learn"><h3>REC</h3><p>Inicia o finaliza la grabación de la salida MASTER estéreo real. La grabación se detiene automáticamente después de cinco minutos.</p></div>
+<div class="page-learn"><h3>RELOJ DE TRANSPORTE</h3><p>Muestra el tiempo transcurrido de reproducción o grabación.</p></div>
+<div class="page-learn"><h3>BIBLIOTECA DE AUDIO</h3><p>Explore materiales sonoros y cargue o arrastre un WAV/AIFF a SOURCE A o B.</p></div>
+<div class="page-learn"><h3>BUSCAR ARCHIVOS</h3><p>Filtra por nombre la lista visible; no modifica ni borra archivos.</p></div>
+<div class="page-learn"><h3>PREESCUCHA DE LA BIBLIOTECA</h3><p>Escucha el WAV/AIFF seleccionado de forma independiente y a nivel seguro, sin cargar SOURCE A/B ni modificar el archivo.</p></div>
+<div class="page-learn"><h3>REGISTRO DE ACTIVIDAD</h3><p>Conserva los cuatro mensajes más recientes. COPY copia el texto; CLEAR vacía solo esta vista.</p></div>
+<div class="page-learn"><h3>FORMA DE ONDA</h3><p>Muestra la fuente activa. Arrastre para una región; los clics BLADE crean cortes.</p></div>
+<div class="page-learn"><h3>SELECCIONAR REGIÓN</h3><p>Arrastrar en la forma de onda define la región mayor usada para crear slices.</p></div>
+<div class="page-learn"><h3>EDITAR SLICE</h3><p>Edita los límites START y END del slice seleccionado.</p></div>
+<div class="page-learn"><h3>CONTROLES DE SLICE</h3><p>Elige SOURCE A/B y un slice, luego ajusta START/END. SET confirma; PLAY SLICE permite escucharlo.</p></div>
+<div class="page-learn"><h3>BLADE</h3><p>Cada clic añade un corte no destructivo dentro de la región.</p></div>
+<div class="page-learn"><h3>DIVIDIR REGIÓN</h3><p>Crea 4, 8, 16, 32 o 64 slices iguales dentro de la región seleccionada.</p></div>
+<div class="page-learn"><h3>BPM</h3><p>Define el tempo del secuenciador entre 20 y 400 pulsos por minuto.</p></div>
+<div class="page-learn"><h3>PATTERN</h3><p>Selecciona una de las ocho memorias de patrón.</p></div>
+<div class="page-learn"><h3>ORDEN DEL PATRÓN</h3><p>Crea o transforma el orden de ocho pasos con celdas SOURCE A, SOURCE B y GAP.</p></div>
+<div class="page-learn"><h3>GESTOS EN VIVO</h3><p>Aplica gestos estructurales reversibles o acciones breves de fragmento a la performance.</p></div>
+<div class="page-learn"><h3>TEMPORIZACIÓN</h3><p>GRID es regular, FREE varía duraciones y JITTER desplaza intervalos alrededor de la rejilla.</p></div>
+<div class="page-learn"><h3>HERITAGE PITCH</h3><p>Usa el rango histórico de 24 posiciones, de −12 a +11 semitonos.</p></div>
+<div class="page-learn"><h3>PERFORMER ASISTIDO</h3><p>Toma decisiones musicales limitadas, pero nunca controla PLAY, STOP ni REC.</p></div>
+<div class="page-learn"><h3>FORMA</h3><p>Conduce la pieza por INTRO, DEVELOP, RUPTURE, CLIMAX y EXIT.</p></div>
+<div class="page-learn"><h3>TRAZA XY</h3><p>Graba y opcionalmente repite movimientos de control; no graba audio.</p></div>
+<div class="page-learn"><h3>MEMORIA DE MOTIVOS</h3><p>Guarda, recupera y varía instantáneas musicales con bloqueos independientes.</p></div>
+<div class="page-learn"><h3>MEZCLADOR DE FUENTES</h3><p>Equilibra SOURCE A/B antes del pitch y envía su suma estéreo a MASTER OUTPUT.</p></div>
+<div class="page-learn"><h3>NIVEL DE LA FUENTE</h3><p>Ajusta la ganancia antes de la suma estéreo: 0 silencia, 1,00 mantiene el nivel y valores mayores añaden ganancia.</p></div>
+<div class="page-learn"><h3>PAN DE LA FUENTE</h3><p>Sitúa una fuente en el campo estéreo: −1 izquierda, 0 centro y +1 derecha.</p></div>
+<div class="page-learn"><h3>ANCHURA DE LA FUENTE</h3><p>Controla la anchura estéreo: 0 reduce a mono, 1 conserva la fuente y 2 exagera la información lateral.</p></div>
+<div class="page-learn"><h3>MUTE DE LA FUENTE</h3><p>Silencia solo esta fuente sin cambiar su ajuste de nivel.</p></div>
+<div class="page-learn"><h3>SOLO DE LA FUENTE</h3><p>Permite escuchar esta fuente sin la otra. Si ambas están en SOLO, las dos permanecen audibles.</p></div>
+<div class="page-learn"><h3>BALANCE A/B</h3><p>Balancea las fuentes: −1 favorece A, 0 mantiene ambas y +1 favorece B.</p></div>
+<div class="page-learn"><h3>MASTER / SALIDA TÉCNICA</h3><p>MASTER moldea creativamente el instrumento. OUTPUT TRIM solo atenúa de −24 a 0 dB antes del limitador true peak; MUTE usa una rampa sin clic. La reconexión reanuda desde silencio.</p></div>
+<div class="page-learn"><h3>FORMATO DE GRABACIÓN</h3><p>Elige PCM16, PCM24 o FLOAT32 para la próxima grabación MASTER estéreo.</p></div>
+<div class="page-learn"><h3>VOCES VIRTUALES</h3><p>Añade dos voces internas paralelas que reutilizan SOURCE A/B con margen seguro.</p></div>
+<div class="page-learn"><h3>LÍNEA DE TIEMPO DE TOMAS</h3><p>Abre el historial, metadatos de revisión y acciones TOMA a SOURCE.</p></div>
+<div class="page-learn"><h3>DOBLE MONITOR</h3><p>Mueve la performance al segundo monitor y mantiene edición y producción en el principal.</p></div>
+<div class="page-learn"><h3>VENTANA MASTER</h3><p>Abre el espacio separado de masterización offline y renderizado de álbum.</p></div>
+<div class="page-learn"><h3>TOMAS / MASTER</h3><p>Abre el espacio de producción integrado: revise las tomas a la izquierda y prepare masters de pista o álbum a la derecha.</p></div>
+<div class="page-learn"><h3>IDIOMA</h3><p>Cambia los textos de ayuda contextual y tutorial entre inglés, portugués, francés y español.</p></div>
+<div class="page-learn"><h3>TUTORIAL</h3><p>Abre la guía de diez capítulos heredada del flujo de trabajo PD v0.28.1.</p></div>
+<div class="page-learn"><h3>ACERCA DE</h3><p>Muestra versión, build de referencia, autoría y licencia.</p></div>
+<div class="page-learn"><h3>LEARN</h3><p>Cuando está activo, pasar o enfocar un control muestra su explicación en el panel fijo Activity Log.</p></div>
+<div class="page-learn"><h3>VISTA</h3><p>Elige tamaño automático o una escala mayor. Las pantallas pequeñas mantienen el desplazamiento.</p></div></div></section>
+</main>
+
+  <footer class="site-footer">
+    <img src="../assets/navalha2-app-icon.png" alt="" width="52" height="52">
+    <div><strong>NAVALHA <b class="brand-number" style="color: #ffd82f">2</b></strong><span>Cortar · recombinar · interpretar</span></div>
+    <nav aria-label="Enlaces al repositorio">
+      <a href="https://github.com/lucioaraujo/navalha2-juce">JUCE/C++</a>
+      <a href="https://github.com/lucioaraujo/navalha2-pd">PD/web</a>
+      <a href="#contact" data-contact-trigger>CONTACTO</a>
+    </nav>
+    <small>Documentación del proyecto · 2026</small>
+  </footer>
+
+  <dialog class="contact-dialog" data-contact-dialog aria-labelledby="contact-title">
+    <button class="dialog-close" type="button" data-contact-close aria-label="Cerrar ventana de contacto">×</button>
+    <h2 id="contact-title">CONTACTO</h2>
+    <p>Copia la dirección de correo electrónico:</p>
+    <code data-contact-address></code>
+    <button class="button button-primary" type="button" data-contact-copy>Copiar correo electrónico</button>
+    <p class="contact-feedback" data-contact-feedback aria-live="polite"></p>
+  </dialog>
+</body>
+</html>

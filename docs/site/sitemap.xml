@@ -36,4 +36,100 @@
   <url>
     <loc>https://navalha2.arquiviagem.net/relatorio-migracao.html</loc>
   </url>
+  <url>
+    <loc>https://navalha2.arquiviagem.net/tutorial.html</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://navalha2.arquiviagem.net/tutorial.html"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://navalha2.arquiviagem.net/pt/tutorial.html"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://navalha2.arquiviagem.net/fr/tutorial.html"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://navalha2.arquiviagem.net/es/tutorial.html"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://navalha2.arquiviagem.net/tutorial.html"/>
+  </url>
+  <url>
+    <loc>https://navalha2.arquiviagem.net/pt/tutorial.html</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://navalha2.arquiviagem.net/tutorial.html"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://navalha2.arquiviagem.net/pt/tutorial.html"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://navalha2.arquiviagem.net/fr/tutorial.html"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://navalha2.arquiviagem.net/es/tutorial.html"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://navalha2.arquiviagem.net/tutorial.html"/>
+  </url>
+  <url>
+    <loc>https://navalha2.arquiviagem.net/fr/tutorial.html</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://navalha2.arquiviagem.net/tutorial.html"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://navalha2.arquiviagem.net/pt/tutorial.html"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://navalha2.arquiviagem.net/fr/tutorial.html"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://navalha2.arquiviagem.net/es/tutorial.html"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://navalha2.arquiviagem.net/tutorial.html"/>
+  </url>
+  <url>
+    <loc>https://navalha2.arquiviagem.net/es/tutorial.html</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://navalha2.arquiviagem.net/tutorial.html"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://navalha2.arquiviagem.net/pt/tutorial.html"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://navalha2.arquiviagem.net/fr/tutorial.html"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://navalha2.arquiviagem.net/es/tutorial.html"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://navalha2.arquiviagem.net/tutorial.html"/>
+  </url>
+  <url>
+    <loc>https://navalha2.arquiviagem.net/aprender.html</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://navalha2.arquiviagem.net/aprender.html"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://navalha2.arquiviagem.net/pt/aprender.html"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://navalha2.arquiviagem.net/fr/aprender.html"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://navalha2.arquiviagem.net/es/aprender.html"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://navalha2.arquiviagem.net/aprender.html"/>
+  </url>
+  <url>
+    <loc>https://navalha2.arquiviagem.net/pt/aprender.html</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://navalha2.arquiviagem.net/aprender.html"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://navalha2.arquiviagem.net/pt/aprender.html"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://navalha2.arquiviagem.net/fr/aprender.html"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://navalha2.arquiviagem.net/es/aprender.html"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://navalha2.arquiviagem.net/aprender.html"/>
+  </url>
+  <url>
+    <loc>https://navalha2.arquiviagem.net/fr/aprender.html</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://navalha2.arquiviagem.net/aprender.html"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://navalha2.arquiviagem.net/pt/aprender.html"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://navalha2.arquiviagem.net/fr/aprender.html"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://navalha2.arquiviagem.net/es/aprender.html"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://navalha2.arquiviagem.net/aprender.html"/>
+  </url>
+  <url>
+    <loc>https://navalha2.arquiviagem.net/es/aprender.html</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://navalha2.arquiviagem.net/aprender.html"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://navalha2.arquiviagem.net/pt/aprender.html"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://navalha2.arquiviagem.net/fr/aprender.html"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://navalha2.arquiviagem.net/es/aprender.html"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://navalha2.arquiviagem.net/aprender.html"/>
+  </url>
+  <url>
+    <loc>https://navalha2.arquiviagem.net/instalacao.html</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://navalha2.arquiviagem.net/instalacao.html"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://navalha2.arquiviagem.net/pt/instalacao.html"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://navalha2.arquiviagem.net/fr/instalacao.html"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://navalha2.arquiviagem.net/es/instalacao.html"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://navalha2.arquiviagem.net/instalacao.html"/>
+  </url>
+  <url>
+    <loc>https://navalha2.arquiviagem.net/pt/instalacao.html</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://navalha2.arquiviagem.net/instalacao.html"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://navalha2.arquiviagem.net/pt/instalacao.html"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://navalha2.arquiviagem.net/fr/instalacao.html"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://navalha2.arquiviagem.net/es/instalacao.html"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://navalha2.arquiviagem.net/instalacao.html"/>
+  </url>
+  <url>
+    <loc>https://navalha2.arquiviagem.net/fr/instalacao.html</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://navalha2.arquiviagem.net/instalacao.html"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://navalha2.arquiviagem.net/pt/instalacao.html"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://navalha2.arquiviagem.net/fr/instalacao.html"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://navalha2.arquiviagem.net/es/instalacao.html"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://navalha2.arquiviagem.net/instalacao.html"/>
+  </url>
+  <url>
+    <loc>https://navalha2.arquiviagem.net/es/instalacao.html</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://navalha2.arquiviagem.net/instalacao.html"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://navalha2.arquiviagem.net/pt/instalacao.html"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://navalha2.arquiviagem.net/fr/instalacao.html"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://navalha2.arquiviagem.net/es/instalacao.html"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://navalha2.arquiviagem.net/instalacao.html"/>
+  </url>
 </urlset>
